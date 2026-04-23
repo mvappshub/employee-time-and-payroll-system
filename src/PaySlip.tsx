@@ -1,6 +1,8 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useStore } from './store'
 import { calculateMonthDays, calcMonthlySummary, calcPaySlip } from './calc'
+import { fetchQuarterlyPhv } from './monthStorage'
+import { AUTOMATIC_PHV_ERROR_MESSAGE, resolveAutomaticPhv } from './phv'
 import { EmploymentTypeLabels } from './types'
 
 const kc = (v: number) => v.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
@@ -15,21 +17,67 @@ export default function PaySlip() {
   const setMonth = useStore(s => s.setCurrentMonth)
   const payInputs = useStore(s => s.paySlipInputs)
   const setPayInput = useStore(s => s.setPaySlipInput)
+  const [averageHourlyEarnings, setAverageHourlyEarnings] = useState<number | null>(null)
+  const [phvError, setPhvError] = useState('')
+  const [phvLoading, setPhvLoading] = useState(true)
+  const [loadedPhvMonth, setLoadedPhvMonth] = useState('')
 
   const recs = records[month] || []
   const pi = payInputs[month] || { manualReward: 0, unworked: 0, sickCarryoverDays: 0 }
   const calcs = useMemo(() => calculateMonthDays(recs, emp, holidays, pi.sickCarryoverDays), [recs, emp, holidays, pi.sickCarryoverDays])
   const sum = useMemo(() => calcMonthlySummary(calcs), [calcs])
+
+  useEffect(() => {
+    let active = true
+    setPhvLoading(true)
+    setPhvError('')
+    setAverageHourlyEarnings(null)
+    setLoadedPhvMonth('')
+
+    fetchQuarterlyPhv(month)
+      .then(response => {
+        if (!active) return
+        setAverageHourlyEarnings(resolveAutomaticPhv(response))
+        setLoadedPhvMonth(month)
+      })
+      .catch(() => {
+        if (!active) return
+        setPhvError(AUTOMATIC_PHV_ERROR_MESSAGE)
+        setLoadedPhvMonth(month)
+      })
+      .finally(() => {
+        if (!active) return
+        setPhvLoading(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [month])
+
   const calculation = useMemo(() => {
+    if (phvLoading || loadedPhvMonth !== month) {
+      return { payslip: null, error: '', loading: true }
+    }
+
+    if (averageHourlyEarnings === null) {
+      return { payslip: null, error: phvError || AUTOMATIC_PHV_ERROR_MESSAGE, loading: false }
+    }
+
     try {
-      return { payslip: calcPaySlip(emp, sum, pi.manualReward, pi.unworked), error: '' }
+      return {
+        payslip: calcPaySlip(emp, sum, pi.manualReward, pi.unworked, averageHourlyEarnings),
+        error: '',
+        loading: false,
+      }
     } catch (error) {
       return {
         payslip: null,
         error: error instanceof Error ? error.message : 'Výpočet výplatní pásky nelze provést.',
+        loading: false,
       }
     }
-  }, [emp, sum, pi.manualReward, pi.unworked])
+  }, [averageHourlyEarnings, emp, loadedPhvMonth, month, phvError, phvLoading, pi.manualReward, pi.unworked, sum])
   const ps = calculation.payslip
 
   const inp = 'border-b border-gray-300 outline-none bg-transparent text-xs w-20 text-right'
@@ -52,7 +100,13 @@ export default function PaySlip() {
         {EmploymentTypeLabels[emp.employmentType] ?? emp.employmentType} · úvazek {emp.workload} · {monthLabel}
       </div>
 
-      {!ps && (
+      {calculation.loading && (
+        <div className="border border-gray-300 bg-gray-50 px-2 py-1 text-gray-600">
+          Načítání PHV...
+        </div>
+      )}
+
+      {!calculation.loading && !ps && (
         <div className="border border-red-300 bg-red-50 px-2 py-1 text-red-700">
           {calculation.error}
         </div>
@@ -71,8 +125,7 @@ export default function PaySlip() {
           <Row label="Pracovní dny (se svátky)" days={sum.workDaysWH} />
           <Row label="Pracovní hodiny (se svátky)" hrs={sum.workHoursWH} />
           <Row label="Denní fond hodin" hrs={ps.dailyFund} />
-          <Row label={`Hodinová sazba`} czk={ps.hourlyRate} />
-          <Row label="Průměrný / pravděpod. výdělek" czk={ps.averageHourlyEarnings} />
+          <Row label="PHV" czk={ps.averageHourlyEarnings} />
           <tr className="border-t border-gray-200"><td colSpan={4}></td></tr>
 
           <Row label="Základní mzda" czk={ps.baseSalaryCalc} bold />

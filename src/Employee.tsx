@@ -83,9 +83,6 @@ export default function Employee() {
               <td className="font-bold">{dailyFund} h</td>
             </tr>
             {chk('weekendWorking', 'Víkend je běžně pracovní')}
-            {chk('holidayAsFund', 'Svátek uznat jako fond')}
-            {chk('vacationAsFund', 'Dovolenou uznat jako fond')}
-            {chk('sickAsFund', 'Nemoc uznat jako fond')}
           </tbody>
         </table>
         <table>
@@ -108,10 +105,6 @@ export default function Employee() {
             {pct('holidaySurcharge', 'Příplatek svátek')}
             {pct('overtimeSurcharge', 'Příplatek přesčas')}
             {pct('sickCompensation', 'Náhrada nemoc')}
-            {num('priorQuarterGrossForAverage', 'Hrubá mzda pro PHV (čtvrtletí)', 100, 'w-24')}
-            {num('priorQuarterWorkedHoursForAverage', 'Odprac. hodiny pro PHV', 1, 'w-24')}
-            {num('priorQuarterWorkedDaysForAverage', 'Odprac. dny pro PHV', 1, 'w-24')}
-            {num('probableHourlyEarnings', 'Pravděpodobný výdělek', 1, 'w-24')}
             {sel('holidayCompensationMode', 'Svátek - vypořádání', [
               { value: 'time-off', label: 'náhr. volno' },
               { value: 'premium', label: 'příplatek' },

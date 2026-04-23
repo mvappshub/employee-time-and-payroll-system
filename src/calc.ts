@@ -80,8 +80,8 @@ function calcCalendarPlanHours(dateStr: string, weekendWorking: boolean, dailyFu
   return dailyFund
 }
 
-function calcHolidayCredit(isHol: boolean, worked: number, holidayAsFund: boolean, dailyFund: number, shift: ShiftType): number {
-  if (isHol && worked === 0 && holidayAsFund && !['volno', 'dovolená', 'nemoc', ''].includes(shift)) return dailyFund
+function calcHolidayCredit(isHol: boolean, worked: number, dailyFund: number, shift: ShiftType): number {
+  if (isHol && worked === 0 && !['volno', 'dovolená', 'nemoc', ''].includes(shift)) return dailyFund
   return 0
 }
 
@@ -142,10 +142,10 @@ export function calculateDay(rec: TimeRecord, emp: EmployeeSettings, holidays: H
   const calendarPlanH = calcCalendarPlanHours(rec.date, emp.weekendWorking, dailyFund)
   const rawPlanH = isHol && worked === 0 ? 0 : calendarPlanH
   const planH = isHol && worked === 0 ? 0 : scheduledH
-  const holCredit = calcHolidayCredit(isHol, worked, emp.holidayAsFund, dailyFund, rec.shift)
+  const holCredit = calcHolidayCredit(isHol, worked, dailyFund, rec.shift)
   const holWorked = isHol ? worked : 0
-  const vac = rec.shift === 'dovolená' && emp.vacationAsFund && !(isHol && worked === 0) ? dailyFund : 0
-  const sick = rec.shift === 'nemoc' && emp.sickAsFund ? dailyFund : 0
+  const vac = rec.shift === 'dovolená' && !(isHol && worked === 0) ? dailyFund : 0
+  const sick = rec.shift === 'nemoc' ? dailyFund : 0
   const night = calcNightHours(rec.arrival, rec.departure, emp.nightFrom, emp.nightTo, emp.nightWorkAllowed)
   const weekend = isWeekend(rec.date) ? worked : 0
   const holTotal = isHol && worked > 0 ? worked : (isHol && worked === 0 ? holCredit : 0)
@@ -266,7 +266,6 @@ export function calcMonthlySummary(days: DayCalc[]): MonthlySummary {
 export interface PaySlipCalc {
   dailyFund: number
   personalBonusBase: number
-  hourlyRate: number
   averageHourlyEarnings: number
   holidaySurchargeRate: number
   nightSurchargeRate: number
@@ -339,23 +338,6 @@ export function calcHourlyRate(baseSalary: number, monthlyFundHours: number): nu
   return monthlyFundHours > 0 ? baseSalary / monthlyFundHours : 0
 }
 
-export function calcAverageHourlyEarnings(emp: EmployeeSettings): number {
-  const hasActualAverage =
-    emp.priorQuarterWorkedDaysForAverage >= 21 &&
-    emp.priorQuarterWorkedHoursForAverage > 0 &&
-    emp.priorQuarterGrossForAverage > 0
-
-  if (hasActualAverage) {
-    return emp.priorQuarterGrossForAverage / emp.priorQuarterWorkedHoursForAverage
-  }
-
-  if (emp.probableHourlyEarnings > 0) {
-    return emp.probableHourlyEarnings
-  }
-
-  throw new Error('Chybí podklady pro výpočet PHV / pravděpodobného výdělku.')
-}
-
 export interface SickPayReductionLimits {
   first: number
   second: number
@@ -412,11 +394,14 @@ function getMinimumHolidaySurcharge(): number {
   return 1
 }
 
-export function calcPaySlip(emp: EmployeeSettings, sum: MonthlySummary, manualReward: number, unworked: number): PaySlipCalc {
+export function calcPaySlip(emp: EmployeeSettings, sum: MonthlySummary, manualReward: number, unworked: number, averageHourlyEarnings: number): PaySlipCalc {
+  if (!Number.isFinite(averageHourlyEarnings) || averageHourlyEarnings <= 0) {
+    throw new Error('Chybí podklady pro automatický výpočet PHV z předchozího čtvrtletí.')
+  }
+
   const dailyFund = emp.workDaysPerWeek > 0 ? emp.weeklyHours / emp.workDaysPerWeek : 0
   const whwh = sum.workHoursWH
   const hr = calcHourlyRate(emp.baseSalary, whwh)
-  const averageHourlyEarnings = calcAverageHourlyEarnings(emp)
   const holidaySurchargeRate = Math.max(emp.holidaySurcharge, getMinimumHolidaySurcharge())
   const nightSurchargeRate = Math.max(emp.nightSurcharge, getMinimumNightSurcharge(emp))
   const weekendSurchargeRate = Math.max(emp.weekendSurcharge, getMinimumWeekendSurcharge(emp))
@@ -475,7 +460,7 @@ export function calcPaySlip(emp: EmployeeSettings, sum: MonthlySummary, manualRe
     holidaySurchargeRate,
     nightSurchargeRate,
     weekendSurchargeRate,
-    hourlyRate: hr, baseSalaryCalc, personalBonusCalc,
+    baseSalaryCalc, personalBonusCalc,
     nightSurchargeCalc, weekendSurchargeCalc, holidaySurchargeCalc, holidayCompLeaveHours, overtimeSurchargeCalc, overtimeCompLeaveHours,
     unworkedCalc, unworkedDays: dailyFund > 0 ? unworked / dailyFund : 0,
     vacationCalc, vacationDays: dailyFund > 0 ? sum.totalVacation / dailyFund : 0,

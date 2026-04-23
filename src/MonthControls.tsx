@@ -1,6 +1,7 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { calculateMonthDays, calcMonthlySummary, calcPaySlip } from './calc'
-import { loadSavedMonth, saveMonthRecord } from './monthStorage'
+import { fetchQuarterlyPhv, loadSavedMonth, saveMonthRecord } from './monthStorage'
+import { AUTOMATIC_PHV_ERROR_MESSAGE, resolveAutomaticPhv } from './phv'
 import { useStore } from './store'
 
 const btn = 'border border-gray-300 px-1.5 py-0.5 text-xs bg-white hover:bg-gray-50'
@@ -15,6 +16,7 @@ export default function MonthControls() {
   const prefillMonth = useStore(s => s.prefillMonth)
   const hydrateMonth = useStore(s => s.hydrateMonth)
   const setMonthStatus = useStore(s => s.setMonthStatus)
+  const [error, setError] = useState('')
 
   const payInputs = paySlipInputs[currentMonth] || { manualReward: 0, unworked: 0, sickCarryoverDays: 0 }
   const monthRecords = records[currentMonth] || []
@@ -29,6 +31,7 @@ export default function MonthControls() {
   }, [currentMonth, initMonth])
 
   const handleLoad = async () => {
+    setError('')
     const loaded = await loadSavedMonth(currentMonth)
     if (!loaded) {
       return
@@ -41,24 +44,32 @@ export default function MonthControls() {
   }
 
   const handleSave = async () => {
-    const payslip = calcPaySlip(employee, summary, payInputs.manualReward, payInputs.unworked)
+    try {
+      setError('')
+      const phvResponse = await fetchQuarterlyPhv(currentMonth)
+      const averageHourlyEarnings = resolveAutomaticPhv(phvResponse)
+      const payslip = calcPaySlip(employee, summary, payInputs.manualReward, payInputs.unworked, averageHourlyEarnings)
 
-    await saveMonthRecord({
-      month: currentMonth,
-      employee,
-      records: monthRecords,
-      paySlipInputs: payInputs,
-      snapshot: {
-        grossWage: payslip.hrubaMzda,
-        workedHours: summary.workedHours,
-        totalSaldo: summary.totalSaldo,
-        savedAt: new Date().toISOString(),
-      },
-    })
-    setMonthStatus(currentMonth, 'saved')
+      await saveMonthRecord({
+        month: currentMonth,
+        employee,
+        records: monthRecords,
+        paySlipInputs: payInputs,
+        snapshot: {
+          grossWage: payslip.hrubaMzda,
+          workedHours: summary.workedHours,
+          totalSaldo: summary.totalSaldo,
+          savedAt: new Date().toISOString(),
+        },
+      })
+      setMonthStatus(currentMonth, 'saved')
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : AUTOMATIC_PHV_ERROR_MESSAGE)
+    }
   }
 
   const handlePrefill = () => {
+    setError('')
     prefillMonth(currentMonth)
   }
 
@@ -69,6 +80,7 @@ export default function MonthControls() {
         <button className={btn} onClick={handleSave}>Uložit měsíc</button>
         <button className={btn} onClick={handlePrefill}>Předvyplnit měsíc</button>
       </div>
+      {error && <div className="mt-1 border border-red-300 bg-red-50 px-2 py-1 text-red-700">{error}</div>}
     </div>
   )
 }

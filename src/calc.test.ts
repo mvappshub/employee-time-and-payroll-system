@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  calcAverageHourlyEarnings,
   calcReducedAverageHourlyBasis,
   calcMonthlyTaxBeforeCredits,
   calcMonthlySummary,
@@ -19,13 +18,11 @@ import type { EmployeeSettings, Holiday, ShiftType, TimeRecord } from "./types";
 const employee: EmployeeSettings = {
   name: "Test",
   employmentType: "pracovni_pomer",
+  remunerationType: "mzda",
   workload: 1,
   weeklyHours: 40,
   workDaysPerWeek: 5,
   weekendWorking: false,
-  holidayAsFund: true,
-  vacationAsFund: true,
-  sickAsFund: true,
   shiftStart: "06:00",
   shiftEnd: "14:30",
   standardBreak: 0.5,
@@ -40,10 +37,6 @@ const employee: EmployeeSettings = {
   holidaySurcharge: 1,
   overtimeSurcharge: 0.25,
   sickCompensation: 0.6,
-  priorQuarterGrossForAverage: 122000,
-  priorQuarterWorkedHoursForAverage: 488,
-  priorQuarterWorkedDaysForAverage: 61,
-  probableHourlyEarnings: 250,
   holidayCompensationMode: "time-off",
   overtimeCompensationMode: "premium",
 };
@@ -70,7 +63,7 @@ function monthlySummary(overrides: Partial<MonthlySummary> = {}): MonthlySummary
 
 describe("calcPaySlip", () => {
   it("handles a regular month without deviations", () => {
-    const payslip = calcPaySlip(employee, monthlySummary(), 0, 0);
+    const payslip = calcPaySlip(employee, monthlySummary(), 0, 0, 250);
 
     expect(payslip.hrubaMzda).toBe(40000);
     expect(payslip.nightSurchargeCalc).toBe(0);
@@ -81,7 +74,7 @@ describe("calcPaySlip", () => {
   });
 
   it("includes manual reward in gross wage and uses correct 2026 payroll rates", () => {
-    const payslip = calcPaySlip(employee, monthlySummary(), 1000, 0);
+    const payslip = calcPaySlip(employee, monthlySummary(), 1000, 0, 250);
 
     expect(payslip.hrubaMzda).toBe(41000);
     expect(payslip.zpFirma).toBe(3690);
@@ -90,8 +83,8 @@ describe("calcPaySlip", () => {
   });
 
   it("increases net wage when a monthly manual reward is entered", () => {
-    const withoutReward = calcPaySlip(employee, monthlySummary(), 0, 0);
-    const withReward = calcPaySlip(employee, monthlySummary(), 1000, 0);
+    const withoutReward = calcPaySlip(employee, monthlySummary(), 0, 0, 250);
+    const withReward = calcPaySlip(employee, monthlySummary(), 1000, 0, 250);
 
     expect(withReward.hrubaMzda).toBeGreaterThan(withoutReward.hrubaMzda);
     expect(withReward.cistaMzda).toBeGreaterThan(withoutReward.cistaMzda);
@@ -108,6 +101,7 @@ describe("calcPaySlip", () => {
       }),
       0,
       0,
+      250,
     );
 
     expect(payslip.sickHourlyBasis).toBe(225);
@@ -117,70 +111,7 @@ describe("calcPaySlip", () => {
     expect(payslip.cistaMzda).toBe(31542);
   });
 
-  it("uses actual average hourly earnings from prior quarter when 21 worked days threshold is met", () => {
-    const payslip = calcPaySlip(
-      {
-        ...employee,
-        priorQuarterGrossForAverage: 90000,
-        priorQuarterWorkedHoursForAverage: 488,
-        priorQuarterWorkedDaysForAverage: 61,
-        probableHourlyEarnings: 250,
-      },
-      monthlySummary(),
-      0,
-      0,
-    );
-
-    expect(payslip.averageHourlyEarnings).toBeCloseTo(184.43, 2);
-  });
-
-  it("uses probable hourly earnings when prior quarter has fewer than 21 worked days", () => {
-    const payslip = calcPaySlip(
-      {
-        ...employee,
-        priorQuarterGrossForAverage: 90000,
-        priorQuarterWorkedHoursForAverage: 488,
-        priorQuarterWorkedDaysForAverage: 10,
-        probableHourlyEarnings: 250,
-      },
-      monthlySummary(),
-      0,
-      0,
-    );
-
-    expect(payslip.averageHourlyEarnings).toBe(250);
-  });
-
-  it("throws when neither actual average inputs nor probable earnings are available", () => {
-    expect(() =>
-      calcPaySlip(
-        {
-          ...employee,
-          priorQuarterGrossForAverage: 0,
-          priorQuarterWorkedHoursForAverage: 0,
-          priorQuarterWorkedDaysForAverage: 0,
-          probableHourlyEarnings: 0,
-        },
-        monthlySummary(),
-        0,
-        0,
-      ),
-    ).toThrow("Chybí podklady");
-  });
-
-  it("throws for invalid negative PHV inputs instead of silently producing a fallback result", () => {
-    expect(() =>
-      calcAverageHourlyEarnings({
-        ...employee,
-        priorQuarterGrossForAverage: -90000,
-        priorQuarterWorkedHoursForAverage: 488,
-        priorQuarterWorkedDaysForAverage: 61,
-        probableHourlyEarnings: -250,
-      }),
-    ).toThrow("Chybí podklady");
-  });
-
-  it("uses selected PHV or probable earnings for vacation and surcharge calculations", () => {
+  it("uses the automatic PHV parameter for vacation and surcharge calculations", () => {
     const payslip = calcPaySlip(
       employee,
       monthlySummary({
@@ -192,12 +123,54 @@ describe("calcPaySlip", () => {
       }),
       0,
       0,
+      250,
     );
 
-    expect(payslip.hourlyRate).toBe(200);
     expect(payslip.prumHodinovy).toBe(250);
     expect(payslip.vacationCalc).toBe(2000);
     expect(payslip.nightSurchargeCalc).toBe(100);
+  });
+
+  it("never falls back to hourly rate when automatic PHV differs from monthly hourly rate", () => {
+    const payslip = calcPaySlip(
+      employee,
+      monthlySummary({
+        workedDays: 19,
+        workedHours: 152,
+        totalVacation: 8,
+        totalRecognized: 160,
+      }),
+      0,
+      0,
+      250,
+    );
+
+    expect(payslip.averageHourlyEarnings).toBe(250);
+    expect(payslip.vacationCalc).toBe(2000);
+  });
+
+  it("throws when automatic PHV is missing", () => {
+    expect(() =>
+      calcPaySlip(
+        employee,
+        monthlySummary(),
+        0,
+        0,
+        0,
+      ),
+    ).toThrow("Chybí podklady pro automatický výpočet PHV");
+  });
+
+  it("throws for invalid negative automatic PHV instead of silently producing a fallback result", () => {
+    expect(() =>
+      calcPaySlip(
+        employee,
+        monthlySummary(),
+        0,
+        0,
+        -250,
+      ),
+    ).toThrow("Chybí podklady pro automatický výpočet PHV");
   });
 
   it("uses legal minimum weekend and night surcharges in wage regime", () => {
@@ -214,6 +187,7 @@ describe("calcPaySlip", () => {
       }),
       0,
       0,
+      250,
     );
 
     expect(payslip.nightSurchargeRate).toBe(0.1);
@@ -236,6 +210,7 @@ describe("calcPaySlip", () => {
       }),
       0,
       0,
+      250,
     );
 
     expect(payslip.nightSurchargeRate).toBe(0.2);
@@ -252,12 +227,13 @@ describe("calcPaySlip", () => {
       totalRecognized: 168,
     });
 
-    const timeOffPayslip = calcPaySlip(employee, baseSummary, 0, 0);
+    const timeOffPayslip = calcPaySlip(employee, baseSummary, 0, 0, 250);
     const premiumPayslip = calcPaySlip(
       { ...employee, holidayCompensationMode: "premium" },
       baseSummary,
       0,
       0,
+      250,
     );
 
     expect(timeOffPayslip.holidaySurchargeCalc).toBe(0);
@@ -277,6 +253,7 @@ describe("calcPaySlip", () => {
       }),
       0,
       0,
+      250,
     );
 
     expect(payslip.holidaySurchargeRate).toBe(1);
@@ -294,6 +271,7 @@ describe("calcPaySlip", () => {
       }),
       0,
       0,
+      250,
     );
 
     expect(payslip.holidaySurchargeRate).toBe(1.5);
@@ -313,8 +291,9 @@ describe("calcPaySlip", () => {
       baseSummary,
       0,
       0,
+      250,
     );
-    const premiumPayslip = calcPaySlip(employee, baseSummary, 0, 0);
+    const premiumPayslip = calcPaySlip(employee, baseSummary, 0, 0, 250);
 
     expect(timeOffPayslip.overtimeSurchargeCalc).toBe(0);
     expect(timeOffPayslip.overtimeCompLeaveHours).toBe(8);
@@ -324,8 +303,8 @@ describe("calcPaySlip", () => {
 
   it("ignores any rogue employee-level reward field and uses only the monthly manual reward input", () => {
     const rogueEmployee = { ...employee, manualReward: 5000 } as EmployeeSettings & { manualReward: number };
-    const withoutReward = calcPaySlip(rogueEmployee, monthlySummary(), 0, 0);
-    const withReward = calcPaySlip(rogueEmployee, monthlySummary(), 1000, 0);
+    const withoutReward = calcPaySlip(rogueEmployee, monthlySummary(), 0, 0, 250);
+    const withReward = calcPaySlip(rogueEmployee, monthlySummary(), 1000, 0, 250);
 
     expect(withoutReward.hrubaMzda).toBe(40000);
     expect(withReward.hrubaMzda).toBe(41000);
@@ -593,7 +572,7 @@ describe("calculateDay", () => {
 });
 
 describe("DPN compensation in payslip", () => {
-  it("derives statutory sick compensation basis from selected PHV or probable earnings", () => {
+  it("derives statutory sick compensation basis from automatic PHV", () => {
     const payslip = calcPaySlip(
       employee,
       monthlySummary({
@@ -604,21 +583,16 @@ describe("DPN compensation in payslip", () => {
       }),
       0,
       0,
+      250,
     );
 
     expect(payslip.sickHourlyBasis).toBe(225);
     expect(payslip.sickCalc).toBe(1080);
   });
 
-  it("reduces DPN basis even when probable earnings are 1 CZK per hour", () => {
+  it("reduces DPN basis even when automatic PHV is 1 CZK per hour", () => {
     const payslip = calcPaySlip(
-      {
-        ...employee,
-        priorQuarterGrossForAverage: 0,
-        priorQuarterWorkedHoursForAverage: 0,
-        priorQuarterWorkedDaysForAverage: 0,
-        probableHourlyEarnings: 1,
-      },
+      employee,
       monthlySummary({
         workedHours: 96,
         totalVacation: 40,
@@ -627,6 +601,7 @@ describe("DPN compensation in payslip", () => {
       }),
       0,
       0,
+      1,
     );
 
     expect(payslip.averageHourlyEarnings).toBe(1);
@@ -645,6 +620,7 @@ describe("DPN compensation in payslip", () => {
       }),
       0,
       0,
+      250,
     );
 
     expect(payslip.celkemOdpracNeodprac).toBe(160);
@@ -664,13 +640,14 @@ describe("saldoMesic — monthly deviation from plan", () => {
       }),
       0,
       0,
+      250,
     );
 
     expect(payslip.saldoMesic).toBe(-8);
   });
 
   it("is 0 in a regular month without deviations", () => {
-    const payslip = calcPaySlip(employee, monthlySummary(), 0, 0);
+    const payslip = calcPaySlip(employee, monthlySummary(), 0, 0, 250);
     expect(payslip.saldoMesic).toBe(0);
   });
 
@@ -684,6 +661,7 @@ describe("saldoMesic — monthly deviation from plan", () => {
       }),
       0,
       0,
+      250,
     );
     expect(payslip.saldoMesic).toBe(8);
   });
@@ -699,6 +677,7 @@ describe("saldoMesic — monthly deviation from plan", () => {
       }),
       0,
       0,
+      250,
     );
     expect(payslip.saldoMesic).toBe(-12);
   });

@@ -17,9 +17,6 @@ export interface EmployeeSettings {
   weeklyHours: number
   workDaysPerWeek: number
   weekendWorking: boolean
-  holidayAsFund: boolean
-  vacationAsFund: boolean
-  sickAsFund: boolean
   shiftStart: string
   shiftEnd: string
   standardBreak: number
@@ -34,10 +31,6 @@ export interface EmployeeSettings {
   holidaySurcharge: number
   overtimeSurcharge: number
   sickCompensation: number
-  priorQuarterGrossForAverage: number
-  priorQuarterWorkedHoursForAverage: number
-  priorQuarterWorkedDaysForAverage: number
-  probableHourlyEarnings: number
   holidayCompensationMode: HolidayCompensationMode
   overtimeCompensationMode: OvertimeCompensationMode
 }

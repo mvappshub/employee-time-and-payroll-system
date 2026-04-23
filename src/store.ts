@@ -11,7 +11,7 @@ import { mergeHolidayYears } from './holidayCalendar'
 const defaultEmployee: EmployeeSettings = {
   name: '', employmentType: 'pracovni_pomer', remunerationType: 'mzda', workload: 1,
   weeklyHours: 40, workDaysPerWeek: 5,
-  weekendWorking: false, holidayAsFund: true, vacationAsFund: true, sickAsFund: true,
+  weekendWorking: false,
   shiftStart: '06:00', shiftEnd: '14:30', standardBreak: 0.5,
   nightWorkAllowed: true, nightFrom: '22:00', nightTo: '06:00',
   overtimeAllowed: true,
@@ -19,10 +19,6 @@ const defaultEmployee: EmployeeSettings = {
   nightSurcharge: 0.10, weekendSurcharge: 0.10,
   holidaySurcharge: 1.00, overtimeSurcharge: 0.25,
   sickCompensation: 0.60,
-  priorQuarterGrossForAverage: 0,
-  priorQuarterWorkedHoursForAverage: 0,
-  priorQuarterWorkedDaysForAverage: 0,
-  probableHourlyEarnings: 0,
   holidayCompensationMode: 'time-off',
   overtimeCompensationMode: 'premium',
 }
@@ -52,6 +48,13 @@ function buildPrefilledMonthRecords(month: string, employee: EmployeeSettings): 
     arrival: isWeekend(date) ? '' : employee.shiftStart,
     departure: isWeekend(date) ? '' : employee.shiftEnd,
   }))
+}
+
+function normalizeEmployeeSettings(employee?: Partial<EmployeeSettings>): EmployeeSettings {
+  return {
+    ...defaultEmployee,
+    ...employee,
+  }
 }
 
 const defaultPaySlipInputs: PaySlipInputs = {
@@ -99,7 +102,7 @@ export const useStore = create<Store>()(
         if (migrated.employmentType && LEGACY_EMPLOYMENT_TYPE_MAP[migrated.employmentType]) {
           migrated.employmentType = LEGACY_EMPLOYMENT_TYPE_MAP[migrated.employmentType]
         }
-        return { employee: { ...s.employee, ...migrated } }
+        return { employee: normalizeEmployeeSettings({ ...s.employee, ...migrated }) }
       }),
       setSection: (section) => set({ section }),
       setCurrentMonth: (m) => {
@@ -127,7 +130,7 @@ export const useStore = create<Store>()(
       },
       hydrateMonth: (m, data) => {
         set(s => ({
-          employee: data.employee,
+          employee: normalizeEmployeeSettings(data.employee),
           records: { ...s.records, [m]: data.records },
           paySlipInputs: { ...s.paySlipInputs, [m]: data.paySlipInputs },
           monthStatus: { ...s.monthStatus, [m]: 'loaded' },
@@ -171,11 +174,12 @@ export const useStore = create<Store>()(
     }),
     {
       name: 'work-evidence-v1',
-      version: 2,
+      version: 3,
       migrate: (persisted) => {
         const state = persisted as Partial<Store> | undefined
         return {
           ...state,
+          employee: normalizeEmployeeSettings(state?.employee),
           // Older versions auto-prefilled many months and persisted them.
           // Drop month-level data once so the new empty-by-default model is real.
           records: {},

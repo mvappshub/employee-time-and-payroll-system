@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { calculateQuarterlyPhv, getPreviousQuarterMonths } from './phv'
+import { AUTOMATIC_PHV_ERROR_MESSAGE, calculateQuarterlyPhv, getPreviousQuarterMonths, resolveAutomaticPhv } from './phv'
 
 describe('PHV quarter selection', () => {
   it('uses October to December for January to March', () => {
@@ -33,5 +33,40 @@ describe('PHV calculation', () => {
     ])
 
     expect(result.phv).toBeNull()
+  })
+})
+
+describe('automatic PHV validation', () => {
+  it('accepts a valid backend PHV response', () => {
+    expect(resolveAutomaticPhv({
+      month: '2026-04',
+      phv: 250,
+      totalGrossWage: 90000,
+      totalWorkedHours: 360,
+      sourceMonths: ['2026-01', '2026-02', '2026-03'],
+      missingMonths: [],
+    })).toBe(250)
+  })
+
+  it('throws when backend reports missing quarter months', () => {
+    expect(() => resolveAutomaticPhv({
+      month: '2026-04',
+      phv: 250,
+      totalGrossWage: 60000,
+      totalWorkedHours: 240,
+      sourceMonths: ['2026-01', '2026-02', '2026-03'],
+      missingMonths: ['2026-03'],
+    })).toThrow(AUTOMATIC_PHV_ERROR_MESSAGE)
+  })
+
+  it('throws when backend cannot calculate PHV', () => {
+    expect(() => resolveAutomaticPhv({
+      month: '2026-04',
+      phv: null,
+      totalGrossWage: 0,
+      totalWorkedHours: 0,
+      sourceMonths: ['2026-01', '2026-02', '2026-03'],
+      missingMonths: [],
+    })).toThrow(AUTOMATIC_PHV_ERROR_MESSAGE)
   })
 })

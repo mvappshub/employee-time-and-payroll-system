@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { calculateMonthDays, calcMonthlySummary, calcPaySlip } from './calc'
+import { calcAverageSourceSnapshot, calculateMonthDays, calcMonthlySummary, calcPaySlip } from './calc'
 import { fetchQuarterlyPhv, loadSavedMonth, saveMonthRecord } from './monthStorage'
-import { AUTOMATIC_PHV_ERROR_MESSAGE, resolveAutomaticPhv } from './phv'
+import { AUTOMATIC_PHV_ERROR_MESSAGE, assertAvailableAverageEarnings } from './phv'
 import { useStore } from './store'
 
 const btn = 'border border-gray-300 px-1.5 py-0.5 text-xs bg-white hover:bg-gray-50'
@@ -18,7 +18,7 @@ export default function MonthControls() {
   const setMonthStatus = useStore(s => s.setMonthStatus)
   const [error, setError] = useState('')
 
-  const payInputs = paySlipInputs[currentMonth] || { manualReward: 0, unworked: 0, sickCarryoverDays: 0 }
+  const payInputs = paySlipInputs[currentMonth] || { manualReward: 0, includeManualRewardInAverage: false, unworked: 0, sickCarryoverDays: 0 }
   const monthRecords = records[currentMonth] || []
   const days = useMemo(
     () => calculateMonthDays(monthRecords, employee, holidays, payInputs.sickCarryoverDays),
@@ -46,23 +46,40 @@ export default function MonthControls() {
   const handleSave = async () => {
     try {
       setError('')
-      const phvResponse = await fetchQuarterlyPhv(currentMonth)
-      const averageHourlyEarnings = resolveAutomaticPhv(phvResponse)
-      const payslip = calcPaySlip(employee, summary, payInputs.manualReward, payInputs.unworked, averageHourlyEarnings)
+      const averageResponse = await fetchQuarterlyPhv(currentMonth, employee)
+      const averageHourlyEarnings = averageResponse.averageHourlyEarnings
+      const safeAverageHourlyEarnings = averageHourlyEarnings && averageHourlyEarnings > 0 ? averageHourlyEarnings : 0
+      const averageSource = calcAverageSourceSnapshot(
+        employee,
+        summary,
+        payInputs.manualReward,
+        payInputs.includeManualRewardInAverage,
+        safeAverageHourlyEarnings,
+      )
+      const snapshot = averageResponse.sourceType === 'unavailable'
+        ? undefined
+        : (() => {
+            const payslip = calcPaySlip(employee, summary, payInputs.manualReward, payInputs.unworked, assertAvailableAverageEarnings(averageResponse))
+            return {
+              grossWage: payslip.hrubaMzda,
+              workedHours: summary.workedHours,
+              totalSaldo: summary.totalSaldo,
+              savedAt: new Date().toISOString(),
+            }
+          })()
 
       await saveMonthRecord({
         month: currentMonth,
         employee,
         records: monthRecords,
         paySlipInputs: payInputs,
-        snapshot: {
-          grossWage: payslip.hrubaMzda,
-          workedHours: summary.workedHours,
-          totalSaldo: summary.totalSaldo,
-          savedAt: new Date().toISOString(),
-        },
+        ...averageSource,
+        snapshot,
       })
       setMonthStatus(currentMonth, 'saved')
+      if (averageResponse.sourceType === 'unavailable') {
+        setError(averageResponse.reason || AUTOMATIC_PHV_ERROR_MESSAGE)
+      }
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : AUTOMATIC_PHV_ERROR_MESSAGE)
     }

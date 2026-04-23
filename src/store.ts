@@ -9,7 +9,7 @@ import { getDaysInMonth, isWeekend } from './calc'
 import { mergeHolidayYears } from './holidayCalendar'
 
 const defaultEmployee: EmployeeSettings = {
-  name: '', employmentType: 'pracovni_pomer', remunerationType: 'mzda', workload: 1,
+  name: '', employmentType: 'pracovni_pomer', remunerationType: 'mzda', employmentStartDate: '2026-01-01', workload: 1,
   weeklyHours: 40, workDaysPerWeek: 5,
   weekendWorking: false,
   shiftStart: '06:00', shiftEnd: '14:30', standardBreak: 0.5,
@@ -59,8 +59,16 @@ function normalizeEmployeeSettings(employee?: Partial<EmployeeSettings>): Employ
 
 const defaultPaySlipInputs: PaySlipInputs = {
   manualReward: 0,
+  includeManualRewardInAverage: false,
   unworked: 0,
   sickCarryoverDays: 0,
+}
+
+function normalizePaySlipInputs(paySlipInputs?: Partial<PaySlipInputs>): PaySlipInputs {
+  return {
+    ...defaultPaySlipInputs,
+    ...paySlipInputs,
+  }
 }
 
 interface Store {
@@ -116,7 +124,7 @@ export const useStore = create<Store>()(
         if (st.records[m]) return
         set({
           records: { ...st.records, [m]: buildEmptyMonthRecords(m) },
-          paySlipInputs: { ...st.paySlipInputs, [m]: st.paySlipInputs[m] || defaultPaySlipInputs },
+          paySlipInputs: { ...st.paySlipInputs, [m]: normalizePaySlipInputs(st.paySlipInputs[m]) },
           monthStatus: { ...st.monthStatus, [m]: 'empty' },
         })
       },
@@ -124,7 +132,7 @@ export const useStore = create<Store>()(
         const st = get()
         set({
           records: { ...st.records, [m]: buildPrefilledMonthRecords(m, st.employee) },
-          paySlipInputs: { ...st.paySlipInputs, [m]: st.paySlipInputs[m] || defaultPaySlipInputs },
+          paySlipInputs: { ...st.paySlipInputs, [m]: normalizePaySlipInputs(st.paySlipInputs[m]) },
           monthStatus: { ...st.monthStatus, [m]: 'prefilled' },
         })
       },
@@ -132,7 +140,7 @@ export const useStore = create<Store>()(
         set(s => ({
           employee: normalizeEmployeeSettings(data.employee),
           records: { ...s.records, [m]: data.records },
-          paySlipInputs: { ...s.paySlipInputs, [m]: data.paySlipInputs },
+          paySlipInputs: { ...s.paySlipInputs, [m]: normalizePaySlipInputs(data.paySlipInputs) },
           monthStatus: { ...s.monthStatus, [m]: 'loaded' },
         }))
       },
@@ -159,9 +167,9 @@ export const useStore = create<Store>()(
       },
       setPaySlipInput: (month, u) => {
         const st = get()
-        const ex = st.paySlipInputs[month] || defaultPaySlipInputs
+        const ex = normalizePaySlipInputs(st.paySlipInputs[month])
         set({
-          paySlipInputs: { ...st.paySlipInputs, [month]: { ...ex, ...u } },
+          paySlipInputs: { ...st.paySlipInputs, [month]: normalizePaySlipInputs({ ...ex, ...u }) },
           monthStatus: { ...st.monthStatus, [month]: 'modified' },
         })
       },
@@ -174,7 +182,7 @@ export const useStore = create<Store>()(
     }),
     {
       name: 'work-evidence-v1',
-      version: 3,
+      version: 4,
       migrate: (persisted) => {
         const state = persisted as Partial<Store> | undefined
         return {
@@ -183,7 +191,9 @@ export const useStore = create<Store>()(
           // Older versions auto-prefilled many months and persisted them.
           // Drop month-level data once so the new empty-by-default model is real.
           records: {},
-          paySlipInputs: {},
+          paySlipInputs: Object.fromEntries(
+            Object.entries(state?.paySlipInputs || {}).map(([month, inputs]) => [month, normalizePaySlipInputs(inputs)])
+          ),
           monthStatus: {},
           currentMonth: state?.currentMonth || currentYM,
         } as Store

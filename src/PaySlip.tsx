@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useStore } from './store'
 import { calculateMonthDays, calcMonthlySummary, calcPaySlip } from './calc'
-import { fetchQuarterlyPhv } from './monthStorage'
-import { AUTOMATIC_PHV_ERROR_MESSAGE, resolveAutomaticPhv } from './phv'
+import { fetchQuarterlyPhv, type QuarterlyPhvResponse } from './monthStorage'
+import { AUTOMATIC_PHV_ERROR_MESSAGE, assertAvailableAverageEarnings } from './phv'
 import { EmploymentTypeLabels } from './types'
 
 const kc = (v: number) => v.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
@@ -21,9 +21,10 @@ export default function PaySlip() {
   const [phvError, setPhvError] = useState('')
   const [phvLoading, setPhvLoading] = useState(true)
   const [loadedPhvMonth, setLoadedPhvMonth] = useState('')
+  const [averageEarnings, setAverageEarnings] = useState<QuarterlyPhvResponse | null>(null)
 
   const recs = records[month] || []
-  const pi = payInputs[month] || { manualReward: 0, unworked: 0, sickCarryoverDays: 0 }
+  const pi = payInputs[month] || { manualReward: 0, includeManualRewardInAverage: false, unworked: 0, sickCarryoverDays: 0 }
   const calcs = useMemo(() => calculateMonthDays(recs, emp, holidays, pi.sickCarryoverDays), [recs, emp, holidays, pi.sickCarryoverDays])
   const sum = useMemo(() => calcMonthlySummary(calcs), [calcs])
 
@@ -33,11 +34,14 @@ export default function PaySlip() {
     setPhvError('')
     setAverageHourlyEarnings(null)
     setLoadedPhvMonth('')
+    setAverageEarnings(null)
 
-    fetchQuarterlyPhv(month)
+    fetchQuarterlyPhv(month, emp)
       .then(response => {
         if (!active) return
-        setAverageHourlyEarnings(resolveAutomaticPhv(response))
+        setAverageEarnings(response)
+        setAverageHourlyEarnings(assertAvailableAverageEarnings(response))
+        setPhvError(response.sourceType === 'probable' ? (response.reason || '') : '')
         setLoadedPhvMonth(month)
       })
       .catch(() => {
@@ -53,7 +57,7 @@ export default function PaySlip() {
     return () => {
       active = false
     }
-  }, [month])
+  }, [emp, month])
 
   const calculation = useMemo(() => {
     if (phvLoading || loadedPhvMonth !== month) {
@@ -125,7 +129,38 @@ export default function PaySlip() {
           <Row label="Pracovní dny (se svátky)" days={sum.workDaysWH} />
           <Row label="Pracovní hodiny (se svátky)" hrs={sum.workHoursWH} />
           <Row label="Denní fond hodin" hrs={ps.dailyFund} />
-          <Row label="PHV" czk={ps.averageHourlyEarnings} />
+          <Row label={averageEarnings?.sourceType === 'probable' ? 'Pravděpodobný výdělek' : 'Skutečný PHV'} czk={ps.averageHourlyEarnings} />
+          <tr className="border-t border-gray-200"><td colSpan={4}></td></tr>
+          <tr>
+            <td className="py-0.5">Zdroj výdělku pro náhrady</td>
+            <td colSpan={3} className="text-right">{averageEarnings?.sourceType === 'probable' ? 'pravděpodobný výdělek' : 'skutečný PHV'}</td>
+          </tr>
+          <tr>
+            <td className="py-0.5">{averageEarnings?.sourceType === 'probable' ? 'Pravděpodobný výdělek' : 'Skutečný PHV'}</td>
+            <td></td><td></td>
+            <td className="text-right">{kc(ps.averageHourlyEarnings)}</td>
+          </tr>
+          <tr>
+            <td className="py-0.5">Rozhodné období</td>
+            <td colSpan={3} className="text-right">{averageEarnings ? `${averageEarnings.periodStart} až ${averageEarnings.periodEnd}` : ''}</td>
+          </tr>
+          <tr>
+            <td className="py-0.5">Zdrojové měsíce</td>
+            <td colSpan={3} className="text-right">{averageEarnings?.sourceMonths.join(', ') || ''}</td>
+          </tr>
+          <tr>
+            <td className="py-0.5">Gross for average</td>
+            <td></td><td></td>
+            <td className="text-right">{kc(averageEarnings?.grossForAverage || 0)}</td>
+          </tr>
+          <tr>
+            <td className="py-0.5">Worked hours for average</td>
+            <td className="text-right">{h(averageEarnings?.workedHoursForAverage || 0)}</td><td></td><td></td>
+          </tr>
+          <tr>
+            <td className="py-0.5">Worked days for average</td>
+            <td></td><td className="text-right">{d(averageEarnings?.workedDaysForAverage || 0)}</td><td></td>
+          </tr>
           <tr className="border-t border-gray-200"><td colSpan={4}></td></tr>
 
           <Row label="Základní mzda" czk={ps.baseSalaryCalc} bold />
@@ -147,6 +182,13 @@ export default function PaySlip() {
             <td className="text-right">
               <input type="number" className={inp} value={pi.manualReward}
                 onChange={e => setPayInput(month, { manualReward: parseFloat(e.target.value) || 0 })} />
+            </td>
+          </tr>
+          <tr>
+            <td className="py-0.5">Započítat do average</td>
+            <td colSpan={3} className="text-right">
+              <input type="checkbox" checked={pi.includeManualRewardInAverage}
+                onChange={e => setPayInput(month, { includeManualRewardInAverage: e.target.checked })} />
             </td>
           </tr>
           <tr>

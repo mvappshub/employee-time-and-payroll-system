@@ -17,7 +17,7 @@ export default function TimeSheet() {
   const payInputs = useStore(s => s.paySlipInputs)
 
   const recs = records[month] || []
-  const pi = payInputs[month] || { manualReward: 0, unworked: 0, sickCarryoverDays: 0 }
+  const pi = payInputs[month] || { manualReward: 0, includeManualRewardInAverage: false, unworked: 0, sickCarryoverDays: 0 }
   const calcs = useMemo(() => calculateMonthDays(recs, emp, holidays, pi.sickCarryoverDays), [recs, emp, holidays, pi.sickCarryoverDays])
   const sum = useMemo(() => calcMonthlySummary(calcs), [calcs])
 

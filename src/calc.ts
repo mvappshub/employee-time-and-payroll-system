@@ -309,6 +309,12 @@ export interface PaySlipCalc {
   saldoMesic: number
 }
 
+export interface AverageSourceSnapshot {
+  grossForAverage: number
+  workedHoursForAverage: number
+  workedDaysForAverage: number
+}
+
 export function roundUpToWholeCrown(value: number): number {
   return Math.ceil(value)
 }
@@ -392,6 +398,41 @@ function getMinimumHolidaySurcharge(): number {
   // MPSV/TREXIMA: paid holiday premium is 100 % of average earnings when
   // compensatory time off is not provided.
   return 1
+}
+
+export function calcAverageSourceSnapshot(
+  emp: EmployeeSettings,
+  sum: MonthlySummary,
+  manualReward: number,
+  includeManualRewardInAverage: boolean,
+  averageHourlyEarnings: number,
+): AverageSourceSnapshot {
+  const hourlyRate = calcHourlyRate(emp.baseSalary, sum.workHoursWH)
+  const workedRatio = sum.workHoursWH > 0 ? sum.workedHours / sum.workHoursWH : 0
+  const baseSalaryForAverage = hourlyRate * sum.workedHours
+  const personalBonusForAverage = workedRatio * emp.baseSalary * emp.personalBonus
+  const nightSurchargeRate = Math.max(emp.nightSurcharge, getMinimumNightSurcharge(emp))
+  const weekendSurchargeRate = Math.max(emp.weekendSurcharge, getMinimumWeekendSurcharge(emp))
+  const holidaySurchargeRate = Math.max(emp.holidaySurcharge, getMinimumHolidaySurcharge())
+  const holidaySurchargeForAverage = emp.holidayCompensationMode === 'premium'
+    ? averageHourlyEarnings * sum.totalHolidayWorked * holidaySurchargeRate
+    : 0
+  const overtimeSurchargeForAverage = emp.overtimeCompensationMode === 'premium'
+    ? averageHourlyEarnings * sum.totalOvertime * emp.overtimeSurcharge
+    : 0
+
+  return {
+    grossForAverage:
+      baseSalaryForAverage +
+      personalBonusForAverage +
+      averageHourlyEarnings * sum.totalNight * nightSurchargeRate +
+      averageHourlyEarnings * sum.totalWeekend * weekendSurchargeRate +
+      holidaySurchargeForAverage +
+      overtimeSurchargeForAverage +
+      (includeManualRewardInAverage ? manualReward : 0),
+    workedHoursForAverage: sum.workedHours,
+    workedDaysForAverage: sum.workedDays,
+  }
 }
 
 export function calcPaySlip(emp: EmployeeSettings, sum: MonthlySummary, manualReward: number, unworked: number, averageHourlyEarnings: number): PaySlipCalc {

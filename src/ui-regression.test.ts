@@ -24,4 +24,21 @@ describe('UI regressions', () => {
 
     expect(source).not.toContain('Hodinová sazba')
   })
+
+  it('employee form exposes employment start date', () => {
+    const source = readFileSync(new URL('./Employee.tsx', import.meta.url), 'utf8')
+
+    expect(source).toContain('Datum nástupu')
+  })
+
+  it('payslip exposes the readonly average earnings audit block', () => {
+    const source = readFileSync(new URL('./PaySlip.tsx', import.meta.url), 'utf8')
+
+    expect(source).toContain('Zdroj výdělku pro náhrady')
+    expect(source).toContain('Rozhodné období')
+    expect(source).toContain('Zdrojové měsíce')
+    expect(source).toContain('Gross for average')
+    expect(source).toContain('Worked hours for average')
+    expect(source).toContain('Worked days for average')
+  })
 })

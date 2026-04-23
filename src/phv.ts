@@ -1,5 +1,7 @@
-import type { SavedMonthSnapshot } from './monthStorage'
+import { getDaysInMonth, isWeekend } from './calc'
+import { mergeHolidayYears } from './holidayCalendar'
 import type { QuarterlyPhvResponse } from './monthStorage'
+import type { EmployeeSettings } from './types'
 
 export const AUTOMATIC_PHV_ERROR_MESSAGE = 'Chybí podklady pro automatický výpočet PHV z předchozího čtvrtletí.'
 
@@ -22,25 +24,138 @@ export function getPreviousQuarterMonths(targetMonth: string): string[] {
   return [monthId(year, 7), monthId(year, 8), monthId(year, 9)]
 }
 
-export function calculateQuarterlyPhv(months: Array<{ month: string; snapshot: SavedMonthSnapshot }>): {
-  phv: number | null
-  totalGrossWage: number
-  totalWorkedHours: number
-} {
-  const totalGrossWage = months.reduce((sum, item) => sum + item.snapshot.grossWage, 0)
-  const totalWorkedHours = months.reduce((sum, item) => sum + item.snapshot.workedHours, 0)
+export interface AverageQuarterTotals {
+  grossForAverage: number
+  workedHoursForAverage: number
+  workedDaysForAverage: number
+}
+
+export interface AverageEarningsEmployeeContext {
+  employmentStartDate: string
+  baseSalary: number
+  personalBonus: number
+  weeklyHours: number
+  workDaysPerWeek: number
+  weekendWorking: boolean
+}
+
+export function getEmploymentStartMonth(employmentStartDate: string): string {
+  return employmentStartDate.slice(0, 7)
+}
+
+export function sumAverageQuarterTotals(items: AverageQuarterTotals[]): AverageQuarterTotals {
+  return items.reduce(
+    (sum, item) => ({
+      grossForAverage: sum.grossForAverage + item.grossForAverage,
+      workedHoursForAverage: sum.workedHoursForAverage + item.workedHoursForAverage,
+      workedDaysForAverage: sum.workedDaysForAverage + item.workedDaysForAverage,
+    }),
+    { grossForAverage: 0, workedHoursForAverage: 0, workedDaysForAverage: 0 },
+  )
+}
+
+export function calculateActualPhv(totals: AverageQuarterTotals): number | null {
+  if (
+    totals.workedDaysForAverage >= 21 &&
+    totals.workedHoursForAverage > 0 &&
+    totals.grossForAverage > 0
+  ) {
+    return totals.grossForAverage / totals.workedHoursForAverage
+  }
+
+  return null
+}
+
+export function calculateProbableHourlyEarnings(employee: AverageEarningsEmployeeContext, targetMonth: string): number | null {
+  const probableMonthlyEarnings = employee.baseSalary + employee.baseSalary * employee.personalBonus
+  const [year] = targetMonth.split('-').map(Number)
+  const holidays = mergeHolidayYears([], [year])
+  const holidayDates = new Set(holidays.map(holiday => holiday.date))
+  const dailyFund = employee.workDaysPerWeek > 0 ? employee.weeklyHours / employee.workDaysPerWeek : 0
+  const targetMonthFundHours = getDaysInMonth(targetMonth).reduce((sum, date) => {
+    if (!employee.weekendWorking && isWeekend(date)) return sum
+    if (holidayDates.has(date)) return sum
+    return sum + dailyFund
+  }, 0)
+
+  if (probableMonthlyEarnings <= 0 || targetMonthFundHours <= 0) {
+    return null
+  }
+
+  return probableMonthlyEarnings / targetMonthFundHours
+}
+
+export function resolveAverageEarnings(
+  month: string,
+  employee: AverageEarningsEmployeeContext,
+  sourceMonths: string[],
+  totals: AverageQuarterTotals,
+  missingMonths: string[],
+): QuarterlyPhvResponse {
+  const actualPhv = calculateActualPhv(totals)
+  const probableHourlyEarnings = calculateProbableHourlyEarnings(employee, month)
+  const [periodStart] = sourceMonths
+  const periodEnd = sourceMonths[sourceMonths.length - 1]
+
+  if (actualPhv !== null) {
+    return {
+      month,
+      sourceType: 'actual',
+      averageHourlyEarnings: actualPhv,
+      actualPhv,
+      probableHourlyEarnings,
+      periodStart,
+      periodEnd,
+      sourceMonths,
+      missingMonths,
+      grossForAverage: totals.grossForAverage,
+      workedHoursForAverage: totals.workedHoursForAverage,
+      workedDaysForAverage: totals.workedDaysForAverage,
+      reason: null,
+    }
+  }
+
+  if (probableHourlyEarnings !== null) {
+    return {
+      month,
+      sourceType: 'probable',
+      averageHourlyEarnings: probableHourlyEarnings,
+      actualPhv: null,
+      probableHourlyEarnings,
+      periodStart,
+      periodEnd,
+      sourceMonths,
+      missingMonths,
+      grossForAverage: totals.grossForAverage,
+      workedHoursForAverage: totals.workedHoursForAverage,
+      workedDaysForAverage: totals.workedDaysForAverage,
+      reason: totals.workedDaysForAverage < 21
+        ? 'V rozhodném období není alespoň 21 odpracovaných dnů.'
+        : AUTOMATIC_PHV_ERROR_MESSAGE,
+    }
+  }
 
   return {
-    phv: totalWorkedHours > 0 ? totalGrossWage / totalWorkedHours : null,
-    totalGrossWage,
-    totalWorkedHours,
+    month,
+    sourceType: 'unavailable',
+    averageHourlyEarnings: null,
+    actualPhv: null,
+    probableHourlyEarnings: null,
+    periodStart,
+    periodEnd,
+    sourceMonths,
+    missingMonths,
+    grossForAverage: totals.grossForAverage,
+    workedHoursForAverage: totals.workedHoursForAverage,
+    workedDaysForAverage: totals.workedDaysForAverage,
+    reason: AUTOMATIC_PHV_ERROR_MESSAGE,
   }
 }
 
-export function resolveAutomaticPhv(response: QuarterlyPhvResponse): number {
-  if (response.phv === null || response.missingMonths.length > 0 || !Number.isFinite(response.phv) || response.phv <= 0) {
-    throw new Error(AUTOMATIC_PHV_ERROR_MESSAGE)
+export function assertAvailableAverageEarnings(response: QuarterlyPhvResponse): number {
+  if (response.sourceType === 'unavailable' || response.averageHourlyEarnings === null || response.averageHourlyEarnings <= 0) {
+    throw new Error(response.reason || AUTOMATIC_PHV_ERROR_MESSAGE)
   }
 
-  return response.phv
+  return response.averageHourlyEarnings
 }

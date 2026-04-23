@@ -71,6 +71,7 @@ export default function Employee() {
               { value: 'dpc', label: EmploymentTypeLabels.dpc },
               { value: 'dpp', label: EmploymentTypeLabels.dpp },
             ])}
+            {time('employmentStartDate', 'Datum nástupu')}
             {sel('remunerationType', 'Režim odměňování', [
               { value: 'mzda', label: 'mzda' },
               { value: 'plat', label: 'plat' },

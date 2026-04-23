@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  calcAverageSourceSnapshot,
   calcReducedAverageHourlyBasis,
   calcMonthlyTaxBeforeCredits,
   calcMonthlySummary,
@@ -19,6 +20,7 @@ const employee: EmployeeSettings = {
   name: "Test",
   employmentType: "pracovni_pomer",
   remunerationType: "mzda",
+  employmentStartDate: "2026-01-01",
   workload: 1,
   weeklyHours: 40,
   workDaysPerWeek: 5,
@@ -147,6 +149,34 @@ describe("calcPaySlip", () => {
 
     expect(payslip.averageHourlyEarnings).toBe(250);
     expect(payslip.vacationCalc).toBe(2000);
+  });
+
+  it("stores average-source gross independently from general gross wage", () => {
+    const averageSource = calcAverageSourceSnapshot(
+      employee,
+      monthlySummary({
+        workedHours: 152,
+        workedDays: 19,
+        totalRecognized: 160,
+        totalNight: 4,
+        totalWeekend: 8,
+      }),
+      1000,
+      false,
+      250,
+    );
+
+    expect(averageSource.workedHoursForAverage).toBe(152);
+    expect(averageSource.workedDaysForAverage).toBe(19);
+    expect(averageSource.grossForAverage).toBeGreaterThan(0);
+    expect(averageSource.grossForAverage).not.toBe(41000);
+  });
+
+  it("includes manual reward in average gross only when explicitly enabled", () => {
+    const withoutReward = calcAverageSourceSnapshot(employee, monthlySummary(), 1000, false, 250);
+    const withReward = calcAverageSourceSnapshot(employee, monthlySummary(), 1000, true, 250);
+
+    expect(withReward.grossForAverage - withoutReward.grossForAverage).toBe(1000);
   });
 
   it("throws when automatic PHV is missing", () => {

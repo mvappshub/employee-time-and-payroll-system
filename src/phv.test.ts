@@ -1,5 +1,23 @@
 import { describe, expect, it } from 'vitest'
-import { AUTOMATIC_PHV_ERROR_MESSAGE, calculateQuarterlyPhv, getPreviousQuarterMonths, resolveAutomaticPhv } from './phv'
+import {
+  AUTOMATIC_PHV_ERROR_MESSAGE,
+  calculateActualPhv,
+  calculateProbableHourlyEarnings,
+  getEmploymentStartMonth,
+  getPreviousQuarterMonths,
+  resolveAverageEarnings,
+  sumAverageQuarterTotals,
+} from './phv'
+import type { AverageEarningsEmployeeContext } from './phv'
+
+const employee: AverageEarningsEmployeeContext = {
+  employmentStartDate: '2026-01-01',
+  baseSalary: 30000,
+  personalBonus: 0.25,
+  weeklyHours: 40,
+  workDaysPerWeek: 5,
+  weekendWorking: false,
+}
 
 describe('PHV quarter selection', () => {
   it('uses October to December for January to March', () => {
@@ -14,59 +32,87 @@ describe('PHV quarter selection', () => {
   })
 })
 
-describe('PHV calculation', () => {
-  it('calculates PHV as gross wages divided by worked hours', () => {
-    const result = calculateQuarterlyPhv([
-      { month: '2026-01', snapshot: { grossWage: 30000, workedHours: 150, totalSaldo: 0, savedAt: '' } },
-      { month: '2026-02', snapshot: { grossWage: 32000, workedHours: 160, totalSaldo: 0, savedAt: '' } },
-      { month: '2026-03', snapshot: { grossWage: 31000, workedHours: 155, totalSaldo: 0, savedAt: '' } },
+describe('average earnings source resolution', () => {
+  it('uses probable source for January 2026 because previous quarter is before employment start', () => {
+    const result = resolveAverageEarnings(
+      '2026-01',
+      employee,
+      ['2025-10', '2025-11', '2025-12'],
+      { grossForAverage: 0, workedHoursForAverage: 0, workedDaysForAverage: 0 },
+      [],
+    )
+
+    expect(getEmploymentStartMonth(employee.employmentStartDate)).toBe('2026-01')
+    expect(result.sourceType).toBe('probable')
+    expect(result.averageHourlyEarnings).toBe(result.probableHourlyEarnings)
+    expect(result.actualPhv).toBeNull()
+  })
+
+  it('uses actual PHV for April 2026 when Q1 has complete data and at least 21 worked days', () => {
+    const totals = sumAverageQuarterTotals([
+      { grossForAverage: 30000, workedHoursForAverage: 160, workedDaysForAverage: 21 },
+      { grossForAverage: 32000, workedHoursForAverage: 152, workedDaysForAverage: 19 },
+      { grossForAverage: 31000, workedHoursForAverage: 160, workedDaysForAverage: 21 },
     ])
+    const result = resolveAverageEarnings(
+      '2026-04',
+      employee,
+      ['2026-01', '2026-02', '2026-03'],
+      totals,
+      [],
+    )
 
-    expect(result.totalGrossWage).toBe(93000)
-    expect(result.totalWorkedHours).toBe(465)
-    expect(result.phv).toBe(200)
+    expect(calculateActualPhv(totals)).toBeCloseTo(93000 / 472, 8)
+    expect(result.sourceType).toBe('actual')
+    expect(result.averageHourlyEarnings).toBeCloseTo(93000 / 472, 8)
+    expect(result.actualPhv).toBeCloseTo(93000 / 472, 8)
   })
 
-  it('returns null PHV when there are no worked hours', () => {
-    const result = calculateQuarterlyPhv([
-      { month: '2026-01', snapshot: { grossWage: 30000, workedHours: 0, totalSaldo: 0, savedAt: '' } },
-    ])
+  it('uses probable source for April 2026 when Q1 has fewer than 21 worked days', () => {
+    const result = resolveAverageEarnings(
+      '2026-04',
+      employee,
+      ['2026-01', '2026-02', '2026-03'],
+      { grossForAverage: 45000, workedHoursForAverage: 240, workedDaysForAverage: 20 },
+      [],
+    )
 
-    expect(result.phv).toBeNull()
-  })
-})
-
-describe('automatic PHV validation', () => {
-  it('accepts a valid backend PHV response', () => {
-    expect(resolveAutomaticPhv({
-      month: '2026-04',
-      phv: 250,
-      totalGrossWage: 90000,
-      totalWorkedHours: 360,
-      sourceMonths: ['2026-01', '2026-02', '2026-03'],
-      missingMonths: [],
-    })).toBe(250)
+    expect(result.sourceType).toBe('probable')
+    expect(result.actualPhv).toBeNull()
+    expect(result.averageHourlyEarnings).toBe(result.probableHourlyEarnings)
   })
 
-  it('throws when backend reports missing quarter months', () => {
-    expect(() => resolveAutomaticPhv({
-      month: '2026-04',
-      phv: 250,
-      totalGrossWage: 60000,
-      totalWorkedHours: 240,
-      sourceMonths: ['2026-01', '2026-02', '2026-03'],
-      missingMonths: ['2026-03'],
-    })).toThrow(AUTOMATIC_PHV_ERROR_MESSAGE)
+  it('does not count months before employment start as missing', () => {
+    const result = resolveAverageEarnings(
+      '2026-02',
+      employee,
+      ['2025-10', '2025-11', '2025-12'],
+      { grossForAverage: 0, workedHoursForAverage: 0, workedDaysForAverage: 0 },
+      [],
+    )
+
+    expect(result.missingMonths).toEqual([])
+    expect(result.sourceType).toBe('probable')
   })
 
-  it('throws when backend cannot calculate PHV', () => {
-    expect(() => resolveAutomaticPhv({
-      month: '2026-04',
-      phv: null,
-      totalGrossWage: 0,
-      totalWorkedHours: 0,
-      sourceMonths: ['2026-01', '2026-02', '2026-03'],
-      missingMonths: [],
-    })).toThrow(AUTOMATIC_PHV_ERROR_MESSAGE)
+  it('returns unavailable only when even probable earnings cannot be calculated', () => {
+    const result = resolveAverageEarnings(
+      '2026-04',
+      { ...employee, baseSalary: 0, personalBonus: 0 },
+      ['2026-01', '2026-02', '2026-03'],
+      { grossForAverage: 0, workedHoursForAverage: 0, workedDaysForAverage: 0 },
+      ['2026-02'],
+    )
+
+    expect(result.sourceType).toBe('unavailable')
+    expect(result.averageHourlyEarnings).toBeNull()
+    expect(result.reason).toBe(AUTOMATIC_PHV_ERROR_MESSAGE)
+  })
+
+  it('calculates probable earnings from fixed contractual data and target month fund hours', () => {
+    const probable = calculateProbableHourlyEarnings(employee, '2026-01')
+
+    expect(probable).toBeGreaterThan(0)
+    expect(probable).toBeCloseTo(37500 / 168, 8)
   })
 })

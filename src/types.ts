@@ -13,6 +13,7 @@ export interface EmployeeSettings {
   name: string
   employmentType: EmploymentType
   remunerationType: RemunerationType
+  employmentStartDate: string
   workload: number
   weeklyHours: number
   workDaysPerWeek: number
@@ -49,6 +50,7 @@ export interface Holiday {
 
 export interface PaySlipInputs {
   manualReward: number
+  includeManualRewardInAverage: boolean
   unworked: number
   sickCarryoverDays: number
 }

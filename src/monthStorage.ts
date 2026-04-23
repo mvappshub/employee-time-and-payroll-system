@@ -7,21 +7,37 @@ export interface SavedMonthSnapshot {
   savedAt: string
 }
 
+export interface SavedMonthAverageSource {
+  grossForAverage: number
+  workedHoursForAverage: number
+  workedDaysForAverage: number
+}
+
 export interface SavedMonthRecord {
   month: string
   employee: EmployeeSettings
   records: TimeRecord[]
   paySlipInputs: PaySlipInputs
-  snapshot: SavedMonthSnapshot
+  grossForAverage: number
+  workedHoursForAverage: number
+  workedDaysForAverage: number
+  snapshot?: SavedMonthSnapshot
 }
 
 export interface QuarterlyPhvResponse {
   month: string
-  phv: number | null
-  totalGrossWage: number
-  totalWorkedHours: number
+  sourceType: 'actual' | 'probable' | 'unavailable'
+  averageHourlyEarnings: number | null
+  actualPhv: number | null
+  probableHourlyEarnings: number | null
+  periodStart: string
+  periodEnd: string
   sourceMonths: string[]
   missingMonths: string[]
+  grossForAverage: number
+  workedHoursForAverage: number
+  workedDaysForAverage: number
+  reason: string | null
 }
 
 async function parseJsonResponse<T>(response: Response): Promise<T> {
@@ -50,7 +66,17 @@ export async function saveMonthRecord(record: SavedMonthRecord): Promise<void> {
   }
 }
 
-export async function fetchQuarterlyPhv(month: string): Promise<QuarterlyPhvResponse> {
-  const response = await fetch(`/api/phv/${month}`)
+export async function fetchQuarterlyPhv(month: string, employee?: EmployeeSettings): Promise<QuarterlyPhvResponse> {
+  const params = new URLSearchParams()
+  if (employee) {
+    params.set('employmentStartDate', employee.employmentStartDate)
+    params.set('baseSalary', String(employee.baseSalary))
+    params.set('personalBonus', String(employee.personalBonus))
+    params.set('weeklyHours', String(employee.weeklyHours))
+    params.set('workDaysPerWeek', String(employee.workDaysPerWeek))
+    params.set('weekendWorking', String(employee.weekendWorking))
+  }
+  const suffix = params.size > 0 ? `?${params.toString()}` : ''
+  const response = await fetch(`/api/phv/${month}${suffix}`)
   return parseJsonResponse<QuarterlyPhvResponse>(response)
 }

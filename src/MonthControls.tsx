@@ -41,12 +41,7 @@ export default function MonthControls() {
   }
 
   const handleSave = async () => {
-    let grossWage = 0
-    try {
-      grossWage = calcPaySlip(employee, summary, payInputs.manualReward, payInputs.unworked).hrubaMzda
-    } catch {
-      grossWage = 0
-    }
+    const payslip = calcPaySlip(employee, summary, payInputs.manualReward, payInputs.unworked)
 
     await saveMonthRecord({
       month: currentMonth,
@@ -54,7 +49,7 @@ export default function MonthControls() {
       records: monthRecords,
       paySlipInputs: payInputs,
       snapshot: {
-        grossWage,
+        grossWage: payslip.hrubaMzda,
         workedHours: summary.workedHours,
         totalSaldo: summary.totalSaldo,
         savedAt: new Date().toISOString(),

@@ -610,6 +610,30 @@ describe("DPN compensation in payslip", () => {
     expect(payslip.sickCalc).toBe(1080);
   });
 
+  it("reduces DPN basis even when probable earnings are 1 CZK per hour", () => {
+    const payslip = calcPaySlip(
+      {
+        ...employee,
+        priorQuarterGrossForAverage: 0,
+        priorQuarterWorkedHoursForAverage: 0,
+        priorQuarterWorkedDaysForAverage: 0,
+        probableHourlyEarnings: 1,
+      },
+      monthlySummary({
+        workedHours: 96,
+        totalVacation: 40,
+        totalSick: 40,
+        totalRecognized: 176,
+      }),
+      0,
+      0,
+    );
+
+    expect(payslip.averageHourlyEarnings).toBe(1);
+    expect(payslip.sickHourlyBasis).toBe(0.9);
+    expect(payslip.sickCalc).toBeCloseTo(21.6, 6);
+  });
+
   it("uses recognized hours from timesheet for monthly balance instead of manual real-hours input", () => {
     const payslip = calcPaySlip(
       employee,

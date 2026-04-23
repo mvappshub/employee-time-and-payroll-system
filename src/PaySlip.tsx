@@ -1,7 +1,6 @@
 import { useMemo } from 'react'
 import { useStore } from './store'
-import { calculateMonthDays, calcHourlyRate, calcMonthlySummary, calcPaySlip, type MonthlySummary, type PaySlipCalc } from './calc'
-import type { EmployeeSettings } from './types'
+import { calculateMonthDays, calcMonthlySummary, calcPaySlip } from './calc'
 import { EmploymentTypeLabels } from './types'
 
 const kc = (v: number) => v.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
@@ -21,13 +20,17 @@ export default function PaySlip() {
   const pi = payInputs[month] || { manualReward: 0, unworked: 0, sickCarryoverDays: 0 }
   const calcs = useMemo(() => calculateMonthDays(recs, emp, holidays, pi.sickCarryoverDays), [recs, emp, holidays, pi.sickCarryoverDays])
   const sum = useMemo(() => calcMonthlySummary(calcs), [calcs])
-  const ps = useMemo(() => {
+  const calculation = useMemo(() => {
     try {
-      return calcPaySlip(emp, sum, pi.manualReward, pi.unworked)
-    } catch {
-      return emptyPaySlip(emp, sum)
+      return { payslip: calcPaySlip(emp, sum, pi.manualReward, pi.unworked), error: '' }
+    } catch (error) {
+      return {
+        payslip: null,
+        error: error instanceof Error ? error.message : 'Výpočet výplatní pásky nelze provést.',
+      }
     }
   }, [emp, sum, pi.manualReward, pi.unworked])
+  const ps = calculation.payslip
 
   const inp = 'border-b border-gray-300 outline-none bg-transparent text-xs w-20 text-right'
   const monthLabel = (() => {
@@ -49,7 +52,13 @@ export default function PaySlip() {
         {EmploymentTypeLabels[emp.employmentType] ?? emp.employmentType} · úvazek {emp.workload} · {monthLabel}
       </div>
 
-      <table className="w-full text-[11px] border-collapse">
+      {!ps && (
+        <div className="border border-red-300 bg-red-50 px-2 py-1 text-red-700">
+          {calculation.error}
+        </div>
+      )}
+
+      {ps && <table className="w-full text-[11px] border-collapse">
         <thead>
           <tr className="border-b border-gray-400">
             <th className="text-left font-normal text-gray-600 w-1/2">Položka</th>
@@ -144,61 +153,9 @@ export default function PaySlip() {
             <td></td><td></td>
           </tr>
         </tbody>
-      </table>
+      </table>}
     </div>
   )
-}
-
-function emptyPaySlip(emp: EmployeeSettings, sum: MonthlySummary): PaySlipCalc {
-  const dailyFund = emp.workDaysPerWeek > 0 ? emp.weeklyHours / emp.workDaysPerWeek : 0
-  const hourlyRate = calcHourlyRate(emp.baseSalary, sum.workHoursWH)
-
-  return {
-    dailyFund,
-    personalBonusBase: emp.baseSalary * emp.personalBonus,
-    hourlyRate,
-    averageHourlyEarnings: 0,
-    holidaySurchargeRate: Math.max(emp.holidaySurcharge, 1),
-    nightSurchargeRate: emp.nightSurcharge,
-    weekendSurchargeRate: emp.weekendSurcharge,
-    baseSalaryCalc: 0,
-    personalBonusCalc: 0,
-    nightSurchargeCalc: 0,
-    weekendSurchargeCalc: 0,
-    holidaySurchargeCalc: 0,
-    holidayCompLeaveHours: 0,
-    overtimeSurchargeCalc: 0,
-    overtimeCompLeaveHours: 0,
-    unworkedCalc: 0,
-    unworkedDays: 0,
-    vacationCalc: 0,
-    vacationDays: 0,
-    sickHourlyBasis: 0,
-    sickCalc: 0,
-    sickDays: dailyFund > 0 ? sum.totalSick / dailyFund : 0,
-    hrubaMzda: 0,
-    contributionBase: 0,
-    healthEmployee: 0,
-    healthEmployer: 0,
-    socialEmployee: 0,
-    socialEmployer: 0,
-    taxBase: 0,
-    taxBeforeCredits: 0,
-    taxAfterCredits: 0,
-    zpPrac: 0,
-    zpFirma: 0,
-    spPrac: 0,
-    spFirma: 0,
-    zakladDane: 0,
-    dan: 0,
-    danSleva: 0,
-    slevaPoplatnika: 2570,
-    cistaMzda: 0,
-    prumHodinovy: 0,
-    prumDenni: 0,
-    celkemOdpracNeodprac: sum.totalRecognized,
-    saldoMesic: sum.totalSaldo,
-  }
 }
 
 function Row({ label, hrs, days, czk, bold, neg }: {

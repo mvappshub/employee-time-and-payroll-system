@@ -36,8 +36,10 @@ const employee: EmployeeSettings = {
   holidaySurcharge: 1,
   overtimeSurcharge: 0.25,
   sickCompensation: 0.6,
-  probableAverageHourlyEarnings: 250,
-  reducedAverageHourlyEarnings: 190,
+  priorQuarterGrossForAverage: 122000,
+  priorQuarterWorkedHoursForAverage: 488,
+  priorQuarterWorkedDaysForAverage: 61,
+  probableHourlyEarnings: 250,
   holidayCompensationMode: "time-off",
   overtimeCompensationMode: "premium",
 };
@@ -104,14 +106,65 @@ describe("calcPaySlip", () => {
       0,
     );
 
-    expect(payslip.sickHourlyBasis).toBe(190);
-    expect(payslip.sickCalc).toBe(912);
+    expect(payslip.sickHourlyBasis).toBe(250);
+    expect(payslip.sickCalc).toBe(1200);
     expect(payslip.zpPrac).toBe(38000);
     expect(payslip.zakladDane).toBe(38000);
-    expect(payslip.cistaMzda).toBe(31374);
+    expect(payslip.cistaMzda).toBe(31662);
   });
 
-  it("uses probable average earnings for vacation and surcharge calculations", () => {
+  it("uses actual average hourly earnings from prior quarter when 21 worked days threshold is met", () => {
+    const payslip = calcPaySlip(
+      {
+        ...employee,
+        priorQuarterGrossForAverage: 90000,
+        priorQuarterWorkedHoursForAverage: 488,
+        priorQuarterWorkedDaysForAverage: 61,
+        probableHourlyEarnings: 250,
+      },
+      monthlySummary(),
+      0,
+      0,
+    );
+
+    expect(payslip.averageHourlyEarnings).toBeCloseTo(184.43, 2);
+  });
+
+  it("uses probable hourly earnings when prior quarter has fewer than 21 worked days", () => {
+    const payslip = calcPaySlip(
+      {
+        ...employee,
+        priorQuarterGrossForAverage: 90000,
+        priorQuarterWorkedHoursForAverage: 488,
+        priorQuarterWorkedDaysForAverage: 10,
+        probableHourlyEarnings: 250,
+      },
+      monthlySummary(),
+      0,
+      0,
+    );
+
+    expect(payslip.averageHourlyEarnings).toBe(250);
+  });
+
+  it("throws when neither actual average inputs nor probable earnings are available", () => {
+    expect(() =>
+      calcPaySlip(
+        {
+          ...employee,
+          priorQuarterGrossForAverage: 0,
+          priorQuarterWorkedHoursForAverage: 0,
+          priorQuarterWorkedDaysForAverage: 0,
+          probableHourlyEarnings: 0,
+        },
+        monthlySummary(),
+        0,
+        0,
+      ),
+    ).toThrow("Chybí podklady");
+  });
+
+  it("uses selected PHV or probable earnings for vacation and surcharge calculations", () => {
     const payslip = calcPaySlip(
       employee,
       monthlySummary({
@@ -251,21 +304,6 @@ describe("calcPaySlip", () => {
     expect(timeOffPayslip.overtimeCompLeaveHours).toBe(8);
     expect(premiumPayslip.overtimeSurchargeCalc).toBe(500);
     expect(premiumPayslip.overtimeCompLeaveHours).toBe(0);
-  });
-
-  it("falls back to hourly rate when probable average earnings are not provided", () => {
-    const payslip = calcPaySlip(
-      { ...employee, probableAverageHourlyEarnings: 0 },
-      monthlySummary({
-        totalNight: 4,
-      }),
-      0,
-      0,
-    );
-
-    expect(payslip.hourlyRate).toBe(200);
-    expect(payslip.averageHourlyEarnings).toBe(200);
-    expect(payslip.nightSurchargeCalc).toBe(80);
   });
 
   it("ignores any rogue employee-level reward field and uses only the monthly manual reward input", () => {
@@ -499,7 +537,7 @@ describe("calculateDay", () => {
 });
 
 describe("DPN compensation in payslip", () => {
-  it("values statutory sick compensation from reduced average hourly earnings", () => {
+  it("derives statutory sick compensation basis from selected PHV or probable earnings", () => {
     const payslip = calcPaySlip(
       employee,
       monthlySummary({
@@ -512,8 +550,8 @@ describe("DPN compensation in payslip", () => {
       0,
     );
 
-    expect(payslip.sickHourlyBasis).toBe(190);
-    expect(payslip.sickCalc).toBe(912);
+    expect(payslip.sickHourlyBasis).toBe(250);
+    expect(payslip.sickCalc).toBe(1200);
   });
 
   it("uses recognized hours from timesheet for monthly balance instead of manual real-hours input", () => {

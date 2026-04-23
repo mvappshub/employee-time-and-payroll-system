@@ -335,6 +335,33 @@ export function calcMonthlyTaxBeforeCredits(taxBase: number): number {
   return roundUpToWholeCrown(lowBand + highBand)
 }
 
+export function calcHourlyRate(baseSalary: number, monthlyFundHours: number): number {
+  return monthlyFundHours > 0 ? baseSalary / monthlyFundHours : 0
+}
+
+export function calcAverageHourlyEarnings(emp: EmployeeSettings): number {
+  const hasActualAverage =
+    emp.priorQuarterWorkedDaysForAverage >= 21 &&
+    emp.priorQuarterWorkedHoursForAverage > 0 &&
+    emp.priorQuarterGrossForAverage > 0
+
+  if (hasActualAverage) {
+    return emp.priorQuarterGrossForAverage / emp.priorQuarterWorkedHoursForAverage
+  }
+
+  if (emp.probableHourlyEarnings > 0) {
+    return emp.probableHourlyEarnings
+  }
+
+  throw new Error('Chybí podklady pro výpočet PHV / pravděpodobného výdělku.')
+}
+
+export function calcReducedAverageHourlyBasis(averageHourlyEarnings: number): number {
+  // Minimal implementation: DPN basis is derived from the selected PHV/PV source,
+  // not entered as a separate fake constant. Reduction thresholds can be expanded later.
+  return averageHourlyEarnings
+}
+
 function getMinimumNightSurcharge(emp: EmployeeSettings): number {
   // MPSV/TREXIMA: § 116 mzda >= 10 %, § 125 plat = 20 %.
   return emp.remunerationType === 'plat' ? 0.2 : 0.1
@@ -354,8 +381,8 @@ function getMinimumHolidaySurcharge(): number {
 export function calcPaySlip(emp: EmployeeSettings, sum: MonthlySummary, manualReward: number, unworked: number): PaySlipCalc {
   const dailyFund = emp.workDaysPerWeek > 0 ? emp.weeklyHours / emp.workDaysPerWeek : 0
   const whwh = sum.workHoursWH
-  const hr = whwh > 0 ? emp.baseSalary / whwh : 0
-  const averageHourlyEarnings = emp.probableAverageHourlyEarnings > 0 ? emp.probableAverageHourlyEarnings : hr
+  const hr = calcHourlyRate(emp.baseSalary, whwh)
+  const averageHourlyEarnings = calcAverageHourlyEarnings(emp)
   const holidaySurchargeRate = Math.max(emp.holidaySurcharge, getMinimumHolidaySurcharge())
   const nightSurchargeRate = Math.max(emp.nightSurcharge, getMinimumNightSurcharge(emp))
   const weekendSurchargeRate = Math.max(emp.weekendSurcharge, getMinimumWeekendSurcharge(emp))
@@ -375,7 +402,7 @@ export function calcPaySlip(emp: EmployeeSettings, sum: MonthlySummary, manualRe
   const overtimeCompLeaveHours = emp.overtimeCompensationMode === 'time-off' ? sum.totalOvertime : 0
   const unworkedCalc = hr * unworked
   const vacationCalc = averageHourlyEarnings * sum.totalVacation
-  const sickHourlyBasis = emp.reducedAverageHourlyEarnings > 0 ? emp.reducedAverageHourlyEarnings : averageHourlyEarnings
+  const sickHourlyBasis = calcReducedAverageHourlyBasis(averageHourlyEarnings)
   const sickCalc = sickHourlyBasis * sum.totalSick * emp.sickCompensation
 
   const hrubaMzda = Math.max(

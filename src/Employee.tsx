@@ -108,8 +108,10 @@ export default function Employee() {
             {pct('holidaySurcharge', 'Příplatek svátek')}
             {pct('overtimeSurcharge', 'Příplatek přesčas')}
             {pct('sickCompensation', 'Náhrada nemoc')}
-            {num('probableAverageHourlyEarnings', 'Pravděpod. průměr (Kč/h)', 1, 'w-24')}
-            {num('reducedAverageHourlyEarnings', 'Reduk. průměr pro DPN', 1, 'w-24')}
+            {num('priorQuarterGrossForAverage', 'Hrubá mzda pro PHV (čtvrtletí)', 100, 'w-24')}
+            {num('priorQuarterWorkedHoursForAverage', 'Odprac. hodiny pro PHV', 1, 'w-24')}
+            {num('priorQuarterWorkedDaysForAverage', 'Odprac. dny pro PHV', 1, 'w-24')}
+            {num('probableHourlyEarnings', 'Pravděpodobný výdělek', 1, 'w-24')}
             {sel('holidayCompensationMode', 'Svátek - vypořádání', [
               { value: 'time-off', label: 'náhr. volno' },
               { value: 'premium', label: 'příplatek' },

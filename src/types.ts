@@ -34,8 +34,10 @@ export interface EmployeeSettings {
   holidaySurcharge: number
   overtimeSurcharge: number
   sickCompensation: number
-  probableAverageHourlyEarnings: number
-  reducedAverageHourlyEarnings: number
+  priorQuarterGrossForAverage: number
+  priorQuarterWorkedHoursForAverage: number
+  priorQuarterWorkedDaysForAverage: number
+  probableHourlyEarnings: number
   holidayCompensationMode: HolidayCompensationMode
   overtimeCompensationMode: OvertimeCompensationMode
 }

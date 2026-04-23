@@ -19,8 +19,10 @@ const defaultEmployee: EmployeeSettings = {
   nightSurcharge: 0.10, weekendSurcharge: 0.10,
   holidaySurcharge: 1.00, overtimeSurcharge: 0.25,
   sickCompensation: 0.60,
-  probableAverageHourlyEarnings: 250,
-  reducedAverageHourlyEarnings: 190,
+  priorQuarterGrossForAverage: 0,
+  priorQuarterWorkedHoursForAverage: 0,
+  priorQuarterWorkedDaysForAverage: 0,
+  probableHourlyEarnings: 0,
   holidayCompensationMode: 'time-off',
   overtimeCompensationMode: 'premium',
 }

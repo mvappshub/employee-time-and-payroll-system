@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useMemo } from 'react'
 import { useStore } from './store'
 import { calculateMonthDays, calcMonthlySummary, formatDateCZ, isWeekend } from './calc'
 import type { ShiftType, TimeRecord } from './types'
@@ -12,12 +12,9 @@ export default function TimeSheet() {
   const holidays = useStore(s => s.holidays)
   const month = useStore(s => s.currentMonth)
   const setMonth = useStore(s => s.setCurrentMonth)
-  const initMonth = useStore(s => s.initMonth)
   const updateRecord = useStore(s => s.updateRecord)
   const resetMonth = useStore(s => s.resetMonth)
   const payInputs = useStore(s => s.paySlipInputs)
-
-  useEffect(() => { initMonth(month) }, [month, initMonth])
 
   const recs = records[month] || []
   const pi = payInputs[month] || { manualReward: 0, unworked: 0, sickCarryoverDays: 0 }

@@ -34,19 +34,47 @@ function yearFromMonth(month: string): number {
   return parseInt(month.split('-')[0], 10)
 }
 
+function buildEmptyMonthRecords(month: string): TimeRecord[] {
+  return getDaysInMonth(month).map(date => ({
+    date,
+    shift: '',
+    arrival: '',
+    departure: '',
+  }))
+}
+
+function buildPrefilledMonthRecords(month: string, employee: EmployeeSettings): TimeRecord[] {
+  return getDaysInMonth(month).map(date => ({
+    date,
+    shift: (isWeekend(date) ? 'volno' : 'ranní') as ShiftType,
+    arrival: isWeekend(date) ? '' : employee.shiftStart,
+    departure: isWeekend(date) ? '' : employee.shiftEnd,
+  }))
+}
+
+const defaultPaySlipInputs: PaySlipInputs = {
+  manualReward: 0,
+  unworked: 0,
+  sickCarryoverDays: 0,
+}
+
 interface Store {
   employee: EmployeeSettings
   records: Record<string, TimeRecord[]>
   holidays: Holiday[]
   currentMonth: string
   paySlipInputs: Record<string, PaySlipInputs>
+  monthStatus: Record<string, 'empty' | 'loaded' | 'prefilled' | 'saved' | 'modified'>
   section: 'employee' | 'timesheet' | 'payslip' | 'holidays'
   setEmployee: (u: Partial<EmployeeSettings>) => void
   setSection: (s: Store['section']) => void
   setCurrentMonth: (m: string) => void
   initMonth: (m: string) => void
+  prefillMonth: (m: string) => void
+  hydrateMonth: (m: string, data: { employee: EmployeeSettings; records: TimeRecord[]; paySlipInputs: PaySlipInputs }) => void
   updateRecord: (month: string, idx: number, u: Partial<TimeRecord>) => void
   setPaySlipInput: (month: string, u: Partial<PaySlipInputs>) => void
+  setMonthStatus: (month: string, status: Store['monthStatus'][string]) => void
   addHoliday: (h: Holiday) => void
   removeHoliday: (i: number) => void
   updateHoliday: (i: number, h: Holiday) => void
@@ -61,6 +89,7 @@ export const useStore = create<Store>()(
       holidays: defaultHolidays,
       currentMonth: currentYM,
       paySlipInputs: {},
+      monthStatus: {},
       section: 'employee',
 
       setEmployee: (u) => set(s => {
@@ -80,44 +109,79 @@ export const useStore = create<Store>()(
         const nextHolidays = mergeHolidayYears(st.holidays, [yearFromMonth(m)])
         if (nextHolidays.length !== st.holidays.length) set({ holidays: nextHolidays })
         if (st.records[m]) return
-        const days = getDaysInMonth(m)
-        const recs: TimeRecord[] = days.map(date => ({
-          date,
-          shift: (isWeekend(date) ? 'volno' : 'ranní') as ShiftType,
-          arrival: isWeekend(date) ? '' : st.employee.shiftStart,
-          departure: isWeekend(date) ? '' : st.employee.shiftEnd,
+        set({
+          records: { ...st.records, [m]: buildEmptyMonthRecords(m) },
+          paySlipInputs: { ...st.paySlipInputs, [m]: st.paySlipInputs[m] || defaultPaySlipInputs },
+          monthStatus: { ...st.monthStatus, [m]: 'empty' },
+        })
+      },
+      prefillMonth: (m) => {
+        const st = get()
+        set({
+          records: { ...st.records, [m]: buildPrefilledMonthRecords(m, st.employee) },
+          paySlipInputs: { ...st.paySlipInputs, [m]: st.paySlipInputs[m] || defaultPaySlipInputs },
+          monthStatus: { ...st.monthStatus, [m]: 'prefilled' },
+        })
+      },
+      hydrateMonth: (m, data) => {
+        set(s => ({
+          employee: data.employee,
+          records: { ...s.records, [m]: data.records },
+          paySlipInputs: { ...s.paySlipInputs, [m]: data.paySlipInputs },
+          monthStatus: { ...s.monthStatus, [m]: 'loaded' },
         }))
-        set({ records: { ...st.records, [m]: recs } })
       },
       resetMonth: (m) => {
         const st = get()
         const nextHolidays = mergeHolidayYears(st.holidays, [yearFromMonth(m)])
-        const days = getDaysInMonth(m)
-        const recs: TimeRecord[] = days.map(date => ({
-          date,
-          shift: (isWeekend(date) ? 'volno' : 'ranní') as ShiftType,
-          arrival: isWeekend(date) ? '' : st.employee.shiftStart,
-          departure: isWeekend(date) ? '' : st.employee.shiftEnd,
-        }))
-        set({ holidays: nextHolidays, records: { ...st.records, [m]: recs } })
+        set({
+          holidays: nextHolidays,
+          records: { ...st.records, [m]: buildEmptyMonthRecords(m) },
+          paySlipInputs: { ...st.paySlipInputs, [m]: defaultPaySlipInputs },
+          monthStatus: { ...st.monthStatus, [m]: 'empty' },
+        })
       },
       updateRecord: (month, idx, u) => {
         const st = get()
         const recs = [...(st.records[month] || [])]
         if (recs[idx]) {
           recs[idx] = { ...recs[idx], ...u }
-          set({ records: { ...st.records, [month]: recs } })
+          set({
+            records: { ...st.records, [month]: recs },
+            monthStatus: { ...st.monthStatus, [month]: 'modified' },
+          })
         }
       },
       setPaySlipInput: (month, u) => {
         const st = get()
-        const ex = st.paySlipInputs[month] || { manualReward: 0, unworked: 0, sickCarryoverDays: 0 }
-        set({ paySlipInputs: { ...st.paySlipInputs, [month]: { ...ex, ...u } } })
+        const ex = st.paySlipInputs[month] || defaultPaySlipInputs
+        set({
+          paySlipInputs: { ...st.paySlipInputs, [month]: { ...ex, ...u } },
+          monthStatus: { ...st.monthStatus, [month]: 'modified' },
+        })
+      },
+      setMonthStatus: (month, status) => {
+        set(s => ({ monthStatus: { ...s.monthStatus, [month]: status } }))
       },
       addHoliday: (h) => set(s => ({ holidays: [...s.holidays, h].sort((a, b) => a.date.localeCompare(b.date)) })),
       removeHoliday: (i) => set(s => ({ holidays: s.holidays.filter((_, idx) => idx !== i) })),
       updateHoliday: (i, h) => set(s => ({ holidays: s.holidays.map((old, idx) => idx === i ? h : old) })),
     }),
-    { name: 'work-evidence-v1' }
+    {
+      name: 'work-evidence-v1',
+      version: 2,
+      migrate: (persisted) => {
+        const state = persisted as Partial<Store> | undefined
+        return {
+          ...state,
+          // Older versions auto-prefilled many months and persisted them.
+          // Drop month-level data once so the new empty-by-default model is real.
+          records: {},
+          paySlipInputs: {},
+          monthStatus: {},
+          currentMonth: state?.currentMonth || currentYM,
+        } as Store
+      },
+    }
   )
 )

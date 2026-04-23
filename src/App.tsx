@@ -3,6 +3,7 @@ import Employee from './Employee'
 import TimeSheet from './TimeSheet'
 import PaySlip from './PaySlip'
 import Holidays from './Holidays'
+import MonthControls from './MonthControls'
 
 const NAV = [
   { key: 'employee', label: 'Zaměstnanec' },
@@ -27,6 +28,7 @@ export default function App() {
         ))}
       </nav>
       <main className="flex-1 overflow-auto p-1">
+        <MonthControls />
         {section === 'employee' && <Employee />}
         {section === 'timesheet' && <TimeSheet />}
         {section === 'payslip' && <PaySlip />}

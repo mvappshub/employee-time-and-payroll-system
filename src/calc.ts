@@ -69,8 +69,13 @@ function findHoliday(dateStr: string, holidays: Holiday[]): Holiday | undefined 
   return holidays.find(h => h.date === dateStr)
 }
 
-function calcPlanHours(shift: ShiftType, dateStr: string, weekendWorking: boolean, dailyFund: number): number {
+function calcScheduledHours(shift: ShiftType, dateStr: string, weekendWorking: boolean, dailyFund: number): number {
   if (shift === 'volno' || shift === '' || shift === 'přesčas') return 0
+  if (isWeekend(dateStr) && !weekendWorking) return 0
+  return dailyFund
+}
+
+function calcCalendarPlanHours(dateStr: string, weekendWorking: boolean, dailyFund: number): number {
   if (isWeekend(dateStr) && !weekendWorking) return 0
   return dailyFund
 }
@@ -133,8 +138,10 @@ export function calculateDay(rec: TimeRecord, emp: EmployeeSettings, holidays: H
   const worked = calcWorked(rec.arrival, rec.departure, brk)
   const hol = findHoliday(rec.date, holidays)
   const isHol = !!hol
-  const rawPlanH = calcPlanHours(rec.shift, rec.date, emp.weekendWorking, dailyFund)
-  const planH = (isHol && worked === 0) ? 0 : rawPlanH
+  const scheduledH = calcScheduledHours(rec.shift, rec.date, emp.weekendWorking, dailyFund)
+  const calendarPlanH = calcCalendarPlanHours(rec.date, emp.weekendWorking, dailyFund)
+  const rawPlanH = isHol && worked === 0 ? 0 : calendarPlanH
+  const planH = isHol && worked === 0 ? 0 : scheduledH
   const holCredit = calcHolidayCredit(isHol, worked, emp.holidayAsFund, dailyFund, rec.shift)
   const holWorked = isHol ? worked : 0
   const vac = rec.shift === 'dovolená' && emp.vacationAsFund && !(isHol && worked === 0) ? dailyFund : 0
@@ -230,8 +237,8 @@ export interface MonthlySummary {
 
 export function calcMonthlySummary(days: DayCalc[]): MonthlySummary {
   const s = (fn: (d: DayCalc) => number) => days.reduce((a, d) => a + fn(d), 0)
-  const calendarWorkDays = days.filter(d => d.planHours > 0).length
-  const calendarWorkHours = s(d => d.planHours)
+  const calendarWorkDays = days.filter(d => d.rawPlanHours > 0).length
+  const calendarWorkHours = s(d => d.rawPlanHours)
   const monthlyFundHours = s(d => d.rawPlanHours)
   return {
     workDaysWH: calendarWorkDays,
@@ -249,7 +256,7 @@ export function calcMonthlySummary(days: DayCalc[]): MonthlySummary {
     totalRecognized: s(d => d.recognizedHours),
     totalSaldo: s(d => d.saldo),
     holidayDaysInMonth: days.filter(d => d.isHoliday).length,
-    freeDaysInMonth: days.filter(d => d.planHours === 0).length,
+    freeDaysInMonth: days.filter(d => d.rawPlanHours === 0).length,
     calendarWorkDays,
     calendarWorkHours,
     monthlyFundHours,

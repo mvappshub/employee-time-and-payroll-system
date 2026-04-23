@@ -302,7 +302,7 @@ describe("rounding helpers", () => {
 });
 
 describe("calculateDay", () => {
-  it("holiday on a regular workday has rawPlanHours = 8 for monthly fund", () => {
+  it("holiday on a regular workday has rawPlanHours = 0 when not worked", () => {
     const record: TimeRecord = {
       date: "2026-12-25",
       shift: "ranní",
@@ -311,7 +311,7 @@ describe("calculateDay", () => {
     };
     const holidays: Holiday[] = [{ date: "2026-12-25", name: "1. svátek vánoční" }];
     const day = calculateDay(record, employee, holidays);
-    expect(day.rawPlanHours).toBe(8);
+    expect(day.rawPlanHours).toBe(0);
     expect(day.planHours).toBe(0);
   });
 
@@ -326,7 +326,7 @@ describe("calculateDay", () => {
 
     const day = calculateDay(record, employee, holidays);
 
-    expect(day.rawPlanHours).toBe(8);
+    expect(day.rawPlanHours).toBe(0);
     expect(day.planHours).toBe(0);
     expect(day.vacation).toBe(0);
     expect(day.holidayCredit).toBe(0);
@@ -395,7 +395,7 @@ describe("calculateDay", () => {
     expect(day.worked).toBe(5);
   });
 
-  it("holiday on a workday has rawPlanHours 8 for monthly fund", () => {
+  it("holiday on a workday has rawPlanHours 0 when not worked", () => {
     const record: TimeRecord = {
       date: "2026-05-08",
       shift: "ranní",
@@ -404,7 +404,7 @@ describe("calculateDay", () => {
     };
     const holidays: Holiday[] = [{ date: "2026-05-08", name: "Den vítězství" }];
     const day = calculateDay(record, employee, holidays);
-    expect(day.rawPlanHours).toBe(8);
+    expect(day.rawPlanHours).toBe(0);
     expect(day.planHours).toBe(0);
   });
 
@@ -490,7 +490,7 @@ describe("calculateDay", () => {
 
     const day = calculateMonthDays([record], employee, holidays)[0];
 
-    expect(day?.rawPlanHours).toBe(8);
+    expect(day?.rawPlanHours).toBe(0);
     expect(day?.planHours).toBe(0);
     expect(day?.holidayCredit).toBe(0);
     expect(day?.sick).toBe(8);
@@ -651,7 +651,7 @@ describe("saldo — worked minus planHours only", () => {
     };
     const holidays: Holiday[] = [{ date: "2026-05-08", name: "Den vítězství" }];
     const day = calculateDay(record, employee, holidays);
-    expect(day.rawPlanHours).toBe(8);
+    expect(day.rawPlanHours).toBe(0);
     expect(day.planHours).toBe(0);
     expect(day.worked).toBe(0);
     expect(day.holidayCredit).toBe(8);
@@ -673,7 +673,7 @@ describe("P1-03 — monthly summary workday counts", () => {
     expect(sum.workDaysWH).toBe(3);
   });
 
-  it("counts free days as those with planHours === 0", () => {
+  it("counts free days as calendar days outside the monthly fund", () => {
     const records: TimeRecord[] = [
       { date: "2026-04-01", shift: "ranní", arrival: "06:00", departure: "14:30" },
       { date: "2026-04-02", shift: "volno", arrival: "", departure: "" },
@@ -681,7 +681,7 @@ describe("P1-03 — monthly summary workday counts", () => {
     ];
     const days = calculateMonthDays(records, employee, []);
     const sum = calcMonthlySummary(days);
-    expect(sum.freeDaysInMonth).toBe(2);
+    expect(sum.freeDaysInMonth).toBe(0);
   });
 
   it("counts holidays in the month", () => {

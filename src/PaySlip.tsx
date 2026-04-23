@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useMemo } from 'react'
 import { useStore } from './store'
 import { calculateMonthDays, calcMonthlySummary, calcPaySlip } from './calc'
 import { EmploymentTypeLabels } from './types'
@@ -13,11 +13,8 @@ export default function PaySlip() {
   const holidays = useStore(s => s.holidays)
   const month = useStore(s => s.currentMonth)
   const setMonth = useStore(s => s.setCurrentMonth)
-  const initMonth = useStore(s => s.initMonth)
   const payInputs = useStore(s => s.paySlipInputs)
   const setPayInput = useStore(s => s.setPaySlipInput)
-
-  useEffect(() => { initMonth(month) }, [month, initMonth])
 
   const recs = records[month] || []
   const pi = payInputs[month] || { manualReward: 0, unworked: 0, sickCarryoverDays: 0 }

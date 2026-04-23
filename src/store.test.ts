@@ -11,6 +11,27 @@ describe("holiday defaults", () => {
   });
 });
 
+describe("month initialization", () => {
+  it("starts a new month empty instead of prefilled", () => {
+    useStore.getState().initMonth("2030-01");
+
+    const records = useStore.getState().records["2030-01"];
+    expect(records).toHaveLength(31);
+    expect(records?.every(record => record.shift === "" && record.arrival === "" && record.departure === "")).toBe(true);
+    expect(useStore.getState().monthStatus["2030-01"]).toBe("empty");
+  });
+
+  it("prefills only the selected month on explicit request", () => {
+    useStore.getState().initMonth("2030-02");
+    useStore.getState().prefillMonth("2030-02");
+
+    const records = useStore.getState().records["2030-02"];
+    expect(records?.some(record => record.shift === "ranní")).toBe(true);
+    expect(useStore.getState().monthStatus["2030-02"]).toBe("prefilled");
+    expect(useStore.getState().records["2030-03"]).toBeUndefined();
+  });
+});
+
 describe("employmentType", () => {
   it("defaults to pracovni_pomer", () => {
     const { employee } = useStore.getState();

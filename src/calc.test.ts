@@ -1,13 +1,17 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  calcAverageHourlyEarnings,
+  calcReducedAverageHourlyBasis,
   calcMonthlyTaxBeforeCredits,
   calcMonthlySummary,
   calcPaySlip,
   calculateDay,
   calculateMonthDays,
+  convertDailySickPayReductionLimitsToHourly,
   roundTaxBase,
   roundUpToWholeCrown,
+  SICK_PAY_HOURLY_REDUCTION_LIMITS_2026,
   type MonthlySummary
 } from "./calc";
 import type { EmployeeSettings, Holiday, ShiftType, TimeRecord } from "./types";
@@ -106,11 +110,11 @@ describe("calcPaySlip", () => {
       0,
     );
 
-    expect(payslip.sickHourlyBasis).toBe(250);
-    expect(payslip.sickCalc).toBe(1200);
+    expect(payslip.sickHourlyBasis).toBe(225);
+    expect(payslip.sickCalc).toBe(1080);
     expect(payslip.zpPrac).toBe(38000);
     expect(payslip.zakladDane).toBe(38000);
-    expect(payslip.cistaMzda).toBe(31662);
+    expect(payslip.cistaMzda).toBe(31542);
   });
 
   it("uses actual average hourly earnings from prior quarter when 21 worked days threshold is met", () => {
@@ -161,6 +165,18 @@ describe("calcPaySlip", () => {
         0,
         0,
       ),
+    ).toThrow("Chybí podklady");
+  });
+
+  it("throws for invalid negative PHV inputs instead of silently producing a fallback result", () => {
+    expect(() =>
+      calcAverageHourlyEarnings({
+        ...employee,
+        priorQuarterGrossForAverage: -90000,
+        priorQuarterWorkedHoursForAverage: 488,
+        priorQuarterWorkedDaysForAverage: 61,
+        probableHourlyEarnings: -250,
+      }),
     ).toThrow("Chybí podklady");
   });
 
@@ -336,6 +352,46 @@ describe("rounding helpers", () => {
     expect(calcMonthlyTaxBeforeCredits(146901)).toBe(22036);
     expect(calcMonthlyTaxBeforeCredits(146902)).toBe(22036);
     expect(calcMonthlyTaxBeforeCredits(146905)).toBe(22037);
+  });
+});
+
+describe("DPN hourly reduction basis", () => {
+  it("converts 2026 daily reduction limits to hourly limits rounded up to halere", () => {
+    expect(SICK_PAY_HOURLY_REDUCTION_LIMITS_2026).toEqual({
+      first: 285.78,
+      second: 428.58,
+      third: 856.98,
+    });
+    expect(convertDailySickPayReductionLimitsToHourly({ first: 1.001, second: 2.001, third: 3.001 })).toEqual({
+      first: 0.18,
+      second: 0.36,
+      third: 0.53,
+    });
+  });
+
+  it("returns 0 for zero or negative PHV", () => {
+    expect(calcReducedAverageHourlyBasis(0)).toBe(0);
+    expect(calcReducedAverageHourlyBasis(-1)).toBe(0);
+  });
+
+  it("reduces low PHV at 90 percent in the first band", () => {
+    expect(calcReducedAverageHourlyBasis(250)).toBe(225);
+  });
+
+  it("handles threshold boundaries with 90, 60 and 30 percent bands", () => {
+    expect(calcReducedAverageHourlyBasis(285.78)).toBeCloseTo(257.202, 6);
+    expect(calcReducedAverageHourlyBasis(428.58)).toBeCloseTo(342.882, 6);
+    expect(calcReducedAverageHourlyBasis(856.98)).toBeCloseTo(471.402, 6);
+  });
+
+  it("ignores PHV above the third hourly limit and stays monotonic", () => {
+    const atThird = calcReducedAverageHourlyBasis(856.98);
+    const aboveThird = calcReducedAverageHourlyBasis(1200);
+
+    expect(aboveThird).toBeCloseTo(atThird, 6);
+    expect(aboveThird).toBeLessThanOrEqual(1200);
+    expect(aboveThird).toBeGreaterThanOrEqual(0);
+    expect(calcReducedAverageHourlyBasis(500)).toBeGreaterThan(calcReducedAverageHourlyBasis(400));
   });
 });
 
@@ -550,8 +606,8 @@ describe("DPN compensation in payslip", () => {
       0,
     );
 
-    expect(payslip.sickHourlyBasis).toBe(250);
-    expect(payslip.sickCalc).toBe(1200);
+    expect(payslip.sickHourlyBasis).toBe(225);
+    expect(payslip.sickCalc).toBe(1080);
   });
 
   it("uses recognized hours from timesheet for monthly balance instead of manual real-hours input", () => {

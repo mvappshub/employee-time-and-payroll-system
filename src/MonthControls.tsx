@@ -23,10 +23,6 @@ export default function MonthControls() {
     [monthRecords, employee, holidays, payInputs.sickCarryoverDays],
   )
   const summary = useMemo(() => calcMonthlySummary(days), [days])
-  const payslip = useMemo(
-    () => calcPaySlip(employee, summary, payInputs.manualReward, payInputs.unworked),
-    [employee, summary, payInputs.manualReward, payInputs.unworked],
-  )
 
   useEffect(() => {
     initMonth(currentMonth)
@@ -45,13 +41,20 @@ export default function MonthControls() {
   }
 
   const handleSave = async () => {
+    let grossWage = 0
+    try {
+      grossWage = calcPaySlip(employee, summary, payInputs.manualReward, payInputs.unworked).hrubaMzda
+    } catch {
+      grossWage = 0
+    }
+
     await saveMonthRecord({
       month: currentMonth,
       employee,
       records: monthRecords,
       paySlipInputs: payInputs,
       snapshot: {
-        grossWage: payslip.hrubaMzda,
+        grossWage,
         workedHours: summary.workedHours,
         totalSaldo: summary.totalSaldo,
         savedAt: new Date().toISOString(),

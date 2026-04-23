@@ -356,10 +356,44 @@ export function calcAverageHourlyEarnings(emp: EmployeeSettings): number {
   throw new Error('Chybí podklady pro výpočet PHV / pravděpodobného výdělku.')
 }
 
+export interface SickPayReductionLimits {
+  first: number
+  second: number
+  third: number
+}
+
+const SICK_PAY_DAILY_REDUCTION_LIMITS_2026 = {
+  first: 1633,
+  second: 2449,
+  third: 4897,
+} as const
+
+function roundUpToHalere(value: number): number {
+  return Math.ceil((value - Number.EPSILON) * 100) / 100
+}
+
+export function convertDailySickPayReductionLimitsToHourly(
+  dailyLimits: SickPayReductionLimits,
+): SickPayReductionLimits {
+  return {
+    first: roundUpToHalere(dailyLimits.first * 0.175),
+    second: roundUpToHalere(dailyLimits.second * 0.175),
+    third: roundUpToHalere(dailyLimits.third * 0.175),
+  }
+}
+
+export const SICK_PAY_HOURLY_REDUCTION_LIMITS_2026 =
+  convertDailySickPayReductionLimitsToHourly(SICK_PAY_DAILY_REDUCTION_LIMITS_2026)
+
 export function calcReducedAverageHourlyBasis(averageHourlyEarnings: number): number {
-  // Minimal implementation: DPN basis is derived from the selected PHV/PV source,
-  // not entered as a separate fake constant. Reduction thresholds can be expanded later.
-  return averageHourlyEarnings
+  if (averageHourlyEarnings <= 0) return 0
+
+  const { first, second, third } = SICK_PAY_HOURLY_REDUCTION_LIMITS_2026
+  const firstBand = Math.min(averageHourlyEarnings, first) * 0.9
+  const secondBand = Math.max(0, Math.min(averageHourlyEarnings, second) - first) * 0.6
+  const thirdBand = Math.max(0, Math.min(averageHourlyEarnings, third) - second) * 0.3
+
+  return firstBand + secondBand + thirdBand
 }
 
 function getMinimumNightSurcharge(emp: EmployeeSettings): number {

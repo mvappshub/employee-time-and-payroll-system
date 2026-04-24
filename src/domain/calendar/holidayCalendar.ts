@@ -1,4 +1,4 @@
-import type { Holiday } from "./types";
+import type { Holiday } from "../shared/types";
 
 function pad(value: number): string {
   return String(value).padStart(2, "0");

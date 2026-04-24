@@ -6,8 +6,8 @@ import {
   getPreviousQuarterMonths,
   resolveAverageEarnings,
   sumAverageQuarterTotals,
-} from './phv'
-import type { AverageEarningsEmployeeContext } from './phv'
+} from './domain/payroll/phv'
+import type { AverageEarningsEmployeeContext } from './domain/payroll/phv'
 
 const employee: AverageEarningsEmployeeContext = {
   employmentStartDate: '2026-01-01',

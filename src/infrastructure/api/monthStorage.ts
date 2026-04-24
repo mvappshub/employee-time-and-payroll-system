@@ -1,4 +1,4 @@
-import type { PaySlipInputs, TimeRecord } from './types'
+import type { EmployerProfile, EmployeeSettings, PaySlipInputs, TimeRecord } from '../../domain/shared/types'
 
 export interface SavedMonthSnapshot {
   grossWage: number
@@ -15,6 +15,7 @@ export interface SavedMonthAverageSource {
 
 export interface SavedMonthRecord {
   month: string
+  employer?: EmployerProfile
   employee: EmployeeSettings
   records: TimeRecord[]
   paySlipInputs: PaySlipInputs

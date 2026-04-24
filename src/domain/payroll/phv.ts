@@ -1,7 +1,6 @@
 import { getDaysInMonth, isWeekend } from './calc'
-import { mergeHolidayYears } from './holidayCalendar'
-import type { QuarterlyPhvResponse } from './monthStorage'
-import type { EmployeeSettings } from './types'
+import { mergeHolidayYears } from '../calendar/holidayCalendar'
+import type { QuarterlyPhvResponse } from '../../infrastructure/api/monthStorage'
 
 export const AUTOMATIC_PHV_ERROR_MESSAGE = 'Chybí podklady pro automatický výpočet PHV z předchozího čtvrtletí.'
 

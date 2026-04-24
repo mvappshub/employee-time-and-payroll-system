@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { useStore } from "./store";
+import { useStore } from "./infrastructure/state/store";
 
 describe("holiday defaults", () => {
   it("contains Czech public holidays for 2026", () => {
@@ -47,5 +47,38 @@ describe("employmentType", () => {
     const { employee } = useStore.getState();
     const validTypes = ["pracovni_pomer", "dpc", "dpp"];
     expect(validTypes.includes(employee.employmentType)).toBe(true);
+  });
+});
+
+describe("payslip metadata defaults", () => {
+  it("starts with empty employer profile and vacation summary fields", () => {
+    const { employer, employee } = useStore.getState();
+
+    expect(employer).toEqual({ name: "", ico: "", seat: "" });
+    expect(employee.employeeNumber).toBe("");
+    expect(employee.vacationEntitlementHours).toBe(0);
+    expect(employee.vacationUsedHours).toBe(0);
+    expect(employee.vacationRemainingHours).toBe(0);
+  });
+
+  it("keeps the current employer when loading a legacy month without employer snapshot", () => {
+    useStore.getState().setEmployer({ name: "ACME", ico: "12345678", seat: "Praha" });
+
+    useStore.getState().hydrateMonth("2030-04", {
+      employee: useStore.getState().employee,
+      records: [],
+      paySlipInputs: {
+        manualReward: 0,
+        includeManualRewardInAverage: false,
+        unworked: 0,
+        sickCarryoverDays: 0,
+      },
+    });
+
+    expect(useStore.getState().employer).toEqual({
+      name: "ACME",
+      ico: "12345678",
+      seat: "Praha",
+    });
   });
 });

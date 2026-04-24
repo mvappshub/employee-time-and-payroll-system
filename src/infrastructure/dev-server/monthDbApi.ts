@@ -1,13 +1,15 @@
 import fs from 'fs/promises'
 import path from 'path'
 import type { IncomingMessage, ServerResponse } from 'http'
-import { getEmploymentStartMonth, getPreviousQuarterMonths, resolveAverageEarnings, sumAverageQuarterTotals, type AverageEarningsEmployeeContext } from './src/phv'
+import { getEmploymentStartMonth, getPreviousQuarterMonths, resolveAverageEarnings, sumAverageQuarterTotals, type AverageEarningsEmployeeContext } from '../../domain/payroll/phv'
+import type { EmployerProfile } from '../../domain/shared/types'
 
 const DATA_DIR = path.resolve(process.cwd(), 'month-data')
 const MONTH_PATTERN = /^\d{4}-\d{2}$/
 
 export interface PersistedMonthRecord {
   month: string
+  employer?: EmployerProfile
   employee?: Partial<AverageEarningsEmployeeContext>
   grossForAverage?: number
   workedHoursForAverage?: number
@@ -140,7 +142,7 @@ async function handleMonthRecord(req: IncomingMessage, res: ServerResponse, mont
   sendJson(res, 405, { error: 'method_not_allowed' })
 }
 
-async function handlePhv(res: ServerResponse, req: IncomingMessage, month: string): Promise<void> {
+async function handlePhv(res: ServerResponse, month: string): Promise<void> {
   const sourceMonths = getPreviousQuarterMonths(month)
   const allRecords = await loadAllMonthRecords()
   const employeeContextMonth = findLatestEmployeeContextMonth(allRecords, month)
@@ -168,7 +170,7 @@ async function handlePhv(res: ServerResponse, req: IncomingMessage, month: strin
       workedDaysForAverage: record.workedDaysForAverage || 0,
     }]
   })
-  const missingMonths = effectiveSourceMonths.filter((sourceMonth, index) => {
+  const missingMonths = effectiveSourceMonths.filter((sourceMonth) => {
     const actualIndex = sourceMonths.indexOf(sourceMonth)
     const record = loaded[actualIndex]
     return !record
@@ -200,7 +202,7 @@ export function monthDbApiPlugin() {
             return
           }
           if (phvMatch && req.method === 'GET') {
-            await handlePhv(res, req, phvMatch[1])
+            await handlePhv(res, phvMatch[1])
             return
           }
           next()
@@ -221,7 +223,7 @@ export function monthDbApiPlugin() {
             return
           }
           if (phvMatch && req.method === 'GET') {
-            await handlePhv(res, req, phvMatch[1])
+            await handlePhv(res, phvMatch[1])
             return
           }
           next()

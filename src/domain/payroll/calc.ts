@@ -1,4 +1,4 @@
-import type { EmployeeSettings, TimeRecord, Holiday, ShiftType } from './types'
+import type { EmployeeSettings, TimeRecord, Holiday, ShiftType } from '../shared/types'
 
 export function timeToDecimal(time: string): number | null {
   if (!time || !time.includes(':')) return null
@@ -27,7 +27,7 @@ export function getDaysInMonth(ym: string): string[] {
   })
 }
 
-export function calcCalendarWorkDays(ym: string, holidays: Holiday[], weekendWorking: boolean): { days: number; hours: number; dailyFund: number } {
+export function calcCalendarWorkDays(ym: string, holidays: Holiday[]): { days: number; hours: number; dailyFund: number } {
   const daysInMonth = getDaysInMonth(ym)
   const workDays = daysInMonth.filter(d => {
     if (isWeekend(d)) return false

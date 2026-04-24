@@ -9,8 +9,15 @@ export type OvertimeCompensationMode = 'time-off' | 'premium'
 export type RemunerationType = 'mzda' | 'plat'
 export type ShiftType = 'ranní' | 'odpolední' | 'noční' | 'přesčas' | 'volno' | 'dovolená' | 'nemoc' | ''
 
+export interface EmployerProfile {
+  name: string
+  ico: string
+  seat: string
+}
+
 export interface EmployeeSettings {
   name: string
+  employeeNumber: string
   employmentType: EmploymentType
   remunerationType: RemunerationType
   employmentStartDate: string
@@ -34,6 +41,9 @@ export interface EmployeeSettings {
   sickCompensation: number
   holidayCompensationMode: HolidayCompensationMode
   overtimeCompensationMode: OvertimeCompensationMode
+  vacationEntitlementHours: number
+  vacationUsedHours: number
+  vacationRemainingHours: number
 }
 
 export interface TimeRecord {

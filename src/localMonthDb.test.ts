@@ -3,7 +3,7 @@ import {
   findLatestEmployeeContextMonth,
   pickEmployeeContextForMonth,
   type PersistedMonthRecord,
-} from '../localMonthDb'
+} from './infrastructure/dev-server/monthDbApi'
 
 const januaryEmployee = {
   employmentStartDate: '2026-01-01',
@@ -58,5 +58,14 @@ describe('local month db employee context resolution', () => {
       workDaysPerWeek: 5,
       weekendWorking: false,
     })
+  })
+
+  it('accepts legacy month records without employer snapshot', () => {
+    const records: PersistedMonthRecord[] = [
+      { month: '2026-02', employee: januaryEmployee },
+    ]
+
+    expect(records[0].employer).toBeUndefined()
+    expect(findLatestEmployeeContextMonth(records, '2026-03')).toBe('2026-02')
   })
 })

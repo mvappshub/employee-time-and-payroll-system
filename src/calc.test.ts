@@ -13,11 +13,12 @@ import {
   roundUpToWholeCrown,
   SICK_PAY_HOURLY_REDUCTION_LIMITS_2026,
   type MonthlySummary
-} from "./calc";
-import type { EmployeeSettings, Holiday, ShiftType, TimeRecord } from "./types";
+} from "./domain/payroll/calc";
+import type { EmployeeSettings, Holiday, ShiftType, TimeRecord } from "./domain/shared/types";
 
 const employee: EmployeeSettings = {
   name: "Test",
+  employeeNumber: "",
   employmentType: "pracovni_pomer",
   remunerationType: "mzda",
   employmentStartDate: "2026-01-01",
@@ -41,6 +42,9 @@ const employee: EmployeeSettings = {
   sickCompensation: 0.6,
   holidayCompensationMode: "time-off",
   overtimeCompensationMode: "premium",
+  vacationEntitlementHours: 0,
+  vacationUsedHours: 0,
+  vacationRemainingHours: 0,
 };
 
 function monthlySummary(overrides: Partial<MonthlySummary> = {}): MonthlySummary {
@@ -59,6 +63,11 @@ function monthlySummary(overrides: Partial<MonthlySummary> = {}): MonthlySummary
     totalOvertime: 0,
     totalRecognized: 160,
     totalSaldo: 0,
+    holidayDaysInMonth: 0,
+    freeDaysInMonth: 0,
+    calendarWorkDays: 20,
+    calendarWorkHours: 160,
+    monthlyFundHours: 160,
     ...overrides,
   };
 }

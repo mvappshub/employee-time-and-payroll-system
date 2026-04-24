@@ -41,7 +41,7 @@ export default function PaySlip() {
         if (!active) return
         setAverageEarnings(response)
         setAverageHourlyEarnings(assertAvailableAverageEarnings(response))
-        setPhvError(response.sourceType === 'probable' ? (response.reason || '') : '')
+        setPhvError('')
         setLoadedPhvMonth(month)
       })
       .catch(() => {

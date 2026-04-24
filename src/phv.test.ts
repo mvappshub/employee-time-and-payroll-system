@@ -45,6 +45,7 @@ describe('average earnings source resolution', () => {
     expect(result.sourceType).toBe('probable')
     expect(result.averageHourlyEarnings).toBe(result.probableHourlyEarnings)
     expect(result.actualPhv).toBeNull()
+    expect(result.reason).toBeNull()
   })
 
   it('uses actual PHV for April 2026 when Q1 has complete stored data even below 21 worked days', () => {
@@ -82,7 +83,7 @@ describe('average earnings source resolution', () => {
 
     expect(result.sourceType).toBe('probable')
     expect(result.actualPhv).toBeNull()
-    expect(result.reason).toBe('Rozhodné období není kompletní, chybí uložené měsíce předchozího čtvrtletí.')
+    expect(result.reason).toBeNull()
   })
 
   it('uses probable source for February 2026 when previous quarter is before employment start', () => {
@@ -96,6 +97,7 @@ describe('average earnings source resolution', () => {
 
     expect(result.sourceType).toBe('probable')
     expect(result.actualPhv).toBeNull()
+    expect(result.reason).toBeNull()
   })
 
   it('uses probable source for March 2026 when previous quarter is before employment start', () => {
@@ -109,6 +111,7 @@ describe('average earnings source resolution', () => {
 
     expect(result.sourceType).toBe('probable')
     expect(result.actualPhv).toBeNull()
+    expect(result.reason).toBeNull()
   })
 
   it('treats missing post-start month as incomplete quarter even if earlier quarter months are irrelevant', () => {
@@ -127,7 +130,7 @@ describe('average earnings source resolution', () => {
 
     expect(result.sourceType).toBe('probable')
     expect(result.missingMonths).toEqual(['2026-03'])
-    expect(result.reason).toBe('Rozhodné období není kompletní, chybí uložené měsíce předchozího čtvrtletí.')
+    expect(result.reason).toBeNull()
   })
 
   it('does not count months before employment start as missing', () => {
@@ -141,6 +144,7 @@ describe('average earnings source resolution', () => {
 
     expect(result.missingMonths).toEqual([])
     expect(result.sourceType).toBe('probable')
+    expect(result.reason).toBeNull()
   })
 
   it('returns unavailable when probable earnings are missing and employee snapshot is unavailable', () => {

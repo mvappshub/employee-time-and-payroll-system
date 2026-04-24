@@ -129,7 +129,7 @@ export function resolveAverageEarnings(
       grossForAverage: totals.grossForAverage,
       workedHoursForAverage: totals.workedHoursForAverage,
       workedDaysForAverage: totals.workedDaysForAverage,
-      reason: 'Rozhodné období není kompletní, chybí uložené měsíce předchozího čtvrtletí.',
+      reason: null,
     }
   }
 

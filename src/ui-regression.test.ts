@@ -50,5 +50,6 @@ describe('UI regressions', () => {
     expect(source).toContain("    ? 'Skutečný PHV'")
     expect(source).toContain("      ? 'Pravděpodobný výdělek'")
     expect(source).toContain('employeeContextMonth')
+    expect(source).not.toContain("setPhvError(response.sourceType === 'probable' ? (response.reason || '') : '')")
   })
 })

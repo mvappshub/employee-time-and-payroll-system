@@ -29,6 +29,8 @@ describe('UI regressions', () => {
     const source = readFileSync(new URL('./Employee.tsx', import.meta.url), 'utf8')
 
     expect(source).toContain('Datum nástupu')
+    expect(source).toContain("type=\"date\"")
+    expect(source).not.toContain("{time('employmentStartDate', 'Datum nástupu')}")
   })
 
   it('payslip exposes the readonly average earnings audit block', () => {
@@ -40,5 +42,13 @@ describe('UI regressions', () => {
     expect(source).toContain('Gross for average')
     expect(source).toContain('Worked hours for average')
     expect(source).toContain('Worked days for average')
+  })
+
+  it('payslip wording distinguishes probable earnings from actual PHV', () => {
+    const source = readFileSync(new URL('./PaySlip.tsx', import.meta.url), 'utf8')
+
+    expect(source).toContain('Pravděpodobný výdělek z uložených dat zaměstnance')
+    expect(source).toContain('Skutečný PHV z kompletního předchozího čtvrtletí')
+    expect(source).not.toContain("averageEarnings?.sourceType === 'probable' ? 'Pravděpodobný výdělek' : 'Skutečný PHV'")
   })
 })

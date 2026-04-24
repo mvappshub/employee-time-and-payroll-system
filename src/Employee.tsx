@@ -48,6 +48,13 @@ export default function Employee() {
     </tr>
   )
 
+  const date = (key: keyof EmployeeSettings, label: string) => (
+    <tr key={key}>
+      <td className="pr-2 text-gray-600 whitespace-nowrap">{label}</td>
+      <td><input type="date" className={`${inp} w-36`} value={emp[key] as string} onChange={e => set({ [key]: e.target.value })} /></td>
+    </tr>
+  )
+
   const sel = (key: keyof EmployeeSettings, label: string, options: Array<{ value: string; label: string }>) => (
     <tr key={key}>
       <td className="pr-2 text-gray-600 whitespace-nowrap">{label}</td>
@@ -71,7 +78,7 @@ export default function Employee() {
               { value: 'dpc', label: EmploymentTypeLabels.dpc },
               { value: 'dpp', label: EmploymentTypeLabels.dpp },
             ])}
-            {time('employmentStartDate', 'Datum nástupu')}
+            {date('employmentStartDate', 'Datum nástupu')}
             {sel('remunerationType', 'Režim odměňování', [
               { value: 'mzda', label: 'mzda' },
               { value: 'plat', label: 'plat' },

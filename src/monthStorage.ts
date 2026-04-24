@@ -1,4 +1,4 @@
-import type { EmployeeSettings, PaySlipInputs, TimeRecord } from './types'
+import type { PaySlipInputs, TimeRecord } from './types'
 
 export interface SavedMonthSnapshot {
   grossWage: number
@@ -30,6 +30,7 @@ export interface QuarterlyPhvResponse {
   averageHourlyEarnings: number | null
   actualPhv: number | null
   probableHourlyEarnings: number | null
+  employeeContextMonth: string | null
   periodStart: string
   periodEnd: string
   sourceMonths: string[]
@@ -66,17 +67,7 @@ export async function saveMonthRecord(record: SavedMonthRecord): Promise<void> {
   }
 }
 
-export async function fetchQuarterlyPhv(month: string, employee?: EmployeeSettings): Promise<QuarterlyPhvResponse> {
-  const params = new URLSearchParams()
-  if (employee) {
-    params.set('employmentStartDate', employee.employmentStartDate)
-    params.set('baseSalary', String(employee.baseSalary))
-    params.set('personalBonus', String(employee.personalBonus))
-    params.set('weeklyHours', String(employee.weeklyHours))
-    params.set('workDaysPerWeek', String(employee.workDaysPerWeek))
-    params.set('weekendWorking', String(employee.weekendWorking))
-  }
-  const suffix = params.size > 0 ? `?${params.toString()}` : ''
-  const response = await fetch(`/api/phv/${month}${suffix}`)
+export async function fetchQuarterlyPhv(month: string): Promise<QuarterlyPhvResponse> {
+  const response = await fetch(`/api/phv/${month}`)
   return parseJsonResponse<QuarterlyPhvResponse>(response)
 }

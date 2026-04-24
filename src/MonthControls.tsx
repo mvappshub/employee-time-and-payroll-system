@@ -46,7 +46,7 @@ export default function MonthControls() {
   const handleSave = async () => {
     try {
       setError('')
-      const averageResponse = await fetchQuarterlyPhv(currentMonth, employee)
+      const averageResponse = await fetchQuarterlyPhv(currentMonth)
       const averageHourlyEarnings = averageResponse.averageHourlyEarnings
       const safeAverageHourlyEarnings = averageHourlyEarnings && averageHourlyEarnings > 0 ? averageHourlyEarnings : 0
       const averageSource = calcAverageSourceSnapshot(

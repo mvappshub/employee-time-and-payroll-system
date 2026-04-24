@@ -80,6 +80,46 @@ describe('average earnings source resolution', () => {
     expect(result.sourceType).toBe('probable')
     expect(result.actualPhv).toBeNull()
     expect(result.averageHourlyEarnings).toBe(result.probableHourlyEarnings)
+    expect(result.reason).toBe('V kompletním rozhodném období není alespoň 21 odpracovaných dnů.')
+  })
+
+  it('does not return actual PHV when one relevant quarter month is missing', () => {
+    const totals = sumAverageQuarterTotals([
+      { grossForAverage: 62000, workedHoursForAverage: 320, workedDaysForAverage: 42 },
+      { grossForAverage: 31000, workedHoursForAverage: 160, workedDaysForAverage: 21 },
+    ])
+    const result = resolveAverageEarnings(
+      '2026-04',
+      employee,
+      ['2026-01', '2026-02', '2026-03'],
+      totals,
+      ['2026-02'],
+      '2026-01',
+    )
+
+    expect(calculateActualPhv(totals)).toBeCloseTo(93000 / 480, 8)
+    expect(result.sourceType).toBe('probable')
+    expect(result.actualPhv).toBeNull()
+    expect(result.reason).toBe('Rozhodné období není kompletní, chybí uložené měsíce předchozího čtvrtletí.')
+  })
+
+  it('treats missing post-start month as incomplete quarter even if earlier quarter months are irrelevant', () => {
+    const employeeStartingInFebruary: AverageEarningsEmployeeContext = {
+      ...employee,
+      employmentStartDate: '2026-02-10',
+    }
+    const result = resolveAverageEarnings(
+      '2026-05',
+      employeeStartingInFebruary,
+      ['2026-01', '2026-02', '2026-03'],
+      { grossForAverage: 64000, workedHoursForAverage: 320, workedDaysForAverage: 40 },
+      ['2026-03'],
+      '2026-02',
+    )
+
+    expect(result.sourceType).toBe('probable')
+    expect(result.missingMonths).toEqual(['2026-03'])
+    expect(result.reason).toBe('Rozhodné období není kompletní, chybí uložené měsíce předchozího čtvrtletí.')
   })
 
   it('does not count months before employment start as missing', () => {
@@ -95,13 +135,28 @@ describe('average earnings source resolution', () => {
     expect(result.sourceType).toBe('probable')
   })
 
-  it('returns unavailable only when even probable earnings cannot be calculated', () => {
+  it('returns unavailable when probable earnings are missing and employee snapshot is unavailable', () => {
+    const result = resolveAverageEarnings(
+      '2026-04',
+      null,
+      ['2026-01', '2026-02', '2026-03'],
+      { grossForAverage: 0, workedHoursForAverage: 0, workedDaysForAverage: 0 },
+      ['2026-02'],
+    )
+
+    expect(result.sourceType).toBe('unavailable')
+    expect(result.averageHourlyEarnings).toBeNull()
+    expect(result.reason).toBe('Chybí uložený employee snapshot pro výpočet pravděpodobného výdělku.')
+  })
+
+  it('returns unavailable when quarter is incomplete and stored employee snapshot cannot produce probable earnings', () => {
     const result = resolveAverageEarnings(
       '2026-04',
       { ...employee, baseSalary: 0, personalBonus: 0 },
       ['2026-01', '2026-02', '2026-03'],
       { grossForAverage: 0, workedHoursForAverage: 0, workedDaysForAverage: 0 },
       ['2026-02'],
+      '2026-01',
     )
 
     expect(result.sourceType).toBe('unavailable')

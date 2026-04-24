@@ -6,7 +6,7 @@ import { getEmploymentStartMonth, getPreviousQuarterMonths, resolveAverageEarnin
 const DATA_DIR = path.resolve(process.cwd(), 'month-data')
 const MONTH_PATTERN = /^\d{4}-\d{2}$/
 
-interface SavedMonthRecord {
+export interface PersistedMonthRecord {
   month: string
   employee?: Partial<AverageEarningsEmployeeContext>
   grossForAverage?: number
@@ -40,17 +40,17 @@ async function readJsonBody(req: IncomingMessage): Promise<unknown> {
   return raw ? JSON.parse(raw) : null
 }
 
-async function loadMonthRecord(month: string): Promise<SavedMonthRecord | null> {
+async function loadMonthRecord(month: string): Promise<PersistedMonthRecord | null> {
   try {
     const file = await fs.readFile(monthFilePath(month), 'utf8')
-    return JSON.parse(file) as SavedMonthRecord
+    return JSON.parse(file) as PersistedMonthRecord
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null
     throw error
   }
 }
 
-async function loadAllMonthRecords(): Promise<SavedMonthRecord[]> {
+async function loadAllMonthRecords(): Promise<PersistedMonthRecord[]> {
   await ensureDataDir()
   const entries = await fs.readdir(DATA_DIR, { withFileTypes: true })
   const records = await Promise.all(
@@ -58,50 +58,36 @@ async function loadAllMonthRecords(): Promise<SavedMonthRecord[]> {
       .filter(entry => entry.isFile() && entry.name.endsWith('.json'))
       .map(async entry => {
         const file = await fs.readFile(path.join(DATA_DIR, entry.name), 'utf8')
-        return JSON.parse(file) as SavedMonthRecord
+        return JSON.parse(file) as PersistedMonthRecord
       }),
   )
   return records
 }
 
-function employeeContextFromQuery(url: URL): Partial<AverageEarningsEmployeeContext> {
-  const parseNumber = (name: string): number | undefined => {
-    const raw = url.searchParams.get(name)
-    if (raw === null || raw === '') return undefined
-    const value = Number(raw)
-    return Number.isFinite(value) ? value : undefined
-  }
-
-  const parseBoolean = (name: string): boolean | undefined => {
-    const raw = url.searchParams.get(name)
-    if (raw === null || raw === '') return undefined
-    return raw === 'true'
-  }
-
-  return {
-    employmentStartDate: url.searchParams.get('employmentStartDate') || undefined,
-    baseSalary: parseNumber('baseSalary'),
-    personalBonus: parseNumber('personalBonus'),
-    weeklyHours: parseNumber('weeklyHours'),
-    workDaysPerWeek: parseNumber('workDaysPerWeek'),
-    weekendWorking: parseBoolean('weekendWorking'),
-  }
+function isCompleteEmployeeContext(employee?: Partial<AverageEarningsEmployeeContext>): employee is AverageEarningsEmployeeContext {
+  return Boolean(
+    employee
+    && typeof employee.employmentStartDate === 'string'
+    && typeof employee.baseSalary === 'number'
+    && typeof employee.personalBonus === 'number'
+    && typeof employee.weeklyHours === 'number'
+    && typeof employee.workDaysPerWeek === 'number'
+    && typeof employee.weekendWorking === 'boolean',
+  )
 }
 
-function resolveEmployeeContext(records: SavedMonthRecord[], queryContext: Partial<AverageEarningsEmployeeContext>): AverageEarningsEmployeeContext {
-  const latestEmployee = [...records]
-    .filter(record => record.employee)
+export function findLatestEmployeeContextMonth(records: PersistedMonthRecord[], targetMonth: string): string | null {
+  return [...records]
+    .filter(record => record.month <= targetMonth && isCompleteEmployeeContext(record.employee))
     .sort((a, b) => a.month.localeCompare(b.month))
-    .at(-1)?.employee
+    .at(-1)?.month ?? null
+}
 
-  return {
-    employmentStartDate: queryContext.employmentStartDate || latestEmployee?.employmentStartDate || '2026-01-01',
-    baseSalary: queryContext.baseSalary ?? latestEmployee?.baseSalary ?? 0,
-    personalBonus: queryContext.personalBonus ?? latestEmployee?.personalBonus ?? 0,
-    weeklyHours: queryContext.weeklyHours ?? latestEmployee?.weeklyHours ?? 40,
-    workDaysPerWeek: queryContext.workDaysPerWeek ?? latestEmployee?.workDaysPerWeek ?? 5,
-    weekendWorking: queryContext.weekendWorking ?? latestEmployee?.weekendWorking ?? false,
-  }
+export function pickEmployeeContextForMonth(records: PersistedMonthRecord[], targetMonth: string): AverageEarningsEmployeeContext | null {
+  const month = findLatestEmployeeContextMonth(records, targetMonth)
+  if (!month) return null
+  const record = records.find(item => item.month === month)
+  return record && isCompleteEmployeeContext(record.employee) ? record.employee : null
 }
 
 function sendJson(res: ServerResponse, status: number, body: unknown): void {
@@ -135,8 +121,19 @@ async function handleMonthRecord(req: IncomingMessage, res: ServerResponse, mont
 async function handlePhv(res: ServerResponse, req: IncomingMessage, month: string): Promise<void> {
   const sourceMonths = getPreviousQuarterMonths(month)
   const allRecords = await loadAllMonthRecords()
-  const url = new URL(req.url || '', 'http://localhost')
-  const employee = resolveEmployeeContext(allRecords, employeeContextFromQuery(url))
+  const employeeContextMonth = findLatestEmployeeContextMonth(allRecords, month)
+  const employee = pickEmployeeContextForMonth(allRecords, month)
+  if (!employee) {
+    sendJson(res, 200, resolveAverageEarnings(
+      month,
+      null,
+      sourceMonths,
+      { grossForAverage: 0, workedHoursForAverage: 0, workedDaysForAverage: 0 },
+      sourceMonths,
+      null,
+    ))
+    return
+  }
   const employmentStartMonth = getEmploymentStartMonth(employee.employmentStartDate)
   const effectiveSourceMonths = sourceMonths.filter(sourceMonth => sourceMonth >= employmentStartMonth)
   const loaded = await Promise.all(sourceMonths.map(loadMonthRecord))
@@ -156,7 +153,14 @@ async function handlePhv(res: ServerResponse, req: IncomingMessage, month: strin
   })
   const totals = sumAverageQuarterTotals(available)
 
-  sendJson(res, 200, resolveAverageEarnings(month, employee, sourceMonths, totals, missingMonths.length > 0 ? missingMonths : []))
+  sendJson(res, 200, resolveAverageEarnings(
+    month,
+    employee,
+    sourceMonths,
+    totals,
+    missingMonths.length > 0 ? missingMonths : [],
+    employeeContextMonth,
+  ))
 }
 
 export function monthDbApiPlugin() {

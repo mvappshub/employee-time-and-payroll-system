@@ -87,13 +87,15 @@ export function calculateProbableHourlyEarnings(employee: AverageEarningsEmploye
 
 export function resolveAverageEarnings(
   month: string,
-  employee: AverageEarningsEmployeeContext,
+  employee: AverageEarningsEmployeeContext | null,
   sourceMonths: string[],
   totals: AverageQuarterTotals,
   missingMonths: string[],
+  employeeContextMonth: string | null = null,
 ): QuarterlyPhvResponse {
-  const actualPhv = calculateActualPhv(totals)
-  const probableHourlyEarnings = calculateProbableHourlyEarnings(employee, month)
+  const quarterComplete = missingMonths.length === 0
+  const actualPhv = quarterComplete ? calculateActualPhv(totals) : null
+  const probableHourlyEarnings = employee ? calculateProbableHourlyEarnings(employee, month) : null
   const [periodStart] = sourceMonths
   const periodEnd = sourceMonths[sourceMonths.length - 1]
 
@@ -104,6 +106,7 @@ export function resolveAverageEarnings(
       averageHourlyEarnings: actualPhv,
       actualPhv,
       probableHourlyEarnings,
+      employeeContextMonth,
       periodStart,
       periodEnd,
       sourceMonths,
@@ -122,6 +125,7 @@ export function resolveAverageEarnings(
       averageHourlyEarnings: probableHourlyEarnings,
       actualPhv: null,
       probableHourlyEarnings,
+      employeeContextMonth,
       periodStart,
       periodEnd,
       sourceMonths,
@@ -129,11 +133,19 @@ export function resolveAverageEarnings(
       grossForAverage: totals.grossForAverage,
       workedHoursForAverage: totals.workedHoursForAverage,
       workedDaysForAverage: totals.workedDaysForAverage,
-      reason: totals.workedDaysForAverage < 21
-        ? 'V rozhodném období není alespoň 21 odpracovaných dnů.'
-        : AUTOMATIC_PHV_ERROR_MESSAGE,
+      reason: !quarterComplete
+        ? 'Rozhodné období není kompletní, chybí uložené měsíce předchozího čtvrtletí.'
+        : 'V kompletním rozhodném období není alespoň 21 odpracovaných dnů.',
     }
   }
+
+  const reason = !quarterComplete
+    ? employee === null
+      ? 'Chybí uložený employee snapshot pro výpočet pravděpodobného výdělku.'
+      : AUTOMATIC_PHV_ERROR_MESSAGE
+    : employee === null
+      ? 'Chybí uložený employee snapshot pro výpočet pravděpodobného výdělku.'
+      : AUTOMATIC_PHV_ERROR_MESSAGE
 
   return {
     month,
@@ -141,6 +153,7 @@ export function resolveAverageEarnings(
     averageHourlyEarnings: null,
     actualPhv: null,
     probableHourlyEarnings: null,
+    employeeContextMonth,
     periodStart,
     periodEnd,
     sourceMonths,
@@ -148,7 +161,7 @@ export function resolveAverageEarnings(
     grossForAverage: totals.grossForAverage,
     workedHoursForAverage: totals.workedHoursForAverage,
     workedDaysForAverage: totals.workedDaysForAverage,
-    reason: AUTOMATIC_PHV_ERROR_MESSAGE,
+    reason,
   }
 }
 

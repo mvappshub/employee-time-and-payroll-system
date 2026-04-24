@@ -36,7 +36,7 @@ export default function PaySlip() {
     setLoadedPhvMonth('')
     setAverageEarnings(null)
 
-    fetchQuarterlyPhv(month, emp)
+    fetchQuarterlyPhv(month)
       .then(response => {
         if (!active) return
         setAverageEarnings(response)
@@ -57,7 +57,23 @@ export default function PaySlip() {
     return () => {
       active = false
     }
-  }, [emp, month])
+  }, [month])
+
+  const averageEarningsLabel = averageEarnings?.sourceType === 'actual'
+    ? 'Skutečný PHV z kompletního předchozího čtvrtletí'
+    : averageEarnings?.sourceType === 'probable'
+      ? 'Pravděpodobný výdělek z uložených dat zaměstnance'
+      : 'PHV není k dispozici'
+
+  const averageEarningsSourceLabel = averageEarnings?.sourceType === 'actual'
+    ? 'skutečný PHV z kompletního předchozího čtvrtletí'
+    : averageEarnings?.sourceType === 'probable'
+      ? 'pravděpodobný výdělek z uložených dat zaměstnance'
+      : 'PHV není k dispozici'
+
+  const employeeContextLabel = averageEarnings?.employeeContextMonth
+    ? `Uložený employee snapshot: ${averageEarnings.employeeContextMonth}`
+    : 'Uložený employee snapshot: není k dispozici'
 
   const calculation = useMemo(() => {
     if (phvLoading || loadedPhvMonth !== month) {
@@ -129,16 +145,20 @@ export default function PaySlip() {
           <Row label="Pracovní dny (se svátky)" days={sum.workDaysWH} />
           <Row label="Pracovní hodiny (se svátky)" hrs={sum.workHoursWH} />
           <Row label="Denní fond hodin" hrs={ps.dailyFund} />
-          <Row label={averageEarnings?.sourceType === 'probable' ? 'Pravděpodobný výdělek' : 'Skutečný PHV'} czk={ps.averageHourlyEarnings} />
+          <Row label={averageEarningsLabel} czk={ps.averageHourlyEarnings} />
           <tr className="border-t border-gray-200"><td colSpan={4}></td></tr>
           <tr>
             <td className="py-0.5">Zdroj výdělku pro náhrady</td>
-            <td colSpan={3} className="text-right">{averageEarnings?.sourceType === 'probable' ? 'pravděpodobný výdělek' : 'skutečný PHV'}</td>
+            <td colSpan={3} className="text-right">{averageEarningsSourceLabel}</td>
           </tr>
           <tr>
-            <td className="py-0.5">{averageEarnings?.sourceType === 'probable' ? 'Pravděpodobný výdělek' : 'Skutečný PHV'}</td>
+            <td className="py-0.5">{averageEarningsLabel}</td>
             <td></td><td></td>
             <td className="text-right">{kc(ps.averageHourlyEarnings)}</td>
+          </tr>
+          <tr>
+            <td className="py-0.5">Employee snapshot</td>
+            <td colSpan={3} className="text-right">{employeeContextLabel}</td>
           </tr>
           <tr>
             <td className="py-0.5">Rozhodné období</td>

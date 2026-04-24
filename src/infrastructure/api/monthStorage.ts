@@ -1,5 +1,15 @@
 import type { EmployerProfile, EmployeeSettings, PaySlipInputs, TimeRecord } from '../../domain/shared/types'
 
+export type MonthWorkflowStatus =
+  | 'empty'
+  | 'loaded'
+  | 'prefilled'
+  | 'save-incomplete'
+  | 'saved'
+  | 'modified'
+  | 'closed'
+  | 'approved'
+
 export interface SavedMonthSnapshot {
   grossWage: number
   workedHours: number
@@ -19,9 +29,10 @@ export interface SavedMonthRecord {
   employee: EmployeeSettings
   records: TimeRecord[]
   paySlipInputs: PaySlipInputs
-  grossForAverage: number
-  workedHoursForAverage: number
-  workedDaysForAverage: number
+  workflowStatus?: MonthWorkflowStatus
+  grossForAverage?: number
+  workedHoursForAverage?: number
+  workedDaysForAverage?: number
   snapshot?: SavedMonthSnapshot
 }
 

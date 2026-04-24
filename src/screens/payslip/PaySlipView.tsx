@@ -58,12 +58,24 @@ export function PaySlipView({
   onMonthChange,
 }: PaySlipViewProps) {
   const inp = 'border-b border-gray-300 bg-transparent text-xs outline-none w-20 text-right'
+  const handlePrint = () => {
+    if (printDisabled) return
+    window.print()
+  }
 
   return (
     <div className="max-w-4xl text-xs">
       <div className="mb-3 flex items-center gap-3">
         <span className="text-sm font-bold">Výplatní páska</span>
         <input type="month" value={month} onChange={e => onMonthChange(e.target.value)} className="border-b border-gray-300 bg-transparent text-xs outline-none" />
+        <button
+          type="button"
+          disabled={printDisabled}
+          onClick={handlePrint}
+          className="border border-gray-300 px-2 py-1 text-[11px] text-gray-700 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400"
+        >
+          Tisk
+        </button>
       </div>
 
       <div className="mb-3 text-gray-600">{employeeHeader}</div>
@@ -72,7 +84,7 @@ export function PaySlipView({
       {!loading && error && <div className="border border-red-300 bg-red-50 px-2 py-1 text-red-700">{error}</div>}
       {!loading && dataClosedWarning && <div className="mt-2 border border-amber-300 bg-amber-50 px-2 py-1 text-amber-800">{dataClosedWarning}</div>}
 
-      {!loading && !printDisabled && employeeDocument && (
+      {!loading && employeeDocument && (
         <div className="space-y-4">
           <section className="rounded border border-gray-300 bg-gray-50 p-3">
             <div className="mb-2 font-semibold">Interní mzdové vstupy</div>
@@ -152,11 +164,6 @@ export function PaySlipView({
         </div>
       )}
 
-      {!loading && printDisabled && (
-        <section className="rounded border border-amber-300 bg-amber-50 p-3 text-[12px] text-amber-900">
-          Tiskový obsah výplatní pásky je dostupný až po uzavření nebo schválení měsíce.
-        </section>
-      )}
     </div>
   )
 }

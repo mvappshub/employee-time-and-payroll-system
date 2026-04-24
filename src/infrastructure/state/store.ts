@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { EmployeeSettings, TimeRecord, Holiday, ShiftType, PaySlipInputs, EmploymentType, EmployerProfile } from '../../domain/shared/types'
+import type { MonthWorkflowStatus } from '../api/monthStorage'
 
 const LEGACY_EMPLOYMENT_TYPE_MAP: Record<string, EmploymentType> = {
   HPP: 'pracovni_pomer',
@@ -98,7 +99,7 @@ interface Store {
   holidays: Holiday[]
   currentMonth: string
   paySlipInputs: Record<string, PaySlipInputs>
-  monthStatus: Record<string, 'empty' | 'loaded' | 'prefilled' | 'saved' | 'modified' | 'closed' | 'approved'>
+  monthStatus: Record<string, MonthWorkflowStatus>
   section: 'employee' | 'timesheet' | 'payslip' | 'holidays' | 'month-close' | 'payroll-sheet' | 'legal-constants'
   setEmployer: (u: Partial<EmployerProfile>) => void
   setEmployee: (u: Partial<EmployeeSettings>) => void
@@ -106,7 +107,7 @@ interface Store {
   setCurrentMonth: (m: string) => void
   initMonth: (m: string) => void
   prefillMonth: (m: string) => void
-  hydrateMonth: (m: string, data: { employer?: EmployerProfile; employee: EmployeeSettings; records: TimeRecord[]; paySlipInputs: PaySlipInputs }) => void
+  hydrateMonth: (m: string, data: { employer?: EmployerProfile; employee: EmployeeSettings; records: TimeRecord[]; paySlipInputs: PaySlipInputs; workflowStatus?: MonthWorkflowStatus }) => void
   updateRecord: (month: string, idx: number, u: Partial<TimeRecord>) => void
   setPaySlipInput: (month: string, u: Partial<PaySlipInputs>) => void
   setMonthStatus: (month: string, status: Store['monthStatus'][string]) => void
@@ -168,7 +169,7 @@ export const useStore = create<Store>()(
           employee: normalizeEmployeeSettings(data.employee),
           records: { ...s.records, [m]: data.records },
           paySlipInputs: { ...s.paySlipInputs, [m]: normalizePaySlipInputs(data.paySlipInputs) },
-          monthStatus: { ...s.monthStatus, [m]: 'loaded' },
+          monthStatus: { ...s.monthStatus, [m]: data.workflowStatus || 'loaded' },
         }))
       },
       resetMonth: (m) => {

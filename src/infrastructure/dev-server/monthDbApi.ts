@@ -3,6 +3,7 @@ import path from 'path'
 import type { IncomingMessage, ServerResponse } from 'http'
 import { getEmploymentStartMonth, getPreviousQuarterMonths, resolveAverageEarnings, sumAverageQuarterTotals, type AverageEarningsEmployeeContext } from '../../domain/payroll/phv'
 import type { EmployerProfile } from '../../domain/shared/types'
+import type { MonthWorkflowStatus } from '../api/monthStorage'
 
 const DATA_DIR = path.resolve(process.cwd(), 'month-data')
 const MONTH_PATTERN = /^\d{4}-\d{2}$/
@@ -11,6 +12,7 @@ export interface PersistedMonthRecord {
   month: string
   employer?: EmployerProfile
   employee?: Partial<AverageEarningsEmployeeContext>
+  workflowStatus?: MonthWorkflowStatus
   grossForAverage?: number
   workedHoursForAverage?: number
   workedDaysForAverage?: number
@@ -163,17 +165,22 @@ async function handlePhv(res: ServerResponse, month: string): Promise<void> {
   const loaded = await Promise.all(sourceMonths.map(loadMonthRecord))
   const available = sourceMonths.flatMap((sourceMonth, index) => {
     const record = loaded[index]
-    if (!record || sourceMonth < employmentStartMonth) return []
+    if (!record || sourceMonth < employmentStartMonth || record.workflowStatus === 'save-incomplete') return []
+    if (
+      typeof record.grossForAverage !== 'number' ||
+      typeof record.workedHoursForAverage !== 'number' ||
+      typeof record.workedDaysForAverage !== 'number'
+    ) return []
     return [{
-      grossForAverage: record.grossForAverage || 0,
-      workedHoursForAverage: record.workedHoursForAverage || 0,
-      workedDaysForAverage: record.workedDaysForAverage || 0,
+      grossForAverage: record.grossForAverage,
+      workedHoursForAverage: record.workedHoursForAverage,
+      workedDaysForAverage: record.workedDaysForAverage,
     }]
   })
   const missingMonths = effectiveSourceMonths.filter((sourceMonth) => {
     const actualIndex = sourceMonths.indexOf(sourceMonth)
     const record = loaded[actualIndex]
-    return !record
+    return !record || record.workflowStatus === 'save-incomplete'
   })
   const totals = sumAverageQuarterTotals(available)
 

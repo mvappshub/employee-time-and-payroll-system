@@ -81,4 +81,20 @@ describe("payslip metadata defaults", () => {
       seat: "Praha",
     });
   });
+
+  it("hydrates persisted workflow status from a saved month record", () => {
+    useStore.getState().hydrateMonth("2030-05", {
+      employee: useStore.getState().employee,
+      records: [],
+      paySlipInputs: {
+        manualReward: 0,
+        includeManualRewardInAverage: false,
+        unworked: 0,
+        sickCarryoverDays: 0,
+      },
+      workflowStatus: "closed",
+    });
+
+    expect(useStore.getState().monthStatus["2030-05"]).toBe("closed");
+  });
 });

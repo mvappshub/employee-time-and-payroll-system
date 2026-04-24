@@ -1,7 +1,7 @@
 export interface MonthControlsViewProps {
   error: string
   info: string
-  currentStatus: 'empty' | 'loaded' | 'prefilled' | 'saved' | 'modified' | 'closed' | 'approved'
+  currentStatus: 'empty' | 'loaded' | 'prefilled' | 'save-incomplete' | 'saved' | 'modified' | 'closed' | 'approved'
   onLoad: () => void | Promise<void>
   onSave: () => void | Promise<void>
   onPrefill: () => void

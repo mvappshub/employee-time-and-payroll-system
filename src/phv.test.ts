@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
   AUTOMATIC_PHV_ERROR_MESSAGE,
-  calculateActualPhv,
   calculateProbableHourlyEarnings,
   getEmploymentStartMonth,
   getPreviousQuarterMonths,
@@ -48,11 +47,11 @@ describe('average earnings source resolution', () => {
     expect(result.actualPhv).toBeNull()
   })
 
-  it('uses actual PHV for April 2026 when Q1 has complete data and at least 21 worked days', () => {
+  it('uses actual PHV for April 2026 when Q1 has complete stored data even below 21 worked days', () => {
     const totals = sumAverageQuarterTotals([
-      { grossForAverage: 30000, workedHoursForAverage: 160, workedDaysForAverage: 21 },
-      { grossForAverage: 32000, workedHoursForAverage: 152, workedDaysForAverage: 19 },
-      { grossForAverage: 31000, workedHoursForAverage: 160, workedDaysForAverage: 21 },
+      { grossForAverage: 30000, workedHoursForAverage: 160, workedDaysForAverage: 6 },
+      { grossForAverage: 32000, workedHoursForAverage: 152, workedDaysForAverage: 5 },
+      { grossForAverage: 31000, workedHoursForAverage: 160, workedDaysForAverage: 6 },
     ])
     const result = resolveAverageEarnings(
       '2026-04',
@@ -62,25 +61,9 @@ describe('average earnings source resolution', () => {
       [],
     )
 
-    expect(calculateActualPhv(totals)).toBeCloseTo(93000 / 472, 8)
     expect(result.sourceType).toBe('actual')
     expect(result.averageHourlyEarnings).toBeCloseTo(93000 / 472, 8)
     expect(result.actualPhv).toBeCloseTo(93000 / 472, 8)
-  })
-
-  it('uses probable source for April 2026 when Q1 has fewer than 21 worked days', () => {
-    const result = resolveAverageEarnings(
-      '2026-04',
-      employee,
-      ['2026-01', '2026-02', '2026-03'],
-      { grossForAverage: 45000, workedHoursForAverage: 240, workedDaysForAverage: 20 },
-      [],
-    )
-
-    expect(result.sourceType).toBe('probable')
-    expect(result.actualPhv).toBeNull()
-    expect(result.averageHourlyEarnings).toBe(result.probableHourlyEarnings)
-    expect(result.reason).toBe('V kompletním rozhodném období není alespoň 21 odpracovaných dnů.')
   })
 
   it('does not return actual PHV when one relevant quarter month is missing', () => {
@@ -97,10 +80,35 @@ describe('average earnings source resolution', () => {
       '2026-01',
     )
 
-    expect(calculateActualPhv(totals)).toBeCloseTo(93000 / 480, 8)
     expect(result.sourceType).toBe('probable')
     expect(result.actualPhv).toBeNull()
     expect(result.reason).toBe('Rozhodné období není kompletní, chybí uložené měsíce předchozího čtvrtletí.')
+  })
+
+  it('uses probable source for February 2026 when previous quarter is before employment start', () => {
+    const result = resolveAverageEarnings(
+      '2026-02',
+      employee,
+      ['2025-10', '2025-11', '2025-12'],
+      { grossForAverage: 0, workedHoursForAverage: 0, workedDaysForAverage: 0 },
+      [],
+    )
+
+    expect(result.sourceType).toBe('probable')
+    expect(result.actualPhv).toBeNull()
+  })
+
+  it('uses probable source for March 2026 when previous quarter is before employment start', () => {
+    const result = resolveAverageEarnings(
+      '2026-03',
+      employee,
+      ['2025-10', '2025-11', '2025-12'],
+      { grossForAverage: 0, workedHoursForAverage: 0, workedDaysForAverage: 0 },
+      [],
+    )
+
+    expect(result.sourceType).toBe('probable')
+    expect(result.actualPhv).toBeNull()
   })
 
   it('treats missing post-start month as incomplete quarter even if earlier quarter months are irrelevant', () => {

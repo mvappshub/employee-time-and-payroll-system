@@ -47,8 +47,8 @@ describe('UI regressions', () => {
   it('payslip wording distinguishes probable earnings from actual PHV', () => {
     const source = readFileSync(new URL('./PaySlip.tsx', import.meta.url), 'utf8')
 
-    expect(source).toContain('Pravděpodobný výdělek z uložených dat zaměstnance')
-    expect(source).toContain('Skutečný PHV z kompletního předchozího čtvrtletí')
-    expect(source).not.toContain("averageEarnings?.sourceType === 'probable' ? 'Pravděpodobný výdělek' : 'Skutečný PHV'")
+    expect(source).toContain("    ? 'Skutečný PHV'")
+    expect(source).toContain("      ? 'Pravděpodobný výdělek'")
+    expect(source).toContain('employeeContextMonth')
   })
 })

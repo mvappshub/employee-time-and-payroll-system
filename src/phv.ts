@@ -55,11 +55,7 @@ export function sumAverageQuarterTotals(items: AverageQuarterTotals[]): AverageQ
 }
 
 export function calculateActualPhv(totals: AverageQuarterTotals): number | null {
-  if (
-    totals.workedDaysForAverage >= 21 &&
-    totals.workedHoursForAverage > 0 &&
-    totals.grossForAverage > 0
-  ) {
+  if (totals.workedHoursForAverage > 0 && totals.grossForAverage > 0) {
     return totals.grossForAverage / totals.workedHoursForAverage
   }
 
@@ -133,9 +129,7 @@ export function resolveAverageEarnings(
       grossForAverage: totals.grossForAverage,
       workedHoursForAverage: totals.workedHoursForAverage,
       workedDaysForAverage: totals.workedDaysForAverage,
-      reason: !quarterComplete
-        ? 'Rozhodné období není kompletní, chybí uložené měsíce předchozího čtvrtletí.'
-        : 'V kompletním rozhodném období není alespoň 21 odpracovaných dnů.',
+      reason: 'Rozhodné období není kompletní, chybí uložené měsíce předchozího čtvrtletí.',
     }
   }
 

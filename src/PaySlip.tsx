@@ -60,15 +60,15 @@ export default function PaySlip() {
   }, [month])
 
   const averageEarningsLabel = averageEarnings?.sourceType === 'actual'
-    ? 'Skutečný PHV z kompletního předchozího čtvrtletí'
+    ? 'Skutečný PHV'
     : averageEarnings?.sourceType === 'probable'
-      ? 'Pravděpodobný výdělek z uložených dat zaměstnance'
+      ? 'Pravděpodobný výdělek'
       : 'PHV není k dispozici'
 
   const averageEarningsSourceLabel = averageEarnings?.sourceType === 'actual'
-    ? 'skutečný PHV z kompletního předchozího čtvrtletí'
+    ? 'skutečný PHV'
     : averageEarnings?.sourceType === 'probable'
-      ? 'pravděpodobný výdělek z uložených dat zaměstnance'
+      ? 'pravděpodobný výdělek'
       : 'PHV není k dispozici'
 
   const employeeContextLabel = averageEarnings?.employeeContextMonth

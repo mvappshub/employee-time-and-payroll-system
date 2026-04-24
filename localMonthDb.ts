@@ -20,6 +20,15 @@ export interface PersistedMonthRecord {
   }
 }
 
+const DEFAULT_EMPLOYEE_CONTEXT: AverageEarningsEmployeeContext = {
+  employmentStartDate: '2026-01-01',
+  baseSalary: 30000,
+  personalBonus: 0.25,
+  weeklyHours: 40,
+  workDaysPerWeek: 5,
+  weekendWorking: false,
+}
+
 async function ensureDataDir(): Promise<void> {
   await fs.mkdir(DATA_DIR, { recursive: true })
 }
@@ -64,21 +73,34 @@ async function loadAllMonthRecords(): Promise<PersistedMonthRecord[]> {
   return records
 }
 
-function isCompleteEmployeeContext(employee?: Partial<AverageEarningsEmployeeContext>): employee is AverageEarningsEmployeeContext {
-  return Boolean(
-    employee
-    && typeof employee.employmentStartDate === 'string'
-    && typeof employee.baseSalary === 'number'
-    && typeof employee.personalBonus === 'number'
-    && typeof employee.weeklyHours === 'number'
-    && typeof employee.workDaysPerWeek === 'number'
-    && typeof employee.weekendWorking === 'boolean',
-  )
+function normalizeEmployeeContext(employee?: Partial<AverageEarningsEmployeeContext>): AverageEarningsEmployeeContext | null {
+  if (!employee) return null
+
+  return {
+    employmentStartDate: typeof employee.employmentStartDate === 'string' && employee.employmentStartDate
+      ? employee.employmentStartDate
+      : DEFAULT_EMPLOYEE_CONTEXT.employmentStartDate,
+    baseSalary: typeof employee.baseSalary === 'number'
+      ? employee.baseSalary
+      : DEFAULT_EMPLOYEE_CONTEXT.baseSalary,
+    personalBonus: typeof employee.personalBonus === 'number'
+      ? employee.personalBonus
+      : DEFAULT_EMPLOYEE_CONTEXT.personalBonus,
+    weeklyHours: typeof employee.weeklyHours === 'number'
+      ? employee.weeklyHours
+      : DEFAULT_EMPLOYEE_CONTEXT.weeklyHours,
+    workDaysPerWeek: typeof employee.workDaysPerWeek === 'number'
+      ? employee.workDaysPerWeek
+      : DEFAULT_EMPLOYEE_CONTEXT.workDaysPerWeek,
+    weekendWorking: typeof employee.weekendWorking === 'boolean'
+      ? employee.weekendWorking
+      : DEFAULT_EMPLOYEE_CONTEXT.weekendWorking,
+  }
 }
 
 export function findLatestEmployeeContextMonth(records: PersistedMonthRecord[], targetMonth: string): string | null {
   return [...records]
-    .filter(record => record.month <= targetMonth && isCompleteEmployeeContext(record.employee))
+    .filter(record => record.month <= targetMonth && normalizeEmployeeContext(record.employee) !== null)
     .sort((a, b) => a.month.localeCompare(b.month))
     .at(-1)?.month ?? null
 }
@@ -87,7 +109,7 @@ export function pickEmployeeContextForMonth(records: PersistedMonthRecord[], tar
   const month = findLatestEmployeeContextMonth(records, targetMonth)
   if (!month) return null
   const record = records.find(item => item.month === month)
-  return record && isCompleteEmployeeContext(record.employee) ? record.employee : null
+  return record ? normalizeEmployeeContext(record.employee) : null
 }
 
 function sendJson(res: ServerResponse, status: number, body: unknown): void {

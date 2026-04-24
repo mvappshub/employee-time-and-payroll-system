@@ -34,4 +34,29 @@ describe('local month db employee context resolution', () => {
     expect(findLatestEmployeeContextMonth(records, '2026-04')).toBeNull()
     expect(pickEmployeeContextForMonth(records, '2026-04')).toBeNull()
   })
+
+  it('normalizes legacy stored employee snapshots that miss employment start date', () => {
+    const records: PersistedMonthRecord[] = [
+      {
+        month: '2026-01',
+        employee: {
+          baseSalary: 30000,
+          personalBonus: 0,
+          weeklyHours: 40,
+          workDaysPerWeek: 5,
+          weekendWorking: false,
+        },
+      },
+    ]
+
+    expect(findLatestEmployeeContextMonth(records, '2026-04')).toBe('2026-01')
+    expect(pickEmployeeContextForMonth(records, '2026-04')).toEqual({
+      employmentStartDate: '2026-01-01',
+      baseSalary: 30000,
+      personalBonus: 0,
+      weeklyHours: 40,
+      workDaysPerWeek: 5,
+      weekendWorking: false,
+    })
+  })
 })

@@ -27,19 +27,19 @@ export function AppShellView({
   holidaysScreen,
 }: AppShellViewProps) {
   return (
-    <div className="flex h-screen bg-white text-xs text-black">
-      <nav className="w-32 shrink-0 border-r border-gray-200 pt-1">
+    <div className="flex min-h-screen bg-[#fcfcfa] text-xs text-slate-800">
+      <nav className="w-36 shrink-0 px-5 pt-10 pb-8">
         {navigationItems.map(item => (
           <div
             key={item.key}
             onClick={() => onSelectSection(item.key)}
-            className={`cursor-pointer select-none px-1 py-0.5 ${activeSection === item.key ? 'font-bold text-blue-600' : 'text-black'}`}
+            className={`mb-2 cursor-pointer select-none py-1 text-[12px] tracking-[0.08em] transition-colors duration-150 ${activeSection === item.key ? 'font-medium text-slate-900' : 'text-slate-400 hover:text-slate-700'}`}
           >
             {item.label}
           </div>
         ))}
       </nav>
-      <main className="flex-1 overflow-auto p-1">
+      <main className="min-w-0 flex-1 overflow-auto px-8 pt-10 pb-8 lg:px-10">
         {monthControls}
         {activeSection === 'employee' && employeeScreen}
         {activeSection === 'timesheet' && timeSheetScreen}

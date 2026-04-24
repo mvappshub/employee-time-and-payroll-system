@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   calcAverageSourceSnapshot,
@@ -14,6 +14,7 @@ import {
   SICK_PAY_HOURLY_REDUCTION_LIMITS_2026,
   type MonthlySummary
 } from "./domain/payroll/calc";
+import * as legalConstants from "./domain/payroll/legalConstants";
 import type { EmployeeSettings, Holiday, ShiftType, TimeRecord } from "./domain/shared/types";
 
 const employee: EmployeeSettings = {
@@ -375,6 +376,18 @@ describe("rounding helpers", () => {
     expect(calcMonthlyTaxBeforeCredits(146902)).toBe(22036);
     expect(calcMonthlyTaxBeforeCredits(146905)).toBe(22037);
   });
+
+  it("uses the threshold for the requested month", () => {
+    const constantSpy = vi.spyOn(legalConstants, "getConstantForMonth").mockImplementation((key, month) => {
+      if (key === "taxThreshold" && month === "2027-01") return 100000;
+      return 146901;
+    });
+
+    expect(calcMonthlyTaxBeforeCredits(120000, "2026-01")).toBe(18000);
+    expect(calcMonthlyTaxBeforeCredits(120000, "2027-01")).toBe(19600);
+
+    constantSpy.mockRestore();
+  });
 });
 
 describe("DPN hourly reduction basis", () => {
@@ -595,7 +608,7 @@ describe("calculateDay", () => {
     expect(day.nightHours).toBe(7);
   });
 
-  it("holiday combined with sickness — holiday has rawPlanHours 8, sick compensates within 14 days", () => {
+  it("holiday combined with sickness counts as calendar sickness day but does not compensate hours", () => {
     const record: TimeRecord = {
       date: "2026-05-08",
       shift: "nemoc",
@@ -609,8 +622,29 @@ describe("calculateDay", () => {
     expect(day?.rawPlanHours).toBe(0);
     expect(day?.planHours).toBe(0);
     expect(day?.holidayCredit).toBe(0);
+    expect(day?.sickCalendarDay).toBe(true);
+    expect(day?.sickCompensatedHours).toBe(0);
+    expect(day?.sick).toBe(0);
+    expect(day?.recognizedHours).toBe(0);
+  });
+
+  it("compensates sickness hours in shift operation on a planned non-holiday weekend day", () => {
+    const shiftEmployee: EmployeeSettings = {
+      ...employee,
+      weekendWorking: true,
+    };
+    const record: TimeRecord = {
+      date: "2026-04-11",
+      shift: "nemoc",
+      arrival: "",
+      departure: "",
+    };
+
+    const day = calculateMonthDays([record], shiftEmployee, [])[0];
+
+    expect(day?.sickCalendarDay).toBe(true);
+    expect(day?.sickCompensatedHours).toBe(8);
     expect(day?.sick).toBe(8);
-    expect(day?.recognizedHours).toBe(8);
   });
 });
 

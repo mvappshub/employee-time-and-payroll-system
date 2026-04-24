@@ -149,7 +149,7 @@ export function calculateDay(rec: TimeRecord, emp: EmployeeSettings, holidays: H
   const holWorked = isHol ? worked : 0
   const vac = rec.shift === 'dovolená' && !(isHol && worked === 0) ? dailyFund : 0
   const sickCalendarDay = rec.shift === 'nemoc'
-  const sickCompensatedHours = rec.shift === 'nemoc' ? calendarPlanH : 0
+  const sickCompensatedHours = rec.shift === 'nemoc' ? planH : 0
   const sick = sickCompensatedHours
   const night = calcNightHours(rec.arrival, rec.departure, emp.nightFrom, emp.nightTo, emp.nightWorkAllowed)
   const weekend = isWeekend(rec.date) ? worked : 0
@@ -337,9 +337,9 @@ export function roundTaxBase(value: number): number {
   return roundUpToNextHundred(value)
 }
 
-export function calcMonthlyTaxBeforeCredits(taxBase: number): number {
+export function calcMonthlyTaxBeforeCredits(taxBase: number, month = '2026-01'): number {
   if (taxBase <= 0) return 0
-  const threshold2026 = getConstantForMonth('taxThreshold', '2026-01')
+  const threshold2026 = getConstantForMonth('taxThreshold', month)
   if (taxBase <= threshold2026) return roundUpToWholeCrown(taxBase * 0.15)
   const lowBand = threshold2026 * 0.15
   const highBand = (taxBase - threshold2026) * 0.23
@@ -498,7 +498,7 @@ export function calcPaySlip(emp: EmployeeSettings, sum: MonthlySummary, manualRe
   const socialEmployee = roundUpToWholeCrown(contributionBase * getConstantForMonth('socialEmployeeRate', month))
   const socialEmployer = roundUpToWholeCrown(contributionBase * getConstantForMonth('socialEmployerRate', month))
   const taxBase = roundTaxBase(hrubaMzda)
-  const taxBeforeCredits = calcMonthlyTaxBeforeCredits(taxBase)
+  const taxBeforeCredits = calcMonthlyTaxBeforeCredits(taxBase, month)
   const slevaPoplatnika = emp.taxDeclarationSigned && emp.taxpayerCreditApplied
     ? getConstantForMonth('taxpayerCredit', month)
     : 0

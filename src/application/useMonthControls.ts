@@ -51,12 +51,11 @@ export function useMonthControls() {
       })
     },
     onSave: async () => {
-      try {
-        setError('')
-        setInfo('')
-        const safeAverageHourlyEarnings = 0
-        const averageSource = calcAverageSourceSnapshot(employee, summary, inputs.manualReward, inputs.includeManualRewardInAverage, safeAverageHourlyEarnings)
+      setError('')
+      setInfo('')
+      const averageSource = calcAverageSourceSnapshot(employee, summary, inputs.manualReward, inputs.includeManualRewardInAverage, 0)
 
+      try {
         await saveMonthRecord({
           month: currentMonth,
           employer,
@@ -65,6 +64,13 @@ export function useMonthControls() {
           paySlipInputs: inputs,
           ...averageSource,
         })
+        setMonthStatus(currentMonth, 'saved')
+      } catch (caughtError) {
+        setError(caughtError instanceof Error ? caughtError.message : AUTOMATIC_PHV_ERROR_MESSAGE)
+        return
+      }
+
+      try {
         const averageResponse = await fetchQuarterlyPhv(currentMonth)
         const resolvedAverageHourlyEarnings = averageResponse.averageHourlyEarnings
         const resolvedAverageSource = calcAverageSourceSnapshot(
@@ -102,12 +108,11 @@ export function useMonthControls() {
           ...resolvedAverageSource,
           snapshot,
         })
-        setMonthStatus(currentMonth, 'saved')
         if (averageResponse.sourceType === 'unavailable') {
           setInfo(averageResponse.reason || AUTOMATIC_PHV_ERROR_MESSAGE)
         }
       } catch (caughtError) {
-        setError(caughtError instanceof Error ? caughtError.message : AUTOMATIC_PHV_ERROR_MESSAGE)
+        setInfo(caughtError instanceof Error ? caughtError.message : AUTOMATIC_PHV_ERROR_MESSAGE)
       }
     },
     onPrefill: () => {

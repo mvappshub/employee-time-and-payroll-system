@@ -146,6 +146,7 @@ export function usePaySlipScreen() {
     loading: calculation.loading,
     error: !calculation.loading && !calculation.payslip ? calculation.error : '',
     isDataClosed,
+    printDisabled: !isDataClosed,
     dataClosedWarning: isDataClosed ? '' : 'Výplatní páska je generována z neuzavřených dat. Nejprve uzavřete evidenci nebo schvalte mzdu.',
     onMonthChange: setMonth,
     internalInputs: {
@@ -168,7 +169,7 @@ export function usePaySlipScreen() {
       { label: 'Odpracované hodiny pro průměr', value: formatHours(averageEarnings?.workedHoursForAverage || 0) },
       { label: 'Odpracované dny pro průměr', value: formatDays(averageEarnings?.workedDaysForAverage || 0) },
     ] : [],
-    employeeDocument: calculation.payslip ? {
+    employeeDocument: calculation.payslip && isDataClosed ? {
       employerName: employer.name,
       employerIco: employer.ico,
       employerSeat: employer.seat,

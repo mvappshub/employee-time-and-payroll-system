@@ -36,6 +36,7 @@ export interface PaySlipViewProps {
   loading: boolean
   error: string
   isDataClosed: boolean
+  printDisabled: boolean
   dataClosedWarning: string
   internalInputs: InternalInputProps
   auditRows: AuditRow[]
@@ -49,6 +50,7 @@ export function PaySlipView({
   loading,
   error,
   isDataClosed,
+  printDisabled,
   dataClosedWarning,
   internalInputs,
   auditRows,
@@ -70,7 +72,7 @@ export function PaySlipView({
       {!loading && error && <div className="border border-red-300 bg-red-50 px-2 py-1 text-red-700">{error}</div>}
       {!loading && dataClosedWarning && <div className="mt-2 border border-amber-300 bg-amber-50 px-2 py-1 text-amber-800">{dataClosedWarning}</div>}
 
-      {!loading && employeeDocument && (
+      {!loading && !printDisabled && employeeDocument && (
         <div className="space-y-4">
           <section className="rounded border border-gray-300 bg-gray-50 p-3">
             <div className="mb-2 font-semibold">Interní mzdové vstupy</div>
@@ -148,6 +150,12 @@ export function PaySlipView({
             </table>
           </section>
         </div>
+      )}
+
+      {!loading && printDisabled && (
+        <section className="rounded border border-amber-300 bg-amber-50 p-3 text-[12px] text-amber-900">
+          Tiskový obsah výplatní pásky je dostupný až po uzavření nebo schválení měsíce.
+        </section>
       )}
     </div>
   )

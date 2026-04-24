@@ -11,6 +11,7 @@ export default function PaySlip() {
       loading={screen.loading}
       error={screen.error}
       isDataClosed={screen.isDataClosed}
+      printDisabled={screen.printDisabled}
       dataClosedWarning={screen.dataClosedWarning}
       internalInputs={screen.internalInputs}
       auditRows={screen.auditRows}

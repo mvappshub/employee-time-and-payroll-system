@@ -118,6 +118,22 @@ describe('document builders', () => {
     expect(refreshed.invalidationReason).toContain('obnovu pracovní smlouvy')
   })
 
+  it('keeps issued contract unchanged when only non-contract payroll fields change', () => {
+    const first = {
+      ...buildEmploymentContractDocument(employee, employer),
+      lifecycleStatus: 'issued' as const,
+      issuedAt: '2026-04-01T10:00:00.000Z',
+      updatedAt: '2026-04-01T10:00:00.000Z',
+      version: 2,
+    }
+
+    const unchanged = buildEmploymentContractDocument({ ...employee, taxDeclarationSigned: false, vacationUsedHours: 40 }, employer, first)
+
+    expect(unchanged).toBe(first)
+    expect(unchanged.version).toBe(2)
+    expect(unchanged.invalidatedAt).toBeUndefined()
+  })
+
   it('builds time sheet statement from persisted month snapshot', () => {
     const document = buildTimeSheetStatementDocument(employee, employer, month, [])
 
@@ -127,15 +143,34 @@ describe('document builders', () => {
   })
 
   it('builds issued payslip document with payroll snapshot', () => {
-    const document = buildIssuedPayslipDocument(employee, employer, month)
+    const document = buildIssuedPayslipDocument(employee, employer, month, {
+      workHoursWH: 160,
+      workDaysWH: 20,
+      totalNight: 4,
+      totalWeekend: 0,
+      totalHolidayTotal: 0,
+      totalOvertime: 2,
+      totalVacation: 8,
+      totalSick: 0,
+    })
 
     expect(document.lifecycleStatus).toBe('issued')
     expect(document.snapshot.payrollResult.hrubaMzda).toBe(40000)
     expect(document.snapshot.calculationSnapshot?.averageHourlyEarnings).toBe(250)
+    expect(document.snapshot.documentSummary.totalOvertime).toBe(2)
   })
 
   it('invalidates an issued document in place', () => {
-    const document = buildIssuedPayslipDocument(employee, employer, month)
+    const document = buildIssuedPayslipDocument(employee, employer, month, {
+      workHoursWH: 160,
+      workDaysWH: 20,
+      totalNight: 4,
+      totalWeekend: 0,
+      totalHolidayTotal: 0,
+      totalOvertime: 2,
+      totalVacation: 8,
+      totalSick: 0,
+    })
     const invalidated = invalidateDocument(document, 'Změna dat.')
 
     expect(invalidated?.lifecycleStatus).toBe('invalidated')

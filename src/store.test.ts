@@ -116,6 +116,16 @@ describe('store workflow cache', () => {
             unworked: 0,
             sickCarryoverDays: 0,
           },
+          documentSummary: {
+            workHoursWH: 160,
+            workDaysWH: 20,
+            totalNight: 0,
+            totalWeekend: 0,
+            totalHolidayTotal: 0,
+            totalOvertime: 0,
+            totalVacation: 0,
+            totalSick: 0,
+          },
         },
       },
     })

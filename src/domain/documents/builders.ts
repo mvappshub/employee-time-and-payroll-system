@@ -14,6 +14,37 @@ function documentVersion(previousVersion?: number): number {
   return typeof previousVersion === 'number' ? previousVersion + 1 : 1
 }
 
+function buildEmploymentContractSnapshot(employee: EmployeeSettings, employer: EmployerProfile): EmploymentContractDocument['snapshot'] {
+  return {
+    employer,
+    employee: {
+      id: employee.id,
+      name: employee.name,
+      employeeNumber: employee.employeeNumber,
+      permanentAddress: employee.permanentAddress,
+      employmentStartDate: employee.employmentStartDate,
+      employmentEndDate: employee.employmentEndDate,
+      contractJobTitle: employee.contractJobTitle,
+      contractWorkplace: employee.contractWorkplace,
+      contractWorkSchedule: employee.contractWorkSchedule,
+      probationMonths: employee.probationMonths,
+      fixedTermEndDate: employee.fixedTermEndDate,
+      remunerationType: employee.remunerationType,
+      baseSalary: employee.baseSalary,
+      workload: employee.workload,
+      weeklyHours: employee.weeklyHours,
+    },
+  }
+}
+
+export function hasContractRelevantChange(
+  previous: EmploymentContractDocument['snapshot'] | null | undefined,
+  next: EmploymentContractDocument['snapshot'],
+): boolean {
+  if (!previous) return true
+  return JSON.stringify(previous) !== JSON.stringify(next)
+}
+
 export function isEmployerProfileReady(profile: EmployerProfile): boolean {
   return Boolean(
     profile.name.trim() &&
@@ -46,6 +77,11 @@ export function buildEmploymentContractDocument(
   employer: EmployerProfile,
   previous?: EmploymentContractDocument | null,
 ): EmploymentContractDocument {
+  const snapshot = buildEmploymentContractSnapshot(employee, employer)
+  if (previous && !hasContractRelevantChange(previous.snapshot, snapshot)) {
+    return previous
+  }
+
   const updatedAt = new Date().toISOString()
   const missing = getEmploymentContractMissingFields(employee, employer)
 
@@ -62,26 +98,7 @@ export function buildEmploymentContractDocument(
     invalidationReason: previous?.lifecycleStatus === 'issued'
       ? 'Změna zaměstnance nebo firemního profilu vyžaduje obnovu pracovní smlouvy.'
       : previous?.invalidationReason,
-    snapshot: {
-      employer,
-      employee: {
-        id: employee.id,
-        name: employee.name,
-        employeeNumber: employee.employeeNumber,
-        permanentAddress: employee.permanentAddress,
-        employmentStartDate: employee.employmentStartDate,
-        employmentEndDate: employee.employmentEndDate,
-        contractJobTitle: employee.contractJobTitle,
-        contractWorkplace: employee.contractWorkplace,
-        contractWorkSchedule: employee.contractWorkSchedule,
-        probationMonths: employee.probationMonths,
-        fixedTermEndDate: employee.fixedTermEndDate,
-        remunerationType: employee.remunerationType,
-        baseSalary: employee.baseSalary,
-        workload: employee.workload,
-        weeklyHours: employee.weeklyHours,
-      },
-    },
+    snapshot,
   }
 }
 
@@ -167,6 +184,7 @@ export function buildIssuedPayslipDocument(
   employee: EmployeeSettings,
   employer: EmployerProfile,
   month: EmployeeMonth,
+  documentSummary: IssuedPayslipDocument['snapshot']['documentSummary'],
   previous?: IssuedPayslipDocument | null,
 ): IssuedPayslipDocument {
   const updatedAt = new Date().toISOString()
@@ -203,6 +221,7 @@ export function buildIssuedPayslipDocument(
       payrollResult: (month.payrollResult || {}) as PayrollResult,
       timeSummary: month.timeSummary,
       paySlipInputs: month.paySlipInputs,
+      documentSummary,
     },
   }
 }

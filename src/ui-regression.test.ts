@@ -8,6 +8,7 @@ const holidaysView = readFileSync(new URL('./screens/holidays/HolidaysView.tsx',
 const appShellView = readFileSync(new URL('./screens/app/AppShellView.tsx', import.meta.url), 'utf8')
 const paySlipHook = readFileSync(new URL('./application/usePaySlipScreen.ts', import.meta.url), 'utf8')
 const appShellHook = readFileSync(new URL('./application/useAppShell.ts', import.meta.url), 'utf8')
+const monthControlsView = readFileSync(new URL('./screens/month-controls/MonthControlsView.tsx', import.meta.url), 'utf8')
 
 describe('UI regressions', () => {
   it('employee view exposes employer profile, employee number, and vacation summary inputs', () => {
@@ -51,6 +52,11 @@ describe('UI regressions', () => {
     expect(paySlipHook).toContain('Dovolená - roční nárok')
     expect(paySlipHook).toContain('Dovolená - vyčerpáno')
     expect(paySlipHook).toContain('Dovolená - zůstatek')
+  })
+
+  it('month controls wire print button to a concrete action', () => {
+    expect(monthControlsView).toContain('onClick={onPrintPayslip}')
+    expect(monthControlsView).toContain('Tisk / PDF')
   })
 
   it('time sheet view still renders the expected work evidence columns', () => {

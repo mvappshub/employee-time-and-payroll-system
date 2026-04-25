@@ -29,6 +29,7 @@ export interface MonthControlsViewProps {
   onCalculatePayroll: () => void | Promise<void>
   onApproveMonth: () => void | Promise<void>
   onIssuePayslip: () => void | Promise<void>
+  onPrintPayslip: () => void | Promise<void>
 }
 
 const btn = 'border border-slate-300 px-2 py-1 text-[12px] text-slate-700 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400'
@@ -51,6 +52,7 @@ export function MonthControlsView({
   onCalculatePayroll,
   onApproveMonth,
   onIssuePayslip,
+  onPrintPayslip,
 }: MonthControlsViewProps) {
   return (
     <div className="app-controls mb-8 rounded border border-slate-200 bg-white p-4 text-xs">
@@ -66,7 +68,7 @@ export function MonthControlsView({
         <button className={btn} onClick={onCalculatePayroll} disabled={!buttonState.canCalculatePayroll} title="Spočítat mzdu. Dostupné až po uzavření evidence.">Spočítat mzdu</button>
         <button className={btn} onClick={onApproveMonth} disabled={!buttonState.canApprove} title="Schválit mzdu. Dostupné až po výpočtu mzdy.">Schválit mzdu</button>
         <button className={btn} onClick={onIssuePayslip} disabled={!buttonState.canIssuePayslip} title="Vystavit výplatní pásku. Dostupné až po schválení mzdy.">Vystavit výplatní pásku</button>
-        <button className={btn} disabled={!buttonState.canPrint} title="Tisk / PDF. Dostupné až po vystavení výplatní pásky.">Tisk / PDF</button>
+        <button className={btn} onClick={onPrintPayslip} disabled={!buttonState.canPrint} title="Tisk / PDF. Dostupné až po vystavení výplatní pásky.">Tisk / PDF</button>
       </div>
       {success && <div className="mt-3 text-green-700">{success}</div>}
       {info && <div className="mt-3 text-slate-500">{info}</div>}

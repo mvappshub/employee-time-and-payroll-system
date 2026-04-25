@@ -3,7 +3,6 @@ import { useEmployeesScreen } from '../../application/useEmployeesScreen'
 import { EmployeeDetail } from './EmployeeDetail'
 import { EmployeeList } from './EmployeeList'
 import { EmployeeMonthOverview } from './EmployeeMonthOverview'
-import { printDocumentById } from '../documents/print'
 
 export function EmployeesScreen() {
   const screen = useEmployeesScreen()
@@ -31,10 +30,7 @@ export function EmployeesScreen() {
           onSaveEmployee={screen.onSaveEmployee}
           onToggleContractPreview={screen.onToggleContractPreview}
           onRefreshContractDraft={screen.onRefreshContractDraft}
-          onPrintContract={async () => {
-            await screen.onPrintContract()
-            printDocumentById('employment-contract-document')
-          }}
+          onPrintContract={screen.onPrintContract}
         />
         <EmployeeMonthOverview
           rows={screen.monthRows}

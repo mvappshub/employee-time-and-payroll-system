@@ -24,6 +24,7 @@ export function MonthControlsScreen() {
       onCalculatePayroll={controls.onCalculatePayroll}
       onApproveMonth={controls.onApproveMonth}
       onIssuePayslip={controls.onIssuePayslip}
+      onPrintPayslip={controls.onPrintPayslip}
     />
   )
 }

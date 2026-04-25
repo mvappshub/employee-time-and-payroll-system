@@ -11,6 +11,7 @@ import {
   type SavedMonthRecord,
 } from '../infrastructure/api/monthStorage'
 import { useStore } from '../infrastructure/state/store'
+import { printDocumentById } from '../screens/documents/print'
 import { defaultPaySlipInputs } from './defaults'
 import type { EmployeeMonth, EmployeeSettings, MonthStatus, TimeRecord, TimeSummary } from '../domain/shared/types'
 import { formatMonthLabel } from './formatters'
@@ -193,6 +194,15 @@ export function useMonthControls() {
     lastActionLabel: payrollState?.updatedAt || payrollState?.issuedAt || payrollState?.approvedAt || payrollState?.closedAt || '—',
     monthExists,
     buttonState,
+    onPrintPayslip: () => {
+      if (!buttonState.canPrint) return
+      setSection('payroll')
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          printDocumentById('issued-payslip-document')
+        })
+      })
+    },
     onInitMonth: async () => {
       if (!selectedEmployeeId || !employee) {
         setInfo('Vyberte zaměstnance.')
@@ -449,7 +459,22 @@ export function useMonthControls() {
         issuedAt: nowIso,
       })
       if (saved && employee) {
-        saved.payslipDocument = buildIssuedPayslipDocument(employee, employer, saved, payrollState?.payslipDocument || null)
+        saved.payslipDocument = buildIssuedPayslipDocument(
+          employee,
+          employer,
+          saved,
+          {
+            workHoursWH: summary.workHoursWH,
+            workDaysWH: summary.workDaysWH,
+            totalNight: summary.totalNight,
+            totalWeekend: summary.totalWeekend,
+            totalHolidayTotal: summary.totalHolidayTotal,
+            totalOvertime: summary.totalOvertime,
+            totalVacation: summary.totalVacation,
+            totalSick: summary.totalSick,
+          },
+          payrollState?.payslipDocument || null,
+        )
       }
       if (!saved) return
       try {

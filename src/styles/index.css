@@ -61,6 +61,16 @@ input[type="number"]::-webkit-outer-spin-button {
   opacity: 0.3;
 }
 
+.document-print-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 @media print {
   @page {
     size: A4;
@@ -99,12 +109,18 @@ input[type="number"]::-webkit-outer-spin-button {
   }
 
   .app-chrome,
-  .app-controls,
-  button,
-  input,
-  select,
-  textarea {
+  .app-controls {
     display: none !important;
+  }
+
+  .document-print-only {
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+    clip: auto !important;
+    clip-path: none !important;
+    white-space: normal !important;
   }
 
   .document-sheet {

@@ -1,6 +1,5 @@
 import { useTimeSheetScreen } from './application/useTimeSheetScreen'
 import { TimeSheetView } from './screens/timesheet/TimeSheetView'
-import { printDocumentById } from './screens/documents/print'
 
 export default function TimeSheet() {
   const screen = useTimeSheetScreen()
@@ -22,10 +21,7 @@ export default function TimeSheet() {
       onMonthChange={screen.onMonthChange}
       onResetMonth={screen.onResetMonth}
       onToggleDocumentPreview={screen.onToggleDocumentPreview}
-      onPrintDocument={async () => {
-        await screen.onPrintDocument()
-        printDocumentById('time-sheet-document')
-      }}
+      onPrintDocument={screen.onPrintDocument}
       onShiftChange={screen.onShiftChange}
       onArrivalChange={screen.onArrivalChange}
       onDepartureChange={screen.onDepartureChange}

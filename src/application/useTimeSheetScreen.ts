@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { calculateMonthDays, calcMonthlySummary, formatDateCZ, isWeekend } from '../domain/payroll/calc'
 import { buildTimeSheetStatementDocument, getTimeSheetStatementBlockingReason } from '../domain/documents/builders'
 import { saveEmployeeMonth as saveEmployeeMonthApi } from '../infrastructure/api/monthStorage'
+import { printDocumentById } from '../screens/documents/print'
 import { defaultPaySlipInputs } from './defaults'
 import { formatCompactNumber, formatMonthLabel } from './formatters'
 import { useStore } from '../infrastructure/state/store'
@@ -173,6 +174,11 @@ export function useTimeSheetScreen() {
         setPayrollMonthState(selectedEmployeeId, month, { timeSheetDocument: issuedDocument, updatedAt: issuedDocument.updatedAt })
         setInfo('Výpis evidence byl vystaven.')
         setError('')
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            printDocumentById('time-sheet-document')
+          })
+        })
       } catch (caughtError) {
         setError(caughtError instanceof Error ? caughtError.message : 'Výpis evidence se nepodařilo vystavit.')
       }

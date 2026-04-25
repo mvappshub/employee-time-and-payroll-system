@@ -56,7 +56,7 @@ export function EmployeeDetail({
   }
 
   return (
-    <section className="rounded border border-slate-200 bg-white p-4">
+    <section className="relative rounded border border-slate-200 bg-white p-4">
       <div className="mb-4 text-sm font-semibold text-slate-900">Karta zaměstnance</div>
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-4">
@@ -191,7 +191,10 @@ export function EmployeeDetail({
           </div>
         )}
         {contractDocument && (
-          <div className={showContractPreview ? 'mt-4' : 'absolute -left-[9999px] top-0'}>
+          <div
+            className={showContractPreview ? 'mt-4' : 'document-print-only'}
+            aria-hidden={showContractPreview ? undefined : 'true'}
+          >
             <EmploymentContractDocumentView document={contractDocument} />
           </div>
         )}

@@ -2,9 +2,11 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   buildEmploymentContractDocument,
   getEmploymentContractMissingFields,
+  hasContractRelevantChange,
   issueEmploymentContractDocument,
   isEmployerProfileReady,
 } from '../domain/documents/builders'
+import { printDocumentById } from '../screens/documents/print'
 import {
   buildEmployeeMonthRecord,
   createEmployee as createEmployeeApi,
@@ -222,6 +224,11 @@ export function useEmployeesScreen() {
       updateEmployee(activeEmployee.id, { employmentContractDocument: issuedDocument })
       setDraftEmployee(current => current ? { ...current, employmentContractDocument: issuedDocument } : current)
       setInfo('Pracovní smlouva byla vystavena.')
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          printDocumentById('employment-contract-document')
+        })
+      })
     },
     onSaveEmployee: async () => {
       if (!activeEmployee) return
@@ -235,7 +242,13 @@ export function useEmployeesScreen() {
       }
       setError('')
       setInfo('')
-      const nextDocument = buildEmploymentContractDocument(activeEmployee, employer, activeEmployee.employmentContractDocument)
+      const nextDocument = !activeEmployee.employmentContractDocument ||
+        hasContractRelevantChange(
+          activeEmployee.employmentContractDocument.snapshot,
+          buildEmploymentContractDocument(activeEmployee, employer, null).snapshot,
+        )
+        ? buildEmploymentContractDocument(activeEmployee, employer, activeEmployee.employmentContractDocument)
+        : activeEmployee.employmentContractDocument
       const employeePayload = {
         ...activeEmployee,
         employmentContractDocument: nextDocument,

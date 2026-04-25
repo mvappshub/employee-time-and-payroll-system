@@ -118,6 +118,16 @@ export interface IssuedPayslipSnapshot {
   payrollResult: PayrollResult
   timeSummary?: TimeSummary
   paySlipInputs: PaySlipInputs
+  documentSummary: {
+    workHoursWH: number
+    workDaysWH: number
+    totalNight: number
+    totalWeekend: number
+    totalHolidayTotal: number
+    totalOvertime: number
+    totalVacation: number
+    totalSick: number
+  }
 }
 
 export interface EmploymentContractDocument extends DocumentMetadata {

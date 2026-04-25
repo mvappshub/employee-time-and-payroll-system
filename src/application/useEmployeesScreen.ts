@@ -1,5 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
-import { createEmployee as createEmployeeApi, listEmployeeMonths, listEmployees, updateEmployee as updateEmployeeApi } from '../infrastructure/api/monthStorage'
+import {
+  buildEmploymentContractDocument,
+  getEmploymentContractMissingFields,
+  issueEmploymentContractDocument,
+  isEmployerProfileReady,
+} from '../domain/documents/builders'
+import {
+  buildEmployeeMonthRecord,
+  createEmployee as createEmployeeApi,
+  listEmployeeMonths,
+  listEmployees,
+  saveEmployeeMonth,
+  updateEmployee as updateEmployeeApi,
+} from '../infrastructure/api/monthStorage'
 import { useStore, normalizeEmployeeSettings } from '../infrastructure/state/store'
 import type { EmployeeMonth, EmployeeSettings, MonthStatus } from '../domain/shared/types'
 import { calculateMonthDays, calcMonthlySummary } from '../domain/payroll/calc'
@@ -19,7 +32,7 @@ function actionLabelForStatus(status?: MonthStatus): string {
     case 'payroll_approved':
       return 'Vystavit výplatní pásku'
     case 'payslip_issued':
-      return 'Tisk PDF'
+      return 'Tisk / PDF'
     default:
       return 'Založit měsíc'
   }
@@ -31,14 +44,8 @@ function buildMonthList(currentMonth: string, loadedMonths: string[]): string[] 
   return Array.from(new Set([...generated, ...loadedMonths])).sort()
 }
 
-function makeEmployeeId(): string {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID()
-  }
-  return `emp-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
-}
-
 export function useEmployeesScreen() {
+  const employer = useStore(s => s.employer)
   const employees = useStore(s => s.employees)
   const selectedEmployeeId = useStore(s => s.selectedEmployeeId)
   const currentMonth = useStore(s => s.currentMonth)
@@ -49,6 +56,7 @@ export function useEmployeesScreen() {
   const holidays = useStore(s => s.holidays)
   const createEmployee = useStore(s => s.createEmployee)
   const updateEmployee = useStore(s => s.updateEmployee)
+  const replaceEmployees = useStore(s => s.replaceEmployees)
   const selectEmployee = useStore(s => s.selectEmployee)
   const archiveEmployee = useStore(s => s.archiveEmployee)
   const initEmployeeMonth = useStore(s => s.initEmployeeMonth)
@@ -60,21 +68,24 @@ export function useEmployeesScreen() {
   const [error, setError] = useState('')
   const [info, setInfo] = useState('')
   const [loadedEmployees, setLoadedEmployees] = useState(false)
+  const [showContractPreview, setShowContractPreview] = useState(false)
 
   const selectedEmployee = employees.find(employee => employee.id === selectedEmployeeId) || null
   const activeEmployee = draftEmployee || selectedEmployee
+  const employmentContractDocument = activeEmployee?.employmentContractDocument || null
+  const contractMissingFields = activeEmployee ? getEmploymentContractMissingFields(activeEmployee, employer) : []
+  const canPrintContract = Boolean(activeEmployee?.id && isEmployerProfileReady(employer) && contractMissingFields.length === 0)
 
   useEffect(() => {
-    if (loadedEmployees || employees.length > 0) return
+    if (loadedEmployees) return
     let active = true
     listEmployees()
-      .then(async loaded => {
+      .then(loaded => {
         if (!active) return
-        loaded.forEach(employee => {
-          if (!employees.some(existing => existing.id === employee.id)) {
-            createEmployee(employee)
-          }
-        })
+        replaceEmployees(loaded)
+        if (selectedEmployeeId && !loaded.some(employee => employee.id === selectedEmployeeId)) {
+          selectEmployee(null)
+        }
       })
       .catch(() => {})
       .finally(() => {
@@ -83,7 +94,7 @@ export function useEmployeesScreen() {
     return () => {
       active = false
     }
-  }, [createEmployee, employees, loadedEmployees])
+  }, [loadedEmployees, replaceEmployees, selectEmployee, selectedEmployeeId])
 
   useEffect(() => {
     if (!selectedEmployeeId) return
@@ -98,6 +109,11 @@ export function useEmployeesScreen() {
       active = false
     }
   }, [hydrateEmployeeMonth, selectedEmployeeId])
+
+  const monthExists = (employeeId: string, month: string) => {
+    const statuses = monthStatusByEmployee[employeeId] || {}
+    return typeof statuses[month] !== 'undefined'
+  }
 
   const monthRows = useMemo(() => {
     if (!activeEmployee?.id) return []
@@ -122,12 +138,13 @@ export function useEmployeesScreen() {
         sickHours: summary?.totalSick ?? 0,
         vacationHours: summary?.totalVacation ?? 0,
         saldo: summary?.totalSaldo ?? 0,
-        timeStatus: status || '—',
+        timeStatus: status || 'bez dat',
         payrollStatus: status === 'payroll_calculated' || status === 'payroll_approved' || status === 'payslip_issued' ? status : '—',
         payslipStatus: status === 'payslip_issued' ? 'vystavena' : '—',
         updatedAt: payrollState?.updatedAt || payrollState?.closedAt || payrollState?.approvedAt || '—',
         actionLabel: actionLabelForStatus(status),
-        actionRoute: !status ? 'init' : (status === 'draft' || status === 'time_saved' ? 'timesheet' : 'payroll'),
+        actionRoute: (!status ? 'init' : (status === 'draft' || status === 'time_saved' ? 'timesheet' : 'payroll')) as 'init' | 'timesheet' | 'payroll',
+        canPreviewTimeSheetDocument: Boolean(payrollState?.timeSheetDocument),
       }
     })
   }, [activeEmployee, currentMonth, holidays, monthStatusByEmployee, paySlipInputsByEmployee, payrollByEmployee, recordsByEmployee])
@@ -159,62 +176,145 @@ export function useEmployeesScreen() {
     error,
     info,
     monthRows,
+    employmentContractDocument,
+    contractMissingFields,
+    showContractPreview,
+    canPrintContract,
     onSelectEmployee: (id: string) => {
       setDraftEmployee(null)
+      setShowContractPreview(false)
       selectEmployee(id)
     },
     onCreateEmployee: () => {
       setError('')
       setInfo('')
-      setDraftEmployee(normalizeEmployeeSettings({ id: '' }))
+      setDraftEmployee({ ...normalizeEmployeeSettings(), id: '' })
       selectEmployee(null)
     },
     onEmployeeChange: (field: keyof EmployeeSettings, value: string | number | boolean) => {
       if (!activeEmployee) return
       setDraftEmployee({ ...activeEmployee, [field]: value } as EmployeeSettings)
     },
+    onToggleContractPreview: () => {
+      setShowContractPreview(value => !value)
+    },
+    onRefreshContractDraft: async () => {
+      if (!activeEmployee?.id) return
+      const nextDocument = buildEmploymentContractDocument(activeEmployee, employer, activeEmployee.employmentContractDocument)
+      try {
+        await updateEmployeeApi(activeEmployee.id, { employmentContractDocument: nextDocument })
+      } catch (saveError) {
+        setError(saveError instanceof Error ? saveError.message : 'Draft pracovní smlouvy se nepodařilo obnovit.')
+        return
+      }
+      updateEmployee(activeEmployee.id, { employmentContractDocument: nextDocument })
+      setInfo('Draft pracovní smlouvy byl aktualizován.')
+    },
+    onPrintContract: async () => {
+      if (!activeEmployee?.id || !activeEmployee.employmentContractDocument || !canPrintContract) return
+      const issuedDocument = issueEmploymentContractDocument(activeEmployee.employmentContractDocument)
+      try {
+        await updateEmployeeApi(activeEmployee.id, { employmentContractDocument: issuedDocument })
+      } catch (saveError) {
+        setError(saveError instanceof Error ? saveError.message : 'Pracovní smlouvu se nepodařilo vystavit.')
+        return
+      }
+      updateEmployee(activeEmployee.id, { employmentContractDocument: issuedDocument })
+      setDraftEmployee(current => current ? { ...current, employmentContractDocument: issuedDocument } : current)
+      setInfo('Pracovní smlouva byla vystavena.')
+    },
     onSaveEmployee: async () => {
       if (!activeEmployee) return
-      if (!activeEmployee.name || !activeEmployee.employmentStartDate || !activeEmployee.baseSalary) {
-        setError('Vyplňte jméno, datum nástupu a základní mzdu.')
+      if (!activeEmployee.name || !activeEmployee.employmentStartDate) {
+        setError('Vyplňte jméno a datum nástupu.')
+        return
+      }
+      if (typeof activeEmployee.baseSalary !== 'number' || activeEmployee.baseSalary <= 0) {
+        setError('Základní mzda musí být kladné číslo.')
         return
       }
       setError('')
-      if (!activeEmployee.id) {
-        const newId = makeEmployeeId()
-        const created = normalizeEmployeeSettings({ ...activeEmployee, id: newId })
+      setInfo('')
+      const nextDocument = buildEmploymentContractDocument(activeEmployee, employer, activeEmployee.employmentContractDocument)
+      const employeePayload = {
+        ...activeEmployee,
+        employmentContractDocument: nextDocument,
+      }
+      const isPersistedEmployee = !!activeEmployee.id && employees.some(employee => employee.id === activeEmployee.id)
+      if (!isPersistedEmployee) {
+        let persistedEmployee: EmployeeSettings
         try {
-          await createEmployeeApi(created)
+          persistedEmployee = await createEmployeeApi({
+            ...employeePayload,
+            id: undefined,
+          })
         } catch (saveError) {
           setError(saveError instanceof Error ? saveError.message : 'Zaměstnance se nepodařilo uložit.')
           return
         }
-        createEmployee(created)
+        createEmployee(persistedEmployee)
+        selectEmployee(persistedEmployee.id)
         setDraftEmployee(null)
         setInfo('Zaměstnanec byl uložen.')
         return
       }
 
       try {
-        await updateEmployeeApi(activeEmployee.id, activeEmployee)
+        await updateEmployeeApi(activeEmployee.id, employeePayload)
       } catch (saveError) {
         setError(saveError instanceof Error ? saveError.message : 'Zaměstnance se nepodařilo uložit.')
         return
       }
-      updateEmployee(activeEmployee.id, activeEmployee)
+      updateEmployee(activeEmployee.id, employeePayload)
       setDraftEmployee(null)
       setInfo('Změny zaměstnance byly uloženy.')
     },
-    onArchiveEmployee: (id: string) => archiveEmployee(id),
-    onInitMonth: (month: string) => {
-      if (!activeEmployee?.id) return
+    onArchiveEmployee: async (id: string) => {
+      setError('')
+      setInfo('')
+      try {
+        await updateEmployeeApi(id, { status: 'archived' })
+      } catch (archiveError) {
+        setError(archiveError instanceof Error ? archiveError.message : 'Zaměstnance se nepodařilo archivovat.')
+        return
+      }
+      archiveEmployee(id)
+      setInfo('Zaměstnanec byl archivován.')
+    },
+    onInitMonth: async (month: string) => {
+      if (!activeEmployee?.id || !employees.some(employee => employee.id === activeEmployee.id)) {
+        setError('Nejprve uložte zaměstnance.')
+        return
+      }
+      if (monthExists(activeEmployee.id, month)) {
+        setInfo('Měsíc už existuje.')
+        return
+      }
+      setError('')
+      setInfo('')
+      const draft = buildEmployeeMonthRecord({
+        employeeId: activeEmployee.id,
+        month,
+        status: 'draft',
+        employee: activeEmployee,
+        records: [],
+        paySlipInputs: defaultPaySlipInputs,
+        auditTrail: [{ at: new Date().toISOString(), action: 'init-month' }],
+      })
+      try {
+        await saveEmployeeMonth(activeEmployee.id, month, draft)
+      } catch (saveError) {
+        setError(saveError instanceof Error ? saveError.message : 'Měsíc se nepodařilo založit.')
+        return
+      }
       initEmployeeMonth(activeEmployee.id, month)
+      hydrateEmployeeMonth(activeEmployee.id, month, draft as EmployeeMonth)
       setCurrentMonth(month)
       setSection('timesheet')
+      setInfo('Měsíc byl založen.')
     },
     onOpenMonth: (month: string) => {
       if (!activeEmployee?.id) return
-      initEmployeeMonth(activeEmployee.id, month)
       setCurrentMonth(month)
       const status = monthStatusByEmployee[activeEmployee.id]?.[month]
       if (status === 'draft' || status === 'time_saved' || !status) {
@@ -222,6 +322,11 @@ export function useEmployeesScreen() {
         return
       }
       setSection('payroll')
+    },
+    onOpenTimeSheetDocument: (month: string) => {
+      if (!activeEmployee?.id) return
+      setCurrentMonth(month)
+      setSection('timesheet')
     },
   }
 }

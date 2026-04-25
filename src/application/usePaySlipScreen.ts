@@ -60,7 +60,6 @@ function getAverageLabels(averageEarnings: QuarterlyPhvResponse | null) {
 }
 
 export function usePaySlipScreen() {
-  const employer = useStore(s => s.employer)
   const employees = useStore(s => s.employees)
   const selectedEmployeeId = useStore(s => s.selectedEmployeeId)
   const recordsByEmployee = useStore(s => s.recordsByEmployee)
@@ -77,8 +76,10 @@ export function usePaySlipScreen() {
   const inputs = selectedEmployeeId ? paySlipInputsByEmployee[selectedEmployeeId]?.[month] || defaultPaySlipInputs : defaultPaySlipInputs
   const currentMonthStatus = selectedEmployeeId ? monthStatusByEmployee[selectedEmployeeId]?.[month] || 'empty' : 'empty'
   const payrollState = selectedEmployeeId ? payrollByEmployee[selectedEmployeeId]?.[month] : undefined
+  const monthExists = selectedEmployeeId ? typeof monthStatusByEmployee[selectedEmployeeId]?.[month] !== 'undefined' : false
   const isDataClosed = currentMonthStatus === 'time_closed' || currentMonthStatus === 'payroll_calculated' || currentMonthStatus === 'payroll_approved' || currentMonthStatus === 'payslip_issued'
   const printDisabled = currentMonthStatus !== 'payslip_issued'
+  const issuedPayslipDocument = payrollState?.payslipDocument || null
 
   const [averageHourlyEarnings, setAverageHourlyEarnings] = useState<number | null>(null)
   const [phvError, setPhvError] = useState('')
@@ -109,7 +110,7 @@ export function usePaySlipScreen() {
   }
 
   useEffect(() => {
-    if (!employee || !selectedEmployeeId || !isDataClosed) {
+    if (!employee || !selectedEmployeeId || !monthExists || !isDataClosed) {
       setPhvLoading(false)
       setAverageHourlyEarnings(null)
       setAverageEarnings(null)
@@ -137,7 +138,7 @@ export function usePaySlipScreen() {
     return () => {
       active = false
     }
-  }, [employee, isDataClosed, month, selectedEmployeeId])
+  }, [employee, isDataClosed, month, monthExists, selectedEmployeeId])
 
   const calculation = useMemo(() => {
     if (!employee || !selectedEmployeeId) {
@@ -148,7 +149,7 @@ export function usePaySlipScreen() {
     }
     if (payrollState?.payrollResult) {
       return {
-        payslip: payrollState.payrollResult as ReturnType<typeof calcPaySlip>,
+        payslip: payrollState.payrollResult as unknown as ReturnType<typeof calcPaySlip>,
         error: '',
         loading: false,
       }
@@ -185,15 +186,19 @@ export function usePaySlipScreen() {
     loading: calculation.loading,
     error: !calculation.loading && !calculation.payslip ? calculation.error : '',
     info,
-    blocked: !employee || !selectedEmployeeId || !isDataClosed,
+    blocked: !employee || !selectedEmployeeId || !monthExists || !isDataClosed,
     blockedMessage: !employee || !selectedEmployeeId
-      ? 'Nejprve vyberte zaměstnance.'
-      : 'Nejprve uzavřete evidenci pracovní doby.',
+      ? 'Vyberte zaměstnance.'
+      : !monthExists
+        ? 'Měsíc ještě není založen.'
+        : 'Nejprve uzavřete evidenci pracovní doby.',
     isDataClosed,
     printDisabled,
     dataClosedWarning: printDisabled && isDataClosed
       ? 'Tisk je dostupný až po vystavení výplatní pásky.'
-      : !isDataClosed
+      : !monthExists
+        ? 'Výplatní pásku lze zpracovat až po založení měsíce.'
+        : !isDataClosed
         ? 'Výpočet mzdy je dostupný až po uzavření evidence.'
         : '',
     onMonthChange: setMonth,
@@ -217,27 +222,17 @@ export function usePaySlipScreen() {
       { label: 'Odpracované hodiny pro průměr', value: formatHours(averageEarnings?.workedHoursForAverage || 0) },
       { label: 'Odpracované dny pro průměr', value: formatDays(averageEarnings?.workedDaysForAverage || 0) },
     ] : [],
-    employeeDocument: calculation.payslip && employee ? {
-      employerName: employer.name,
-      employerIco: employer.ico,
-      employerSeat: employer.seat,
-      employeeName: employee.name,
-      employeeNumber: employee.employeeNumber,
-      employmentTypeLabel: EmploymentTypeLabels[employee.employmentType],
-      periodLabel: formatMonthLabel(month),
-      timeRows: [
-        { label: 'Fond pracovní doby', hrs: formatHours(summary.workHoursWH), days: formatDays(summary.workDaysWH) },
-        { label: 'Odpracováno', hrs: formatHours(summary.workedHours), days: formatDays(summary.workedDays) },
-      ],
+    issuedPayslipDocument,
+    issuedDocumentRows: calculation.payslip && issuedPayslipDocument ? {
       earningsRows: buildEarningRows(
         calculation.payslip,
         summary,
         inputs.manualReward,
-        employee.personalBonus,
-        employee.nightSurcharge,
-        employee.weekendSurcharge,
-        employee.sickCompensation,
-        employee.overtimeSurcharge,
+        issuedPayslipDocument.snapshot.employee.personalBonus,
+        issuedPayslipDocument.snapshot.employee.nightSurcharge,
+        issuedPayslipDocument.snapshot.employee.weekendSurcharge,
+        issuedPayslipDocument.snapshot.employee.sickCompensation,
+        issuedPayslipDocument.snapshot.employee.overtimeSurcharge,
       ),
       contributionRows: [
         { label: 'Vyměřovací základ ZP/SP', czk: formatCzk(Number(calculation.payslip.contributionBase || 0)), bold: true },
@@ -257,10 +252,15 @@ export function usePaySlipScreen() {
       netWage: formatCzk(Number(calculation.payslip.cistaMzda || 0)),
       recapRows: [
         { label: averageEarningsLabel, czk: formatCzk(Number(calculation.payslip.prumHodinovy || 0)) },
-        { label: 'Dovolená - roční nárok', hrs: formatHours(employee.vacationEntitlementHours) },
-        { label: 'Dovolená - vyčerpáno', hrs: formatHours(employee.vacationUsedHours) },
-        { label: 'Dovolená - zůstatek', hrs: formatHours(employee.vacationRemainingHours), bold: true },
+        { label: 'Dovolená - roční nárok', hrs: formatHours(issuedPayslipDocument.snapshot.employee.vacationEntitlementHours) },
+        { label: 'Dovolená - vyčerpáno', hrs: formatHours(issuedPayslipDocument.snapshot.employee.vacationUsedHours) },
+        { label: 'Dovolená - zůstatek', hrs: formatHours(issuedPayslipDocument.snapshot.employee.vacationRemainingHours), bold: true },
       ],
     } : null,
+    issuedDocumentTimeRows: calculation.payslip ? [
+      { label: 'Fond pracovní doby', hrs: formatHours(summary.workHoursWH), days: formatDays(summary.workDaysWH) },
+      { label: 'Odpracováno', hrs: formatHours(summary.workedHours), days: formatDays(summary.workedDays) },
+    ] : [],
+    employmentTypeLabel: employee ? EmploymentTypeLabels[employee.employmentType] : '',
   }
 }

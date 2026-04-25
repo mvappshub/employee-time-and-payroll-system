@@ -1,3 +1,6 @@
+import type { TimeSheetStatementDocument } from '../../domain/shared/types'
+import { TimeSheetStatementDocumentView } from '../documents/TimeSheetStatementDocumentView'
+
 type ShiftOption = { value: string; label: string }
 
 type TimeSheetRow = {
@@ -45,11 +48,19 @@ export interface TimeSheetViewProps {
   title: string
   month: string
   emptyState?: string
+  info: string
+  error: string
+  showDocumentPreview: boolean
+  timeSheetDocument: TimeSheetStatementDocument | null
+  canPreviewDocument: boolean
+  documentBlockedReason: string
   shiftOptions: ShiftOption[]
   summary: TimeSheetSummary
   rows: TimeSheetRow[]
   onMonthChange: (month: string) => void
   onResetMonth: () => void
+  onToggleDocumentPreview: () => void
+  onPrintDocument: () => void | Promise<void>
   onShiftChange: (index: number, shift: string) => void
   onArrivalChange: (index: number, value: string) => void
   onDepartureChange: (index: number, value: string) => void
@@ -59,11 +70,19 @@ export function TimeSheetView({
   title,
   month,
   emptyState,
+  info,
+  error,
+  showDocumentPreview,
+  timeSheetDocument,
+  canPreviewDocument,
+  documentBlockedReason,
   shiftOptions,
   summary,
   rows,
   onMonthChange,
   onResetMonth,
+  onToggleDocumentPreview,
+  onPrintDocument,
   onShiftChange,
   onArrivalChange,
   onDepartureChange,
@@ -74,9 +93,16 @@ export function TimeSheetView({
   return (
     <div className="text-xs">
       <div className="mb-1 flex items-center gap-3">
-        <span className="text-sm font-bold">{title}</span>
+        <span className="text-sm font-bold">Evidence docházky</span>
+        <span className="text-slate-600">{title}</span>
         <input type="month" value={month} onChange={e => onMonthChange(e.target.value)} className="border-b border-gray-300 bg-transparent text-xs outline-none" />
-        <span className="cursor-pointer select-none text-blue-600" onClick={onResetMonth}>reset</span>
+        <button className="border border-slate-300 px-2 py-1 text-[11px] text-slate-700" onClick={onResetMonth}>Reset</button>
+        <button className="border border-slate-300 px-2 py-1 text-[11px] text-slate-700 disabled:border-slate-200 disabled:text-slate-400" onClick={onToggleDocumentPreview} disabled={!canPreviewDocument}>
+          {showDocumentPreview ? 'Skrýt výpis evidence' : 'Náhled výpisu evidence'}
+        </button>
+        <button className="border border-slate-300 px-2 py-1 text-[11px] text-slate-700 disabled:border-slate-200 disabled:text-slate-400" onClick={onPrintDocument} disabled={!canPreviewDocument}>
+          Tisk / PDF
+        </button>
       </div>
       <div className="mb-2 flex gap-6 text-xs text-gray-700">
         <span>Pracovní dny: <strong>{summary.calendarWorkDays}</strong></span>
@@ -85,7 +111,10 @@ export function TimeSheetView({
         <span>Fond hodin: <strong>{summary.monthlyFundHours}</strong></span>
       </div>
       {emptyState && <div className="mb-3 border border-amber-300 bg-amber-50 px-2 py-1 text-amber-800">{emptyState}</div>}
-      <div className="overflow-x-auto">
+      {!emptyState && documentBlockedReason && <div className="mb-3 border border-amber-300 bg-amber-50 px-2 py-1 text-amber-800">{documentBlockedReason}</div>}
+      {!emptyState && info && <div className="mb-3 border border-green-300 bg-green-50 px-2 py-1 text-green-700">{info}</div>}
+      {!emptyState && error && <div className="mb-3 border border-red-300 bg-red-50 px-2 py-1 text-red-700">{error}</div>}
+      {!emptyState && <div className="overflow-x-auto">
         <table className="whitespace-nowrap border-collapse text-[11px]">
           <thead>
             <tr className="border-b border-gray-400">
@@ -147,7 +176,12 @@ export function TimeSheetView({
             </tr>
           </tfoot>
         </table>
-      </div>
+      </div>}
+      {timeSheetDocument && (
+        <div className={showDocumentPreview ? 'mt-6' : 'absolute -left-[9999px] top-0'}>
+          <TimeSheetStatementDocumentView document={timeSheetDocument} />
+        </div>
+      )}
     </div>
   )
 }

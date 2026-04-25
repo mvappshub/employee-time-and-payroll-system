@@ -1,0 +1,348 @@
+{
+  "employeeId": "8c58807a-2534-4305-b360-9fa4a1fe4988",
+  "month": "2026-01",
+  "status": "payslip_issued",
+  "employer": {
+    "name": "",
+    "ico": "",
+    "seat": ""
+  },
+  "employee": {
+    "id": "8c58807a-2534-4305-b360-9fa4a1fe4988",
+    "name": "Pepa Kos",
+    "employeeNumber": "001",
+    "status": "active",
+    "employmentType": "pracovni_pomer",
+    "remunerationType": "mzda",
+    "employmentStartDate": "2026-01-01",
+    "employmentEndDate": "",
+    "workload": 1,
+    "weeklyHours": 40,
+    "workDaysPerWeek": 5,
+    "weekendWorking": false,
+    "shiftStart": "06:00",
+    "shiftEnd": "14:30",
+    "standardBreak": 0.5,
+    "nightWorkAllowed": true,
+    "nightFrom": "22:00",
+    "nightTo": "06:00",
+    "overtimeAllowed": true,
+    "baseSalary": 30000,
+    "personalBonus": 0.25,
+    "nightSurcharge": 0.1,
+    "weekendSurcharge": 0.1,
+    "holidaySurcharge": 1,
+    "overtimeSurcharge": 0.25,
+    "sickCompensation": 0.6,
+    "holidayCompensationMode": "time-off",
+    "overtimeCompensationMode": "premium",
+    "appliesHealthMinimumBase": true,
+    "healthMinimumBaseExceptionReason": "",
+    "taxDeclarationSigned": true,
+    "taxpayerCreditApplied": true,
+    "vacationEntitlementHours": 0,
+    "vacationUsedHours": 0,
+    "vacationRemainingHours": 0
+  },
+  "records": [
+    {
+      "date": "2026-01-01",
+      "shift": "ranní",
+      "arrival": "06:00",
+      "departure": "14:30"
+    },
+    {
+      "date": "2026-01-02",
+      "shift": "ranní",
+      "arrival": "06:00",
+      "departure": "14:30"
+    },
+    {
+      "date": "2026-01-03",
+      "shift": "volno",
+      "arrival": "",
+      "departure": ""
+    },
+    {
+      "date": "2026-01-04",
+      "shift": "volno",
+      "arrival": "",
+      "departure": ""
+    },
+    {
+      "date": "2026-01-05",
+      "shift": "dovolená",
+      "arrival": "",
+      "departure": ""
+    },
+    {
+      "date": "2026-01-06",
+      "shift": "dovolená",
+      "arrival": "",
+      "departure": ""
+    },
+    {
+      "date": "2026-01-07",
+      "shift": "dovolená",
+      "arrival": "",
+      "departure": ""
+    },
+    {
+      "date": "2026-01-08",
+      "shift": "nemoc",
+      "arrival": "",
+      "departure": ""
+    },
+    {
+      "date": "2026-01-09",
+      "shift": "nemoc",
+      "arrival": "",
+      "departure": ""
+    },
+    {
+      "date": "2026-01-10",
+      "shift": "volno",
+      "arrival": "",
+      "departure": ""
+    },
+    {
+      "date": "2026-01-11",
+      "shift": "volno",
+      "arrival": "",
+      "departure": ""
+    },
+    {
+      "date": "2026-01-12",
+      "shift": "ranní",
+      "arrival": "06:00",
+      "departure": "14:30"
+    },
+    {
+      "date": "2026-01-13",
+      "shift": "ranní",
+      "arrival": "06:00",
+      "departure": "14:30"
+    },
+    {
+      "date": "2026-01-14",
+      "shift": "ranní",
+      "arrival": "06:00",
+      "departure": "14:30"
+    },
+    {
+      "date": "2026-01-15",
+      "shift": "ranní",
+      "arrival": "06:00",
+      "departure": "14:30"
+    },
+    {
+      "date": "2026-01-16",
+      "shift": "ranní",
+      "arrival": "06:00",
+      "departure": "14:30"
+    },
+    {
+      "date": "2026-01-17",
+      "shift": "volno",
+      "arrival": "",
+      "departure": ""
+    },
+    {
+      "date": "2026-01-18",
+      "shift": "volno",
+      "arrival": "",
+      "departure": ""
+    },
+    {
+      "date": "2026-01-19",
+      "shift": "ranní",
+      "arrival": "06:00",
+      "departure": "14:30"
+    },
+    {
+      "date": "2026-01-20",
+      "shift": "ranní",
+      "arrival": "06:00",
+      "departure": "14:30"
+    },
+    {
+      "date": "2026-01-21",
+      "shift": "ranní",
+      "arrival": "06:00",
+      "departure": "14:30"
+    },
+    {
+      "date": "2026-01-22",
+      "shift": "ranní",
+      "arrival": "06:00",
+      "departure": "14:30"
+    },
+    {
+      "date": "2026-01-23",
+      "shift": "ranní",
+      "arrival": "06:00",
+      "departure": "14:30"
+    },
+    {
+      "date": "2026-01-24",
+      "shift": "volno",
+      "arrival": "",
+      "departure": ""
+    },
+    {
+      "date": "2026-01-25",
+      "shift": "volno",
+      "arrival": "",
+      "departure": ""
+    },
+    {
+      "date": "2026-01-26",
+      "shift": "ranní",
+      "arrival": "06:00",
+      "departure": "14:30"
+    },
+    {
+      "date": "2026-01-27",
+      "shift": "ranní",
+      "arrival": "06:00",
+      "departure": "14:30"
+    },
+    {
+      "date": "2026-01-28",
+      "shift": "ranní",
+      "arrival": "06:00",
+      "departure": "14:30"
+    },
+    {
+      "date": "2026-01-29",
+      "shift": "ranní",
+      "arrival": "06:00",
+      "departure": "14:30"
+    },
+    {
+      "date": "2026-01-30",
+      "shift": "ranní",
+      "arrival": "06:00",
+      "departure": "14:30"
+    },
+    {
+      "date": "2026-01-31",
+      "shift": "volno",
+      "arrival": "",
+      "departure": ""
+    }
+  ],
+  "paySlipInputs": {
+    "manualReward": 0,
+    "includeManualRewardInAverage": false,
+    "unworked": 0,
+    "sickCarryoverDays": 0
+  },
+  "timeSummary": {
+    "monthlyFundHours": 176,
+    "workedHours": 136,
+    "workedDays": 17,
+    "vacationHours": 24,
+    "sickHours": 16,
+    "totalSaldo": 0
+  },
+  "payrollResult": {
+    "dailyFund": 8,
+    "personalBonusBase": 7500,
+    "averageHourlyEarnings": 223.21428571428572,
+    "holidaySurchargeRate": 1,
+    "nightSurchargeRate": 0.1,
+    "weekendSurchargeRate": 0.1,
+    "baseSalaryCalc": 23181.81818181818,
+    "personalBonusCalc": 5795.454545454545,
+    "nightSurchargeCalc": 0,
+    "weekendSurchargeCalc": 0,
+    "holidaySurchargeCalc": 0,
+    "holidayCompLeaveHours": 8,
+    "overtimeSurchargeCalc": 0,
+    "overtimeCompLeaveHours": 0,
+    "unworkedCalc": 0,
+    "unworkedDays": 0,
+    "vacationCalc": 5357.142857142857,
+    "vacationDays": 3,
+    "sickHourlyBasis": 200.89285714285717,
+    "sickCalc": 1928.5714285714287,
+    "sickDays": 2,
+    "hrubaMzda": 34334.41558441558,
+    "contributionBase": 34334.41558441558,
+    "healthContributionBase": 34334.41558441558,
+    "healthMinimumBaseApplied": false,
+    "healthEmployee": 1546,
+    "healthEmployer": 3091,
+    "socialEmployee": 2438,
+    "socialEmployer": 8515,
+    "taxBase": 34400,
+    "taxBeforeCredits": 5160,
+    "taxAfterCredits": 2590,
+    "zpPrac": 34334.41558441558,
+    "zpFirma": 3091,
+    "spPrac": 2438,
+    "spFirma": 8515,
+    "zakladDane": 34400,
+    "dan": 5160,
+    "danSleva": 2590,
+    "slevaPoplatnika": 2570,
+    "cistaMzda": 29688.98701298701,
+    "prumHodinovy": 223.21428571428572,
+    "prumDenni": 1785.7142857142858,
+    "celkemOdpracNeodprac": 176,
+    "saldoMesic": 0
+  },
+  "calculationSnapshot": {
+    "averageEarningsSource": "probable",
+    "averageHourlyEarnings": 223.21428571428572,
+    "legalConstants": {
+      "sickPayReductionLimitFirst": 1633,
+      "sickPayReductionLimitSecond": 2449,
+      "sickPayReductionLimitThird": 4897,
+      "taxThreshold": 146901,
+      "taxpayerCredit": 2570,
+      "minimumWage": 20800,
+      "healthEmployeeRate": 0.045,
+      "healthEmployerRate": 0.09,
+      "socialEmployeeRate": 0.071,
+      "socialEmployerRate": 0.248
+    },
+    "calculatedAt": "2026-04-25T01:06:46.540Z"
+  },
+  "payslipDocument": {
+    "issuedAt": "2026-04-25T01:08:21.594Z",
+    "month": "2026-01"
+  },
+  "auditTrail": [
+    {
+      "at": "2026-04-25T01:05:12.382Z",
+      "action": "init-month"
+    },
+    {
+      "at": "2026-04-25T01:05:18.918Z",
+      "action": "prefill-month"
+    },
+    {
+      "at": "2026-04-25T01:06:28.308Z",
+      "action": "save-time"
+    },
+    {
+      "at": "2026-04-25T01:06:44.928Z",
+      "action": "close-time"
+    },
+    {
+      "at": "2026-04-25T01:06:46.557Z",
+      "action": "calculate-payroll"
+    },
+    {
+      "at": "2026-04-25T01:08:17.516Z",
+      "action": "approve-payroll"
+    }
+  ],
+  "createdAt": "2026-04-25T01:05:12.382Z",
+  "updatedAt": "2026-04-25T01:08:21.594Z",
+  "closedAt": "2026-04-25T01:06:44.927Z",
+  "approvedAt": "2026-04-25T01:08:17.516Z",
+  "issuedAt": "2026-04-25T01:08:21.594Z"
+}

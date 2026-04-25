@@ -10,7 +10,7 @@ export interface EmployeeViewProps {
   remunerationTypeOptions: Option[]
   holidayCompensationOptions: Option[]
   overtimeCompensationOptions: Option[]
-  onEmployerChange: (field: 'name' | 'ico' | 'seat', value: string) => void
+  onEmployerChange: (field: keyof EmployerProfile, value: string) => void
   onEmployeeChange: (field: keyof EmployeeSettings, value: string | number | boolean) => void
 }
 

@@ -14,11 +14,12 @@ import type { SavedMonthRecord } from '../api/monthStorage'
 const DATA_DIR = path.resolve(process.cwd(), 'month-data')
 const EMPLOYEES_DIR = path.join(DATA_DIR, 'employees')
 const EMPLOYEES_FILE = path.join(DATA_DIR, 'employees.json')
+const COMPANY_FILE = path.join(DATA_DIR, 'company.json')
 const MONTH_PATTERN = /^\d{4}-\d{2}$/
 
-export interface PersistedMonthRecord extends SavedMonthRecord {
+export type PersistedMonthRecord = Omit<SavedMonthRecord, 'employee'> & {
   employer?: EmployerProfile
-  employee?: Partial<AverageEarningsEmployeeContext> & Partial<EmployeeSettings>
+  employee: Partial<AverageEarningsEmployeeContext> & Partial<EmployeeSettings>
 }
 
 const DEFAULT_EMPLOYEE_CONTEXT: AverageEarningsEmployeeContext = {
@@ -64,6 +65,30 @@ async function loadEmployees(): Promise<EmployeeSettings[]> {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return []
     throw error
   }
+}
+
+async function loadCompanyProfile(): Promise<EmployerProfile> {
+  await ensureDataDir()
+  try {
+    const file = await fs.readFile(COMPANY_FILE, 'utf8')
+    return JSON.parse(file) as EmployerProfile
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return {
+        name: '',
+        ico: '',
+        seat: '',
+        representativeName: '',
+        representativeRole: '',
+      }
+    }
+    throw error
+  }
+}
+
+async function saveCompanyProfile(profile: EmployerProfile): Promise<void> {
+  await ensureDataDir()
+  await fs.writeFile(COMPANY_FILE, JSON.stringify(profile, null, 2), 'utf8')
 }
 
 async function saveEmployees(employees: EmployeeSettings[]): Promise<void> {
@@ -155,10 +180,44 @@ async function handleEmployees(req: IncomingMessage, res: ServerResponse): Promi
   if (req.method === 'POST') {
     const body = await readJsonBody(req) as Partial<EmployeeSettings> | null
     const employees = await loadEmployees()
-    const employee = body as EmployeeSettings
+    if (!body?.name || !body.employmentStartDate || typeof body.baseSalary !== 'number' || body.baseSalary <= 0) {
+      sendJson(res, 400, { error: 'invalid_employee_payload' })
+      return
+    }
+    const id = body.id || (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : `emp-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`)
+    if (employees.some(employee => employee.id === id)) {
+      sendJson(res, 409, { error: 'duplicate_employee_id' })
+      return
+    }
+    const employee = { ...body, id } as EmployeeSettings
     employees.push(employee)
     await saveEmployees(employees)
     sendJson(res, 201, employee)
+    return
+  }
+
+  sendJson(res, 405, { error: 'method_not_allowed' })
+}
+
+async function handleCompany(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  if (req.method === 'GET') {
+    sendJson(res, 200, await loadCompanyProfile())
+    return
+  }
+
+  if (req.method === 'PUT') {
+    const body = await readJsonBody(req) as Partial<EmployerProfile> | null
+    const profile: EmployerProfile = {
+      name: body?.name || '',
+      ico: body?.ico || '',
+      seat: body?.seat || '',
+      representativeName: body?.representativeName || '',
+      representativeRole: body?.representativeRole || '',
+    }
+    await saveCompanyProfile(profile)
+    sendJson(res, 200, profile)
     return
   }
 
@@ -172,7 +231,30 @@ async function handleEmployeeUpdate(req: IncomingMessage, res: ServerResponse, e
   }
   const body = await readJsonBody(req) as Partial<EmployeeSettings> | null
   const employees = await loadEmployees()
+  if (!employees.some(employee => employee.id === employeeId)) {
+    sendJson(res, 404, { error: 'employee_not_found' })
+    return
+  }
   const updated = employees.map(employee => employee.id === employeeId ? { ...employee, ...body, id: employeeId } : employee)
+  await saveEmployees(updated)
+  sendJson(res, 200, { ok: true })
+}
+
+async function handleEmployeeDocument(req: IncomingMessage, res: ServerResponse, employeeId: string): Promise<void> {
+  if (req.method !== 'PUT') {
+    sendJson(res, 405, { error: 'method_not_allowed' })
+    return
+  }
+
+  const body = await readJsonBody(req) as EmployeeSettings['employmentContractDocument'] | null
+  const employees = await loadEmployees()
+  const employee = employees.find(item => item.id === employeeId)
+  if (!employee) {
+    sendJson(res, 404, { error: 'employee_not_found' })
+    return
+  }
+
+  const updated = employees.map(item => item.id === employeeId ? { ...item, employmentContractDocument: body } : item)
   await saveEmployees(updated)
   sendJson(res, 200, { ok: true })
 }
@@ -186,6 +268,12 @@ async function handleEmployeeMonths(req: IncomingMessage, res: ServerResponse, e
 }
 
 async function handleEmployeeMonth(req: IncomingMessage, res: ServerResponse, employeeId: string, month: string): Promise<void> {
+  const employees = await loadEmployees()
+  if (!employees.some(employee => employee.id === employeeId)) {
+    sendJson(res, 404, { error: 'employee_not_found' })
+    return
+  }
+
   if (req.method === 'GET') {
     const record = await loadMonthRecord(employeeId, month)
     if (!record) {
@@ -258,15 +346,25 @@ async function handlePhv(req: IncomingMessage, res: ServerResponse, employeeId: 
 function installMiddleware(server: { middlewares: { use: (handler: (req: IncomingMessage, res: ServerResponse, next: () => void) => void | Promise<void>) => void } }) {
   server.middlewares.use(async (req, res, next) => {
     const url = req.url || ''
+    const companyMatch = url.match(/^\/api\/company$/)
     const employeesMatch = url.match(/^\/api\/employees$/)
     const employeeUpdateMatch = url.match(/^\/api\/employees\/([^/]+)$/)
+    const employeeDocumentMatch = url.match(/^\/api\/employees\/([^/]+)\/document$/)
     const employeeMonthsMatch = url.match(/^\/api\/employees\/([^/]+)\/months$/)
     const employeeMonthMatch = url.match(/^\/api\/employees\/([^/]+)\/months\/(\d{4}-\d{2})$/)
     const phvMatch = url.match(/^\/api\/phv\/([^/]+)\/(\d{4}-\d{2})(?:\?.*)?$/)
 
     try {
+      if (companyMatch) {
+        await handleCompany(req, res)
+        return
+      }
       if (employeesMatch) {
         await handleEmployees(req, res)
+        return
+      }
+      if (employeeDocumentMatch) {
+        await handleEmployeeDocument(req, res, employeeDocumentMatch[1])
         return
       }
       if (employeeUpdateMatch) {

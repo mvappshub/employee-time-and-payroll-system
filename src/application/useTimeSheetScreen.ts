@@ -1,35 +1,58 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { calculateMonthDays, calcMonthlySummary, formatDateCZ, isWeekend } from '../domain/payroll/calc'
+import { buildTimeSheetStatementDocument, getTimeSheetStatementBlockingReason } from '../domain/documents/builders'
+import { saveEmployeeMonth as saveEmployeeMonthApi } from '../infrastructure/api/monthStorage'
 import { defaultPaySlipInputs } from './defaults'
 import { formatCompactNumber, formatMonthLabel } from './formatters'
 import { useStore } from '../infrastructure/state/store'
-import type { ShiftType, TimeRecord } from '../domain/shared/types'
+import type { EmployeeMonth, ShiftType, TimeRecord } from '../domain/shared/types'
 
 const SHIFTS: ShiftType[] = ['', 'ranní', 'odpolední', 'noční', 'přesčas', 'volno', 'dovolená', 'nemoc']
 
 export function useTimeSheetScreen() {
+  const employer = useStore(s => s.employer)
   const employees = useStore(s => s.employees)
   const selectedEmployeeId = useStore(s => s.selectedEmployeeId)
   const recordsByEmployee = useStore(s => s.recordsByEmployee)
   const monthStatusByEmployee = useStore(s => s.monthStatusByEmployee)
+  const payrollByEmployee = useStore(s => s.payrollByEmployee)
   const holidays = useStore(s => s.holidays)
   const month = useStore(s => s.currentMonth)
   const setMonth = useStore(s => s.setCurrentMonth)
   const updateRecord = useStore(s => s.updateRecord)
   const resetEmployeeMonth = useStore(s => s.resetEmployeeMonth)
   const paySlipInputsByEmployee = useStore(s => s.paySlipInputsByEmployee)
-  const initEmployeeMonth = useStore(s => s.initEmployeeMonth)
+  const setPayrollMonthState = useStore(s => s.setPayrollMonthState)
+
+  const [info, setInfo] = useState('')
+  const [error, setError] = useState('')
+  const [showDocumentPreview, setShowDocumentPreview] = useState(false)
 
   const employee = employees.find(item => item.id === selectedEmployeeId) || null
-  const monthRecords = selectedEmployeeId ? recordsByEmployee[selectedEmployeeId]?.[month] || [] : []
+  const monthExists = selectedEmployeeId ? typeof monthStatusByEmployee[selectedEmployeeId]?.[month] !== 'undefined' : false
+  const monthRecords = selectedEmployeeId && monthExists ? recordsByEmployee[selectedEmployeeId]?.[month] || [] : []
   const inputs = selectedEmployeeId ? paySlipInputsByEmployee[selectedEmployeeId]?.[month] || defaultPaySlipInputs : defaultPaySlipInputs
   const monthStatus = selectedEmployeeId ? monthStatusByEmployee[selectedEmployeeId]?.[month] || 'empty' : 'empty'
+  const payrollState = selectedEmployeeId ? payrollByEmployee[selectedEmployeeId]?.[month] : undefined
 
   const calcs = useMemo(
     () => employee ? calculateMonthDays(monthRecords, employee, holidays, inputs.sickCarryoverDays) : [],
     [employee, monthRecords, holidays, inputs.sickCarryoverDays],
   )
   const summary = useMemo(() => calcMonthlySummary(calcs), [calcs])
+  const timeSheetDocument = payrollState?.timeSheetDocument || null
+  const documentBlockedReason = !employee || !selectedEmployeeId || !monthExists || !['time_saved', 'time_closed', 'payroll_calculated', 'payroll_approved', 'payslip_issued'].includes(monthStatus)
+    ? 'Výpis evidence lze otevřít až z uloženého měsíce ve stavu time_saved a vyšším.'
+    : getTimeSheetStatementBlockingReason({
+        employeeId: selectedEmployeeId,
+        month,
+        status: monthStatus,
+        records: monthRecords,
+        paySlipInputs: inputs,
+        timeSummary: payrollState?.timeSummary,
+        createdAt: payrollState?.createdAt || new Date().toISOString(),
+        updatedAt: payrollState?.updatedAt || new Date().toISOString(),
+      }, employer)
 
   const onShiftChange = (index: number, shift: string) => {
     if (!employee || !selectedEmployeeId) return
@@ -51,7 +74,13 @@ export function useTimeSheetScreen() {
     title: employee ? `Evidence docházky · ${employee.name}` : 'Evidence docházky',
     month,
     monthLabel: formatMonthLabel(month),
-    emptyState: employee ? '' : 'Nejprve vyberte zaměstnance v kartotéce.',
+    emptyState: !employee ? 'Vyberte zaměstnance.' : !monthExists ? 'Nejprve založte měsíc.' : '',
+    info,
+    error,
+    showDocumentPreview,
+    timeSheetDocument,
+    canPreviewDocument: !documentBlockedReason && Boolean(timeSheetDocument),
+    documentBlockedReason: documentBlockedReason || '',
     shiftOptions: SHIFTS.map(value => ({ value, label: value || '—' })),
     summary: {
       calendarWorkDays: summary.calendarWorkDays,
@@ -99,11 +128,54 @@ export function useTimeSheetScreen() {
     }),
     onMonthChange: (nextMonth: string) => {
       setMonth(nextMonth)
-      if (selectedEmployeeId) initEmployeeMonth(selectedEmployeeId, nextMonth)
+      setShowDocumentPreview(false)
     },
     onResetMonth: () => {
       if (!selectedEmployeeId) return
       resetEmployeeMonth(selectedEmployeeId, month)
+    },
+    onToggleDocumentPreview: () => {
+      setShowDocumentPreview(value => !value)
+    },
+    onPrintDocument: async () => {
+      if (!employee || !selectedEmployeeId || documentBlockedReason) {
+        setError(documentBlockedReason || 'Výpis evidence nelze tisknout.')
+        return
+      }
+      const sourceMonth: EmployeeMonth = {
+        employeeId: selectedEmployeeId,
+        month,
+        status: monthStatus,
+        records: monthRecords,
+        paySlipInputs: inputs,
+        timeSummary: payrollState?.timeSummary || {
+          monthlyFundHours: summary.monthlyFundHours,
+          workedHours: summary.workedHours,
+          workedDays: summary.workedDays,
+          vacationHours: summary.totalVacation,
+          sickHours: summary.totalSick,
+          totalSaldo: summary.totalSaldo,
+        },
+        createdAt: payrollState?.createdAt || new Date().toISOString(),
+        updatedAt: payrollState?.updatedAt || new Date().toISOString(),
+        timeSheetDocument,
+        auditTrail: payrollState?.auditTrail,
+      }
+      const document = buildTimeSheetStatementDocument(employee, employer, sourceMonth, holidays, timeSheetDocument)
+      const issuedDocument = {
+        ...document,
+        lifecycleStatus: 'issued' as const,
+        issuedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+      try {
+        await saveEmployeeMonthApi(selectedEmployeeId, month, { ...sourceMonth, timeSheetDocument: issuedDocument, employer, employee })
+        setPayrollMonthState(selectedEmployeeId, month, { timeSheetDocument: issuedDocument, updatedAt: issuedDocument.updatedAt })
+        setInfo('Výpis evidence byl vystaven.')
+        setError('')
+      } catch (caughtError) {
+        setError(caughtError instanceof Error ? caughtError.message : 'Výpis evidence se nepodařilo vystavit.')
+      }
     },
     onShiftChange,
     onArrivalChange: (index: number, value: string) => {

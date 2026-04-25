@@ -22,17 +22,134 @@ export interface EmployerProfile {
   name: string
   ico: string
   seat: string
+  representativeName: string
+  representativeRole: string
+}
+
+export type DocumentType = 'employment_contract' | 'time_sheet_statement' | 'issued_payslip'
+export type DocumentLifecycleStatus = 'draft' | 'ready' | 'issued' | 'invalidated'
+
+export interface DocumentMetadata {
+  documentType: DocumentType
+  lifecycleStatus: DocumentLifecycleStatus
+  issuedAt?: string
+  issuedBy?: string
+  updatedAt: string
+  sourceMonth?: string
+  referenceId: string
+  version: number
+  snapshotOrigin: 'employee' | 'month'
+  invalidatedAt?: string
+  invalidationReason?: string
+}
+
+export interface EmploymentContractSnapshot {
+  employer: EmployerProfile
+  employee: {
+    id: string
+    name: string
+    employeeNumber: string
+    permanentAddress: string
+    employmentStartDate: string
+    employmentEndDate?: string
+    contractJobTitle: string
+    contractWorkplace: string
+    contractWorkSchedule: string
+    probationMonths?: number
+    fixedTermEndDate?: string
+    remunerationType: RemunerationType
+    baseSalary: number
+    workload: number
+    weeklyHours: number
+  }
+}
+
+export interface TimeSheetStatementSnapshot {
+  employer: EmployerProfile
+  employee: {
+    id: string
+    name: string
+    employeeNumber: string
+    permanentAddress: string
+    contractJobTitle: string
+  }
+  month: string
+  periodLabel: string
+  rows: Array<{
+    date: string
+    shift: ShiftType
+    arrival: string
+    departure: string
+    workedHours: number
+    overtimeHours: number
+    nightHours: number
+    absenceLabel: string
+  }>
+  totals: {
+    workedHours: number
+    overtimeHours: number
+    nightHours: number
+    vacationHours: number
+    sickHours: number
+    totalSaldo: number
+  }
+}
+
+export interface IssuedPayslipSnapshot {
+  employer: EmployerProfile
+  employee: {
+    id: string
+    name: string
+    employeeNumber: string
+    employmentType: EmploymentType
+    remunerationType: RemunerationType
+    baseSalary: number
+    personalBonus: number
+    nightSurcharge: number
+    weekendSurcharge: number
+    sickCompensation: number
+    overtimeSurcharge: number
+    vacationEntitlementHours: number
+    vacationUsedHours: number
+    vacationRemainingHours: number
+  }
+  month: string
+  calculationSnapshot?: CalculationSnapshot
+  payrollResult: PayrollResult
+  timeSummary?: TimeSummary
+  paySlipInputs: PaySlipInputs
+}
+
+export interface EmploymentContractDocument extends DocumentMetadata {
+  documentType: 'employment_contract'
+  snapshot: EmploymentContractSnapshot
+}
+
+export interface TimeSheetStatementDocument extends DocumentMetadata {
+  documentType: 'time_sheet_statement'
+  snapshot: TimeSheetStatementSnapshot
+}
+
+export interface IssuedPayslipDocument extends DocumentMetadata {
+  documentType: 'issued_payslip'
+  snapshot: IssuedPayslipSnapshot
 }
 
 export interface EmployeeSettings {
   id: string
   name: string
   employeeNumber: string
+  permanentAddress: string
   status: EmployeeLifecycleStatus
   employmentType: EmploymentType
   remunerationType: RemunerationType
   employmentStartDate: string
   employmentEndDate?: string
+  contractJobTitle: string
+  contractWorkplace: string
+  contractWorkSchedule: string
+  probationMonths?: number
+  fixedTermEndDate?: string
   workload: number
   weeklyHours: number
   workDaysPerWeek: number
@@ -60,6 +177,7 @@ export interface EmployeeSettings {
   vacationEntitlementHours: number
   vacationUsedHours: number
   vacationRemainingHours: number
+  employmentContractDocument?: EmploymentContractDocument | null
 }
 
 export interface TimeRecord {
@@ -103,9 +221,7 @@ export interface CalculationSnapshot {
   calculatedAt: string
 }
 
-export interface PayrollResult {
-  [key: string]: string | number | boolean | null
-}
+export type PayrollResult = Record<string, unknown>
 
 export interface EmployeeMonth {
   employeeId: string
@@ -116,10 +232,8 @@ export interface EmployeeMonth {
   timeSummary?: TimeSummary
   payrollResult?: PayrollResult
   calculationSnapshot?: CalculationSnapshot
-  payslipDocument?: {
-    issuedAt: string
-    month: string
-  } | null
+  timeSheetDocument?: TimeSheetStatementDocument | null
+  payslipDocument?: IssuedPayslipDocument | null
   auditTrail?: WorkflowAuditEntry[]
   createdAt: string
   updatedAt: string

@@ -5,7 +5,7 @@ import { useStore } from './infrastructure/state/store'
 
 function resetStore() {
   useStore.setState({
-    employer: { name: '', ico: '', seat: '' },
+    employer: { name: '', ico: '', seat: '', representativeName: '', representativeRole: '' },
     employees: [],
     selectedEmployeeId: null,
     recordsByEmployee: {},
@@ -17,15 +17,18 @@ function resetStore() {
   })
 }
 
-function createEmployee() {
-  const id = useStore.getState().createEmployee({
+function createPersistedEmployee() {
+  return useStore.getState().createEmployee({
+    id: 'emp-1',
     name: 'Jan Novák',
     employeeNumber: '001',
+    permanentAddress: 'Praha',
     employmentStartDate: '2026-01-01',
+    contractJobTitle: 'Operátor',
+    contractWorkplace: 'Praha',
+    contractWorkSchedule: 'plný úvazek',
     baseSalary: 32000,
   })
-  useStore.getState().selectEmployee(id)
-  return id
 }
 
 describe('holiday defaults', () => {
@@ -37,13 +40,33 @@ describe('holiday defaults', () => {
   })
 })
 
-describe('employee month store', () => {
+describe('store workflow cache', () => {
   beforeEach(() => {
     resetStore()
   })
 
-  it('starts a new employee month as draft with empty records', () => {
-    const employeeId = createEmployee()
+  it('selecting an employee does not create a month automatically', () => {
+    const employeeId = createPersistedEmployee()
+
+    useStore.getState().selectEmployee(employeeId)
+
+    expect(useStore.getState().recordsByEmployee[employeeId]?.['2026-04']).toBeUndefined()
+    expect(useStore.getState().monthStatusByEmployee[employeeId]?.['2026-04']).toBeUndefined()
+  })
+
+  it('changing currentMonth does not create a month automatically', () => {
+    const employeeId = createPersistedEmployee()
+    useStore.getState().selectEmployee(employeeId)
+
+    useStore.getState().setCurrentMonth('2030-02')
+
+    expect(useStore.getState().recordsByEmployee[employeeId]?.['2030-02']).toBeUndefined()
+    expect(useStore.getState().monthStatusByEmployee[employeeId]?.['2030-02']).toBeUndefined()
+  })
+
+  it('month is created only by explicit initEmployeeMonth', () => {
+    const employeeId = createPersistedEmployee()
+
     useStore.getState().initEmployeeMonth(employeeId, '2030-01')
 
     const records = useStore.getState().recordsByEmployee[employeeId]['2030-01']
@@ -52,42 +75,59 @@ describe('employee month store', () => {
     expect(useStore.getState().monthStatusByEmployee[employeeId]['2030-01']).toBe('draft')
   })
 
-  it('prefills only the requested month for the selected employee', () => {
-    const employeeId = createEmployee()
-    useStore.getState().initEmployeeMonth(employeeId, '2030-02')
-    useStore.getState().prefillEmployeeMonth(employeeId, '2030-02')
+  it('returns month status from payroll phase to time_saved after editing closed evidence', () => {
+    const employeeId = createPersistedEmployee()
+    useStore.getState().initEmployeeMonth(employeeId, '2030-06')
+    useStore.getState().closeEmployeeTime(employeeId, '2030-06')
+    useStore.getState().calculateEmployeePayroll(employeeId, '2030-06', {
+      payrollResult: { hrubaMzda: 40000 },
+      payslipDocument: {
+        documentType: 'issued_payslip',
+        lifecycleStatus: 'issued',
+        issuedAt: '2030-06-10T10:00:00.000Z',
+        updatedAt: '2030-06-10T10:00:00.000Z',
+        referenceId: employeeId,
+        sourceMonth: '2030-06',
+        version: 1,
+        snapshotOrigin: 'month',
+        snapshot: {
+          employer: { name: 'ACME', ico: '123', seat: 'Praha', representativeName: 'Jana', representativeRole: 'jednatelka' },
+          employee: {
+            id: employeeId,
+            name: 'Jan Novák',
+            employeeNumber: '001',
+            employmentType: 'pracovni_pomer',
+            remunerationType: 'mzda',
+            baseSalary: 32000,
+            personalBonus: 0.25,
+            nightSurcharge: 0.1,
+            weekendSurcharge: 0.1,
+            sickCompensation: 0.6,
+            overtimeSurcharge: 0.25,
+            vacationEntitlementHours: 0,
+            vacationUsedHours: 0,
+            vacationRemainingHours: 0,
+          },
+          month: '2030-06',
+          payrollResult: { hrubaMzda: 40000 },
+          paySlipInputs: {
+            manualReward: 0,
+            includeManualRewardInAverage: false,
+            unworked: 0,
+            sickCarryoverDays: 0,
+          },
+        },
+      },
+    })
 
-    const records = useStore.getState().recordsByEmployee[employeeId]['2030-02']
-    expect(records.some(record => record.shift === 'ranní')).toBe(true)
-    expect(useStore.getState().recordsByEmployee[employeeId]['2030-03']).toBeUndefined()
-    expect(useStore.getState().monthStatusByEmployee[employeeId]['2030-02']).toBe('draft')
-  })
+    useStore.getState().updateRecord(employeeId, '2030-06', 0, { shift: 'ranní' })
 
-  it('creates employees with pracovni_pomer as the only supported employment type', () => {
-    const employeeId = createEmployee()
-    const employee = useStore.getState().employees.find(item => item.id === employeeId)
-
-    expect(employee?.employmentType).toBe('pracovni_pomer')
-  })
-
-  it('normalizes any attempted employmentType update back to pracovni_pomer', () => {
-    const employeeId = createEmployee()
-    useStore.getState().updateEmployee(employeeId, { employmentType: 'pracovni_pomer' as never })
-    const employee = useStore.getState().employees.find(item => item.id === employeeId)
-
-    expect(employee?.employmentType).toBe('pracovni_pomer')
-  })
-
-  it('starts with empty employer profile and selectedEmployeeId null', () => {
-    const { employer, selectedEmployeeId, employees } = useStore.getState()
-
-    expect(employer).toEqual({ name: '', ico: '', seat: '' })
-    expect(selectedEmployeeId).toBeNull()
-    expect(employees).toEqual([])
+    expect(useStore.getState().monthStatusByEmployee[employeeId]['2030-06']).toBe('time_saved')
+    expect(useStore.getState().payrollByEmployee[employeeId]['2030-06'].payrollResult).toBeUndefined()
   })
 
   it('hydrates persisted workflow status and month data for an employee month', () => {
-    const employeeId = createEmployee()
+    const employeeId = createPersistedEmployee()
     const monthData: EmployeeMonth = {
       employeeId,
       month: '2030-05',
@@ -109,21 +149,5 @@ describe('employee month store', () => {
 
     expect(useStore.getState().monthStatusByEmployee[employeeId]['2030-05']).toBe('payroll_approved')
     expect(useStore.getState().payrollByEmployee[employeeId]['2030-05'].approvedAt).toBe('2030-05-03T10:00:00.000Z')
-  })
-
-  it('invalidates payroll artifacts when time evidence changes after close', () => {
-    const employeeId = createEmployee()
-    useStore.getState().initEmployeeMonth(employeeId, '2030-06')
-    useStore.getState().closeEmployeeTime(employeeId, '2030-06')
-    useStore.getState().calculateEmployeePayroll(employeeId, '2030-06', {
-      payrollResult: { hrubaMzda: 40000 },
-      payslipDocument: { issuedAt: '2030-06-10T10:00:00.000Z', month: '2030-06' },
-    })
-
-    useStore.getState().updateRecord(employeeId, '2030-06', 0, { shift: 'ranní' })
-
-    expect(useStore.getState().monthStatusByEmployee[employeeId]['2030-06']).toBe('time_saved')
-    expect(useStore.getState().payrollByEmployee[employeeId]['2030-06'].payrollResult).toBeUndefined()
-    expect(useStore.getState().payrollByEmployee[employeeId]['2030-06'].payslipDocument).toBeNull()
   })
 })

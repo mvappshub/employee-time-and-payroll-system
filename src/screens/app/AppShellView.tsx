@@ -30,7 +30,7 @@ export function AppShellView({
 }: AppShellViewProps) {
   return (
     <div className="flex min-h-screen bg-[#fcfcfa] text-xs text-slate-800">
-      <nav className="w-40 shrink-0 px-5 pt-10 pb-8">
+      <nav className="app-chrome w-40 shrink-0 px-5 pt-10 pb-8">
         {navigationItems.map(item => (
           <div
             key={item.key}

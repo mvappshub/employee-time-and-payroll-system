@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react'
+import type { IssuedPayslipDocument } from '../../domain/shared/types'
+import { IssuedPayslipDocumentView } from '../documents/IssuedPayslipDocumentView'
 
 type InternalInputProps = {
   manualReward: number
@@ -13,22 +15,6 @@ type InternalInputProps = {
 
 type AuditRow = { label: string; value: string }
 type PayslipRow = { label: string; hrs?: string; days?: string; czk?: string; bold?: boolean; neg?: boolean }
-type EmployeeDocument = {
-  employerName: string
-  employerIco: string
-  employerSeat: string
-  employeeName: string
-  employeeNumber: string
-  employmentTypeLabel: string
-  periodLabel: string
-  timeRows: PayslipRow[]
-  earningsRows: PayslipRow[]
-  contributionRows: PayslipRow[]
-  taxRows: PayslipRow[]
-  grossWage: string
-  netWage: string
-  recapRows: PayslipRow[]
-}
 
 export interface PaySlipViewProps {
   month: string
@@ -43,8 +29,19 @@ export interface PaySlipViewProps {
   dataClosedWarning: string
   internalInputs: InternalInputProps
   auditRows: AuditRow[]
-  employeeDocument: EmployeeDocument | null
+  issuedPayslipDocument: IssuedPayslipDocument | null
+  issuedDocumentRows: {
+    earningsRows: PayslipRow[]
+    contributionRows: PayslipRow[]
+    taxRows: PayslipRow[]
+    recapRows: PayslipRow[]
+    grossWage: string
+    netWage: string
+  } | null
+  issuedDocumentTimeRows: PayslipRow[]
+  employmentTypeLabel: string
   onMonthChange: (month: string) => void
+  onPrintDocument: () => void
 }
 
 export function PaySlipView({
@@ -60,27 +57,27 @@ export function PaySlipView({
   dataClosedWarning,
   internalInputs,
   auditRows,
-  employeeDocument,
+  issuedPayslipDocument,
+  issuedDocumentRows,
+  issuedDocumentTimeRows,
+  employmentTypeLabel,
   onMonthChange,
+  onPrintDocument,
 }: PaySlipViewProps) {
   const inp = 'border-b border-gray-300 bg-transparent text-xs outline-none w-20 text-right'
-  const handlePrint = () => {
-    if (printDisabled) return
-    window.print()
-  }
 
   return (
-    <div className={`max-w-4xl text-xs ${printDisabled ? 'payslip-print-disabled' : 'payslip-print-enabled'}`}>
+    <div className="max-w-5xl text-xs">
       <div className="mb-3 flex items-center gap-3">
-        <span className="text-sm font-bold">Výplatní páska</span>
+        <span className="text-sm font-bold">Mzda / Výplatní páska</span>
         <input type="month" value={month} onChange={e => onMonthChange(e.target.value)} className="border-b border-gray-300 bg-transparent text-xs outline-none" />
         <button
           type="button"
-          disabled={printDisabled}
-          onClick={handlePrint}
+          disabled={printDisabled || !issuedPayslipDocument}
+          onClick={onPrintDocument}
           className="border border-gray-300 px-2 py-1 text-[11px] text-gray-700 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400"
         >
-          Tisk
+          Tisk / PDF
         </button>
       </div>
 
@@ -92,9 +89,9 @@ export function PaySlipView({
       {!loading && info && <div className="mt-2 border border-slate-300 bg-slate-50 px-2 py-1 text-slate-700">{info}</div>}
       {!loading && dataClosedWarning && <div className="mt-2 border border-amber-300 bg-amber-50 px-2 py-1 text-amber-800">{dataClosedWarning}</div>}
 
-      {!blocked && !loading && employeeDocument && (
-        <div className="space-y-4 payslip-print-content">
-          <section className="rounded border border-gray-300 bg-gray-50 p-3">
+      {!blocked && !loading && (
+        <div className="space-y-4">
+          <section className="rounded border border-gray-300 bg-gray-50 p-3 app-controls">
             <div className="mb-2 font-semibold">Interní mzdové vstupy</div>
             <div className="grid gap-4 md:grid-cols-2">
               <table className="w-full">
@@ -121,75 +118,35 @@ export function PaySlipView({
             </div>
           </section>
 
-          <section className="rounded border border-gray-300 bg-white p-3">
-            <div className="mb-3 border-b border-gray-200 pb-2">
-              <div className="text-sm font-semibold">Výplatní páska pro zaměstnance</div>
-              {!isDataClosed && <div className="mt-1 text-[11px] text-amber-700">Tisk je dostupný až po uzavření dat měsíce.</div>}
-              <div className="mt-2 grid gap-3 text-[11px] text-gray-700 md:grid-cols-2">
-                <div>
-                  {employeeDocument.employerName && <div className="font-semibold text-black">{employeeDocument.employerName}</div>}
-                  {employeeDocument.employerIco && <div>IČO: {employeeDocument.employerIco}</div>}
-                  {employeeDocument.employerSeat && <div>Sídlo: {employeeDocument.employerSeat}</div>}
-                </div>
-                <div>
-                  {employeeDocument.employeeName && <div className="font-semibold text-black">{employeeDocument.employeeName}</div>}
-                  {employeeDocument.employeeNumber && <div>Osobní číslo: {employeeDocument.employeeNumber}</div>}
-                  <div>{employeeDocument.employmentTypeLabel}</div>
-                  <div>Období: {employeeDocument.periodLabel}</div>
-                </div>
-              </div>
+          {issuedPayslipDocument && issuedDocumentRows && (
+            <div className="space-y-4">
+              <section className="rounded border border-slate-200 bg-slate-50 p-3 text-[12px] text-slate-600 app-controls">
+                <div className="font-semibold text-slate-900">Výplatní páska pro zaměstnance</div>
+                Auditní dokument se renderuje z issued snapshotu uloženého při vystavení výplatní pásky.
+                <div className="mt-2">Typ pracovního poměru: {employmentTypeLabel}</div>
+                <div className="mt-1">Fond / odpracováno: {issuedDocumentTimeRows.map(row => `${row.label} ${row.hrs || ''} ${row.days || ''}`.trim()).join(' · ')}</div>
+                <div className="mt-1">Hrubá mzda a Čistá mzda jsou součástí vystaveného dokumentu níže.</div>
+              </section>
+              <IssuedPayslipDocumentView
+                document={issuedPayslipDocument}
+                earningsRows={issuedDocumentRows.earningsRows}
+                contributionRows={issuedDocumentRows.contributionRows}
+                taxRows={issuedDocumentRows.taxRows}
+                recapRows={issuedDocumentRows.recapRows}
+                grossWage={issuedDocumentRows.grossWage}
+                netWage={issuedDocumentRows.netWage}
+              />
             </div>
-            <table className="w-full border-collapse text-[11px]">
-              <thead>
-                <tr className="border-b border-gray-400">
-                  <th className="w-1/2 text-left font-normal text-gray-600">Položka</th>
-                  <th className="w-16 text-right font-normal text-gray-600">h</th>
-                  <th className="w-12 text-right font-normal text-gray-600">dnů</th>
-                  <th className="w-24 text-right font-normal text-gray-600">Kč</th>
-                </tr>
-              </thead>
-              <tbody>
-                {employeeDocument.timeRows.map(row => <PayslipRowView key={row.label} row={row} />)}
-                <tr className="border-t border-gray-200"><td colSpan={4}></td></tr>
-                {employeeDocument.earningsRows.map(row => <PayslipRowView key={row.label} row={row} />)}
-                <tr className="border-t-2 border-gray-400 font-bold">
-                  <td className="py-0.5">Hrubá mzda</td>
-                  <td></td><td></td><td className="text-right">{employeeDocument.grossWage}</td>
-                </tr>
-                <tr className="border-t border-gray-200"><td colSpan={4}></td></tr>
-                {employeeDocument.contributionRows.map(row => <PayslipRowView key={row.label} row={row} />)}
-                <tr className="border-t border-gray-200"><td colSpan={4}></td></tr>
-                {employeeDocument.taxRows.map(row => <PayslipRowView key={row.label} row={row} />)}
-                <tr className="border-t-2 border-gray-400 text-sm font-bold">
-                  <td className="py-0.5">Čistá mzda</td>
-                  <td></td><td></td><td className="text-right">{employeeDocument.netWage}</td>
-                </tr>
-                <tr className="border-t border-gray-200"><td colSpan={4}></td></tr>
-                {employeeDocument.recapRows.map(row => <PayslipRowView key={row.label} row={row} />)}
-              </tbody>
-            </table>
-          </section>
+          )}
+
+          {!issuedPayslipDocument && isDataClosed && (
+            <div className="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-amber-800">
+              Vystavený dokument zatím neexistuje. Tisk je dostupný až po kroku „Vystavit výplatní pásku“.
+            </div>
+          )}
         </div>
       )}
-
-      {!loading && printDisabled && (
-        <div className="hidden payslip-print-warning text-[12px]">
-          Výplatní pásku nelze tisknout z neuzavřených dat.
-        </div>
-      )}
-
     </div>
-  )
-}
-
-function PayslipRowView({ row }: { row: PayslipRow }) {
-  return (
-    <tr className={row.bold ? 'font-bold' : ''}>
-      <td className="py-0.5">{row.label}</td>
-      <td className="text-right">{row.hrs ?? ''}</td>
-      <td className="text-right">{row.days ?? ''}</td>
-      <td className={`text-right ${row.neg ? 'text-red-600' : ''}`}>{row.czk ?? ''}</td>
-    </tr>
   )
 }
 

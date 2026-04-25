@@ -62,11 +62,75 @@ input[type="number"]::-webkit-outer-spin-button {
 }
 
 @media print {
-  .payslip-print-disabled .payslip-print-content {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+
+  html, body {
+    background: #fff !important;
+    color: #000 !important;
+    font-size: 11pt;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  [data-print-document][data-print-active="true"],
+  [data-print-document][data-print-active="true"] * {
+    visibility: visible !important;
+  }
+
+  [data-print-document] {
     display: none !important;
   }
 
-  .payslip-print-disabled .payslip-print-warning {
+  [data-print-document][data-print-active="true"] {
     display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    background: #fff !important;
+  }
+
+  .app-chrome,
+  .app-controls,
+  button,
+  input,
+  select,
+  textarea {
+    display: none !important;
+  }
+
+  .document-sheet {
+    min-height: auto !important;
+    padding: 0 !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .document-sheet table {
+    width: 100% !important;
+  }
+
+  .document-sheet tr,
+  .document-sheet td,
+  .document-sheet th,
+  .document-sheet section,
+  .document-sheet header,
+  .document-sheet footer {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .document-sheet .text-red-700,
+  .document-sheet .text-red-600,
+  .document-sheet .text-green-700 {
+    color: #000 !important;
   }
 }

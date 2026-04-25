@@ -12,15 +12,17 @@ type MonthRow = {
   updatedAt: string
   actionLabel: string
   actionRoute: 'init' | 'timesheet' | 'payroll'
+  canPreviewTimeSheetDocument: boolean
 }
 
 export interface EmployeeMonthOverviewProps {
   rows: MonthRow[]
   onInitMonth: (month: string) => void
   onOpenMonth: (month: string) => void
+  onOpenTimeSheetDocument: (month: string) => void
 }
 
-export function EmployeeMonthOverview({ rows, onInitMonth, onOpenMonth }: EmployeeMonthOverviewProps) {
+export function EmployeeMonthOverview({ rows, onInitMonth, onOpenMonth, onOpenTimeSheetDocument }: EmployeeMonthOverviewProps) {
   return (
     <section className="rounded border border-slate-200 bg-white p-4">
       <div className="mb-3 text-sm font-semibold text-slate-900">Přehled měsíců zaměstnance</div>
@@ -55,18 +57,23 @@ export function EmployeeMonthOverview({ rows, onInitMonth, onOpenMonth }: Employ
                 <td className="py-1">{row.payslipStatus}</td>
                 <td className="py-1">{row.updatedAt}</td>
                 <td className="py-1">
-                  <button
-                    className="text-slate-700"
-                    onClick={() => {
-                      if (row.actionRoute === 'init') {
-                        onInitMonth(row.month)
-                        return
-                      }
-                      onOpenMonth(row.month)
-                    }}
-                  >
-                    {row.actionLabel}
-                  </button>
+                  <div className="flex gap-3">
+                    <button
+                      className="text-slate-700"
+                      onClick={() => {
+                        if (row.actionRoute === 'init') {
+                          onInitMonth(row.month)
+                          return
+                        }
+                        onOpenMonth(row.month)
+                      }}
+                    >
+                      {row.actionLabel}
+                    </button>
+                    <button className="text-slate-700 disabled:text-slate-300" disabled={!row.canPreviewTimeSheetDocument} onClick={() => onOpenTimeSheetDocument(row.month)}>
+                      Výpis evidence
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

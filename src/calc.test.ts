@@ -18,11 +18,20 @@ import * as legalConstants from "./domain/payroll/legalConstants";
 import type { EmployeeSettings, Holiday, ShiftType, TimeRecord } from "./domain/shared/types";
 
 const employee: EmployeeSettings = {
+  id: "emp-1",
   name: "Test",
   employeeNumber: "",
+  permanentAddress: "Praha",
+  status: "active",
   employmentType: "pracovni_pomer",
   remunerationType: "mzda",
   employmentStartDate: "2026-01-01",
+  employmentEndDate: "",
+  contractJobTitle: "Operátor",
+  contractWorkplace: "Praha",
+  contractWorkSchedule: "plný úvazek",
+  probationMonths: 3,
+  fixedTermEndDate: "",
   workload: 1,
   weeklyHours: 40,
   workDaysPerWeek: 5,

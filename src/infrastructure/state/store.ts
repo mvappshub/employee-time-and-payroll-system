@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { invalidateDocument } from '../../domain/documents/builders'
 import {
   type EmployeeMonth,
   type EmployeeSettings,
@@ -18,11 +19,17 @@ const defaultEmployeeTemplate: EmployeeSettings = {
   id: '',
   name: '',
   employeeNumber: '',
+  permanentAddress: '',
   status: 'active',
   employmentType: 'pracovni_pomer',
   remunerationType: 'mzda',
   employmentStartDate: '2026-01-01',
   employmentEndDate: '',
+  contractJobTitle: '',
+  contractWorkplace: '',
+  contractWorkSchedule: '',
+  probationMonths: 3,
+  fixedTermEndDate: '',
   workload: 1,
   weeklyHours: 40,
   workDaysPerWeek: 5,
@@ -50,12 +57,15 @@ const defaultEmployeeTemplate: EmployeeSettings = {
   vacationEntitlementHours: 0,
   vacationUsedHours: 0,
   vacationRemainingHours: 0,
+  employmentContractDocument: null,
 }
 
 const defaultEmployer: EmployerProfile = {
   name: '',
   ico: '',
   seat: '',
+  representativeName: '',
+  representativeRole: '',
 }
 
 const now = new Date()
@@ -92,6 +102,7 @@ export function normalizeEmployeeSettings(employee?: Partial<EmployeeSettings>):
     id: employee?.id || defaultEmployeeTemplate.id || makeId(),
     employmentType: 'pracovni_pomer',
     status: employee?.status || 'active',
+    employmentContractDocument: employee?.employmentContractDocument || null,
   }
 }
 
@@ -152,7 +163,8 @@ function invalidateDerivedMonthState(
       ...payrollState,
       payrollResult: undefined,
       calculationSnapshot: undefined,
-      payslipDocument: null,
+      timeSheetDocument: invalidateDocument(payrollState?.timeSheetDocument, reason),
+      payslipDocument: invalidateDocument(payrollState?.payslipDocument, reason),
       approvedAt: undefined,
       issuedAt: undefined,
       invalidatedAt: nowIso,
@@ -177,6 +189,7 @@ export interface Store {
   setEmployer: (u: Partial<EmployerProfile>) => void
   setSection: (s: Store['section']) => void
   setCurrentMonth: (m: string) => void
+  replaceEmployees: (employees: EmployeeSettings[]) => void
   createEmployee: (data: Partial<EmployeeSettings>) => string
   updateEmployee: (employeeId: string, patch: Partial<EmployeeSettings>) => void
   selectEmployee: (employeeId: string | null) => void
@@ -217,9 +230,13 @@ export const useStore = create<Store>()(
       setSection: (section) => set({ section }),
       setCurrentMonth: (m) => {
         set(s => ({ currentMonth: m, holidays: mergeHolidayYears(s.holidays, [yearFromMonth(m)]) }))
-        const employeeId = get().selectedEmployeeId
-        if (employeeId) get().initEmployeeMonth(employeeId, m)
       },
+      replaceEmployees: (employees) => set(s => ({
+        employees: employees.map(employee => normalizeEmployeeSettings(employee)),
+        selectedEmployeeId: s.selectedEmployeeId && employees.some(employee => employee.id === s.selectedEmployeeId)
+          ? s.selectedEmployeeId
+          : null,
+      })),
 
       createEmployee: (data) => {
         const employee = normalizeEmployeeSettings({ ...data, id: data.id || makeId() })
@@ -242,9 +259,6 @@ export const useStore = create<Store>()(
 
       selectEmployee: (selectedEmployeeId) => {
         set({ selectedEmployeeId })
-        if (selectedEmployeeId) {
-          get().initEmployeeMonth(selectedEmployeeId, get().currentMonth)
-        }
       },
 
       archiveEmployee: (employeeId) => set(s => ({
@@ -409,7 +423,7 @@ export const useStore = create<Store>()(
               [month]: appendAudit({
                 ...payrollState,
                 ...payload,
-                payslipDocument: { issuedAt: nowIso, month },
+                payslipDocument: payload?.payslipDocument || payrollState?.payslipDocument,
                 issuedAt: nowIso,
                 updatedAt: nowIso,
               }, 'issue-payslip'),
@@ -458,6 +472,7 @@ export const useStore = create<Store>()(
                 issuedAt: data.issuedAt,
                 invalidatedAt: data.invalidatedAt,
                 invalidationReason: data.invalidationReason,
+                timeSheetDocument: data.timeSheetDocument,
                 payslipDocument: data.payslipDocument,
               },
             },
@@ -574,6 +589,13 @@ export const useStore = create<Store>()(
     {
       name: 'work-evidence-v2',
       version: 6,
+      partialize: (state) => ({
+        employer: state.employer,
+        holidays: state.holidays,
+        currentMonth: state.currentMonth,
+        selectedEmployeeId: state.selectedEmployeeId,
+        section: state.section,
+      }),
       migrate: (persisted) => {
         const state = persisted as Partial<Store> | undefined
         return {
@@ -587,7 +609,7 @@ export const useStore = create<Store>()(
           monthStatusByEmployee: {},
           payrollByEmployee: {},
           section: state?.section === 'holidays' ? 'holidays' : 'employees',
-        } as Store
+        } as unknown as Store
       },
     },
   ),

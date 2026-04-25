@@ -17,6 +17,7 @@ export function MonthControlsScreen() {
       lastActionLabel={controls.lastActionLabel}
       buttonState={controls.buttonState}
       onLoad={controls.onLoad}
+      onInitMonth={controls.onInitMonth}
       onSave={controls.onSave}
       onPrefill={controls.onPrefill}
       onCloseMonth={controls.onCloseMonth}

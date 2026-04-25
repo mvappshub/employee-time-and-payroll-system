@@ -1,12 +1,20 @@
 import type { ReactNode } from 'react'
-import type { EmployeeSettings } from '../../domain/shared/types'
+import type { EmployeeSettings, EmploymentContractDocument } from '../../domain/shared/types'
+import { EmploymentContractDocumentView } from '../documents/EmploymentContractDocumentView'
 
 export interface EmployeeDetailProps {
   employee: EmployeeSettings | null
   error: string
   info: string
+  contractDocument: EmploymentContractDocument | null
+  contractMissingFields: string[]
+  showContractPreview: boolean
+  canPrintContract: boolean
   onEmployeeChange: (field: keyof EmployeeSettings, value: string | number | boolean) => void
   onSaveEmployee: () => void
+  onToggleContractPreview: () => void
+  onRefreshContractDraft: () => void | Promise<void>
+  onPrintContract: () => void | Promise<void>
 }
 
 const inp = 'w-full border border-slate-200 bg-white px-2 py-1 text-[12px] outline-none'
@@ -14,19 +22,35 @@ const inp = 'w-full border border-slate-200 bg-white px-2 py-1 text-[12px] outli
 function InputRow({
   label,
   children,
+  hint,
 }: {
   label: string
   children: ReactNode
+  hint?: string
 }) {
   return (
     <label className="grid gap-1">
       <span className="text-[11px] uppercase tracking-[0.14em] text-slate-400">{label}</span>
       {children}
+      {hint && <span className="text-[11px] text-slate-400">{hint}</span>}
     </label>
   )
 }
 
-export function EmployeeDetail({ employee, error, info, onEmployeeChange, onSaveEmployee }: EmployeeDetailProps) {
+export function EmployeeDetail({
+  employee,
+  error,
+  info,
+  contractDocument,
+  contractMissingFields,
+  showContractPreview,
+  canPrintContract,
+  onEmployeeChange,
+  onSaveEmployee,
+  onToggleContractPreview,
+  onRefreshContractDraft,
+  onPrintContract,
+}: EmployeeDetailProps) {
   if (!employee) {
     return <section className="rounded border border-slate-200 bg-white p-4 text-slate-500">Vyberte zaměstnance nebo založte novou kartu.</section>
   }
@@ -37,7 +61,7 @@ export function EmployeeDetail({ employee, error, info, onEmployeeChange, onSave
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-4">
           <div>
-            <div className="mb-2 text-[11px] uppercase tracking-[0.18em] text-slate-400">Identifikace</div>
+            <div className="mb-2 text-[11px] uppercase tracking-[0.18em] text-slate-400">Povinné pro uložení zaměstnance</div>
             <div className="grid gap-3">
               <InputRow label="Jméno">
                 <input className={inp} value={employee.name} onChange={e => onEmployeeChange('name', e.target.value)} />
@@ -48,43 +72,58 @@ export function EmployeeDetail({ employee, error, info, onEmployeeChange, onSave
               <InputRow label="Datum nástupu">
                 <input type="date" className={inp} value={employee.employmentStartDate} onChange={e => onEmployeeChange('employmentStartDate', e.target.value)} />
               </InputRow>
-              <InputRow label="Datum ukončení">
-                <input type="date" className={inp} value={employee.employmentEndDate || ''} onChange={e => onEmployeeChange('employmentEndDate', e.target.value)} />
+              <InputRow label="Základní mzda">
+                <input type="number" className={inp} value={employee.baseSalary} onChange={e => onEmployeeChange('baseSalary', parseFloat(e.target.value) || 0)} />
               </InputRow>
             </div>
           </div>
+
           <div>
-            <div className="mb-2 text-[11px] uppercase tracking-[0.18em] text-slate-400">Pracovní údaje</div>
+            <div className="mb-2 text-[11px] uppercase tracking-[0.18em] text-slate-400">Povinné pro tisk pracovní smlouvy</div>
+            <div className="grid gap-3">
+              <InputRow label="Adresa bydliště">
+                <input className={inp} value={employee.permanentAddress} onChange={e => onEmployeeChange('permanentAddress', e.target.value)} />
+              </InputRow>
+              <InputRow label="Druh práce">
+                <input className={inp} value={employee.contractJobTitle} onChange={e => onEmployeeChange('contractJobTitle', e.target.value)} />
+              </InputRow>
+              <InputRow label="Místo výkonu práce">
+                <input className={inp} value={employee.contractWorkplace} onChange={e => onEmployeeChange('contractWorkplace', e.target.value)} />
+              </InputRow>
+              <InputRow label="Pracovní doba / úvazek">
+                <input className={inp} value={employee.contractWorkSchedule} onChange={e => onEmployeeChange('contractWorkSchedule', e.target.value)} />
+              </InputRow>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <div className="mb-2 text-[11px] uppercase tracking-[0.18em] text-slate-400">Doporučené smluvní údaje</div>
             <div className="grid gap-3 sm:grid-cols-2">
+              <InputRow label="Datum ukončení">
+                <input type="date" className={inp} value={employee.employmentEndDate || ''} onChange={e => onEmployeeChange('employmentEndDate', e.target.value)} />
+              </InputRow>
+              <InputRow label="Doba určitá do">
+                <input type="date" className={inp} value={employee.fixedTermEndDate || ''} onChange={e => onEmployeeChange('fixedTermEndDate', e.target.value)} />
+              </InputRow>
               <InputRow label="Úvazek">
                 <input type="number" step="0.1" className={inp} value={employee.workload} onChange={e => onEmployeeChange('workload', parseFloat(e.target.value) || 0)} />
               </InputRow>
               <InputRow label="Týdenní hodiny">
                 <input type="number" className={inp} value={employee.weeklyHours} onChange={e => onEmployeeChange('weeklyHours', parseFloat(e.target.value) || 0)} />
               </InputRow>
-              <InputRow label="Pracovní dny v týdnu">
-                <input type="number" className={inp} value={employee.workDaysPerWeek} onChange={e => onEmployeeChange('workDaysPerWeek', parseFloat(e.target.value) || 0)} />
-              </InputRow>
-              <InputRow label="Víkendový provoz">
-                <input type="checkbox" checked={employee.weekendWorking} onChange={e => onEmployeeChange('weekendWorking', e.target.checked)} />
-              </InputRow>
-            </div>
-          </div>
-          <div>
-            <div className="mb-2 text-[11px] uppercase tracking-[0.18em] text-slate-400">Mzdové údaje</div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <InputRow label="Základní mzda">
-                <input type="number" className={inp} value={employee.baseSalary} onChange={e => onEmployeeChange('baseSalary', parseFloat(e.target.value) || 0)} />
+              <InputRow label="Zkušební doba (měsíce)">
+                <input type="number" className={inp} value={employee.probationMonths || 0} onChange={e => onEmployeeChange('probationMonths', parseFloat(e.target.value) || 0)} />
               </InputRow>
               <InputRow label="Osobní ohodnocení %">
                 <input type="number" className={inp} value={Math.round(employee.personalBonus * 100)} onChange={e => onEmployeeChange('personalBonus', (parseFloat(e.target.value) || 0) / 100)} />
               </InputRow>
             </div>
           </div>
-        </div>
-        <div className="space-y-4">
+
           <div>
-            <div className="mb-2 text-[11px] uppercase tracking-[0.18em] text-slate-400">Daň a pojištění</div>
+            <div className="mb-2 text-[11px] uppercase tracking-[0.18em] text-slate-400">Daň a dovolená</div>
             <div className="grid gap-3">
               <label className="flex items-center gap-2">
                 <input type="checkbox" checked={employee.appliesHealthMinimumBase} onChange={e => onEmployeeChange('appliesHealthMinimumBase', e.target.checked)} />
@@ -103,28 +142,59 @@ export function EmployeeDetail({ employee, error, info, onEmployeeChange, onSave
                 <input type="checkbox" checked={employee.taxpayerCreditApplied} disabled={!employee.taxDeclarationSigned} onChange={e => onEmployeeChange('taxpayerCreditApplied', e.target.checked)} />
                 <span>Uplatnit slevu na poplatníka</span>
               </label>
-            </div>
-          </div>
-          <div>
-            <div className="mb-2 text-[11px] uppercase tracking-[0.18em] text-slate-400">Dovolená</div>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <InputRow label="Roční nárok">
-                <input type="number" className={inp} value={employee.vacationEntitlementHours} onChange={e => onEmployeeChange('vacationEntitlementHours', parseFloat(e.target.value) || 0)} />
-              </InputRow>
-              <InputRow label="Vyčerpáno">
-                <input type="number" className={inp} value={employee.vacationUsedHours} onChange={e => onEmployeeChange('vacationUsedHours', parseFloat(e.target.value) || 0)} />
-              </InputRow>
-              <InputRow label="Zůstatek">
-                <input type="number" className={inp} value={employee.vacationRemainingHours} onChange={e => onEmployeeChange('vacationRemainingHours', parseFloat(e.target.value) || 0)} />
-              </InputRow>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <InputRow label="Roční nárok">
+                  <input type="number" className={inp} value={employee.vacationEntitlementHours} onChange={e => onEmployeeChange('vacationEntitlementHours', parseFloat(e.target.value) || 0)} />
+                </InputRow>
+                <InputRow label="Vyčerpáno">
+                  <input type="number" className={inp} value={employee.vacationUsedHours} onChange={e => onEmployeeChange('vacationUsedHours', parseFloat(e.target.value) || 0)} />
+                </InputRow>
+                <InputRow label="Zůstatek">
+                  <input type="number" className={inp} value={employee.vacationRemainingHours} onChange={e => onEmployeeChange('vacationRemainingHours', parseFloat(e.target.value) || 0)} />
+                </InputRow>
+              </div>
             </div>
           </div>
         </div>
       </div>
+
       <div className="mt-4 flex items-center gap-3">
         <button className="border border-slate-300 px-3 py-1 text-[12px] text-slate-700" onClick={onSaveEmployee}>Uložit zaměstnance</button>
         {info && <span className="text-green-700">{info}</span>}
         {error && <span className="text-red-700">{error}</span>}
+      </div>
+
+      <div className="mt-6 rounded border border-slate-200 bg-slate-50 p-4">
+        <div className="mb-2 text-sm font-semibold text-slate-900">Dokumenty zaměstnance</div>
+        <div className="mb-3 text-[12px] text-slate-600">
+          Pracovní smlouva se zakládá jako draft při uložení zaměstnance. Tisk je dostupný až po doplnění povinných údajů zaměstnance i firmy.
+        </div>
+        {contractMissingFields.length > 0 && (
+          <div className="mb-3 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-[12px] text-amber-800">
+            Pro tisk pracovní smlouvy doplňte: {contractMissingFields.join(', ')}.
+          </div>
+        )}
+        <div className="flex flex-wrap gap-2">
+          <button className="border border-slate-300 px-3 py-1 text-[12px] text-slate-700 disabled:border-slate-200 disabled:text-slate-400" onClick={onToggleContractPreview} disabled={!contractDocument}>
+            {showContractPreview ? 'Skrýt náhled' : 'Náhled'}
+          </button>
+          <button className="border border-slate-300 px-3 py-1 text-[12px] text-slate-700 disabled:border-slate-200 disabled:text-slate-400" onClick={onRefreshContractDraft} disabled={!contractDocument}>
+            Aktualizovat draft
+          </button>
+          <button className="border border-slate-300 px-3 py-1 text-[12px] text-slate-700 disabled:border-slate-200 disabled:text-slate-400" onClick={onPrintContract} disabled={!contractDocument || !canPrintContract}>
+            Tisk / PDF
+          </button>
+        </div>
+        {contractDocument && (
+          <div className="mt-3 text-[12px] text-slate-600">
+            Stav dokumentu: {contractDocument.lifecycleStatus} · verze {contractDocument.version}
+          </div>
+        )}
+        {contractDocument && (
+          <div className={showContractPreview ? 'mt-4' : 'absolute -left-[9999px] top-0'}>
+            <EmploymentContractDocumentView document={contractDocument} />
+          </div>
+        )}
       </div>
     </section>
   )

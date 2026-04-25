@@ -1,5 +1,6 @@
 import { usePaySlipScreen } from './application/usePaySlipScreen'
 import { PaySlipView } from './screens/payslip/PaySlipView'
+import { printDocumentById } from './screens/documents/print'
 
 export default function PaySlip() {
   const screen = usePaySlipScreen()
@@ -18,8 +19,12 @@ export default function PaySlip() {
       dataClosedWarning={screen.dataClosedWarning}
       internalInputs={screen.internalInputs}
       auditRows={screen.auditRows}
-      employeeDocument={screen.employeeDocument}
+      issuedPayslipDocument={screen.issuedPayslipDocument}
+      issuedDocumentRows={screen.issuedDocumentRows}
+      issuedDocumentTimeRows={screen.issuedDocumentTimeRows}
+      employmentTypeLabel={screen.employmentTypeLabel}
       onMonthChange={screen.onMonthChange}
+      onPrintDocument={() => printDocumentById('issued-payslip-document')}
     />
   )
 }

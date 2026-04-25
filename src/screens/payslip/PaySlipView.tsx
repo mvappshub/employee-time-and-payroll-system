@@ -35,6 +35,9 @@ export interface PaySlipViewProps {
   employeeHeader: string
   loading: boolean
   error: string
+  info: string
+  blocked: boolean
+  blockedMessage: string
   isDataClosed: boolean
   printDisabled: boolean
   dataClosedWarning: string
@@ -49,6 +52,9 @@ export function PaySlipView({
   employeeHeader,
   loading,
   error,
+  info,
+  blocked,
+  blockedMessage,
   isDataClosed,
   printDisabled,
   dataClosedWarning,
@@ -64,7 +70,7 @@ export function PaySlipView({
   }
 
   return (
-    <div className="max-w-4xl text-xs">
+    <div className={`max-w-4xl text-xs ${printDisabled ? 'payslip-print-disabled' : 'payslip-print-enabled'}`}>
       <div className="mb-3 flex items-center gap-3">
         <span className="text-sm font-bold">Výplatní páska</span>
         <input type="month" value={month} onChange={e => onMonthChange(e.target.value)} className="border-b border-gray-300 bg-transparent text-xs outline-none" />
@@ -80,12 +86,14 @@ export function PaySlipView({
 
       <div className="mb-3 text-gray-600">{employeeHeader}</div>
 
+      {blocked && <div className="border border-amber-300 bg-amber-50 px-2 py-1 text-amber-800">{blockedMessage}</div>}
       {loading && <div className="border border-gray-300 bg-gray-50 px-2 py-1 text-gray-600">Načítání PHV...</div>}
       {!loading && error && <div className="border border-red-300 bg-red-50 px-2 py-1 text-red-700">{error}</div>}
+      {!loading && info && <div className="mt-2 border border-slate-300 bg-slate-50 px-2 py-1 text-slate-700">{info}</div>}
       {!loading && dataClosedWarning && <div className="mt-2 border border-amber-300 bg-amber-50 px-2 py-1 text-amber-800">{dataClosedWarning}</div>}
 
-      {!loading && employeeDocument && (
-        <div className="space-y-4">
+      {!blocked && !loading && employeeDocument && (
+        <div className="space-y-4 payslip-print-content">
           <section className="rounded border border-gray-300 bg-gray-50 p-3">
             <div className="mb-2 font-semibold">Interní mzdové vstupy</div>
             <div className="grid gap-4 md:grid-cols-2">
@@ -161,6 +169,12 @@ export function PaySlipView({
               </tbody>
             </table>
           </section>
+        </div>
+      )}
+
+      {!loading && printDisabled && (
+        <div className="hidden payslip-print-warning text-[12px]">
+          Výplatní pásku nelze tisknout z neuzavřených dat.
         </div>
       )}
 

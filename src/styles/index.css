@@ -60,3 +60,13 @@ input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
   opacity: 0.3;
 }
+
+@media print {
+  .payslip-print-disabled .payslip-print-content {
+    display: none !important;
+  }
+
+  .payslip-print-disabled .payslip-print-warning {
+    display: block !important;
+  }
+}

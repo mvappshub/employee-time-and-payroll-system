@@ -8,21 +8,34 @@ import type { ShiftType, TimeRecord } from '../domain/shared/types'
 const SHIFTS: ShiftType[] = ['', 'ranní', 'odpolední', 'noční', 'přesčas', 'volno', 'dovolená', 'nemoc']
 
 export function useTimeSheetScreen() {
-  const employee = useStore(s => s.employee)
-  const records = useStore(s => s.records)
+  const employees = useStore(s => s.employees)
+  const selectedEmployeeId = useStore(s => s.selectedEmployeeId)
+  const recordsByEmployee = useStore(s => s.recordsByEmployee)
+  const monthStatusByEmployee = useStore(s => s.monthStatusByEmployee)
   const holidays = useStore(s => s.holidays)
   const month = useStore(s => s.currentMonth)
   const setMonth = useStore(s => s.setCurrentMonth)
   const updateRecord = useStore(s => s.updateRecord)
-  const resetMonth = useStore(s => s.resetMonth)
-  const paySlipInputs = useStore(s => s.paySlipInputs)
+  const resetEmployeeMonth = useStore(s => s.resetEmployeeMonth)
+  const paySlipInputsByEmployee = useStore(s => s.paySlipInputsByEmployee)
+  const initEmployeeMonth = useStore(s => s.initEmployeeMonth)
 
-  const monthRecords = records[month] || []
-  const inputs = paySlipInputs[month] || defaultPaySlipInputs
-  const calcs = useMemo(() => calculateMonthDays(monthRecords, employee, holidays, inputs.sickCarryoverDays), [monthRecords, employee, holidays, inputs.sickCarryoverDays])
+  const employee = employees.find(item => item.id === selectedEmployeeId) || null
+  const monthRecords = selectedEmployeeId ? recordsByEmployee[selectedEmployeeId]?.[month] || [] : []
+  const inputs = selectedEmployeeId ? paySlipInputsByEmployee[selectedEmployeeId]?.[month] || defaultPaySlipInputs : defaultPaySlipInputs
+  const monthStatus = selectedEmployeeId ? monthStatusByEmployee[selectedEmployeeId]?.[month] || 'empty' : 'empty'
+
+  const calcs = useMemo(
+    () => employee ? calculateMonthDays(monthRecords, employee, holidays, inputs.sickCarryoverDays) : [],
+    [employee, monthRecords, holidays, inputs.sickCarryoverDays],
+  )
   const summary = useMemo(() => calcMonthlySummary(calcs), [calcs])
 
   const onShiftChange = (index: number, shift: string) => {
+    if (!employee || !selectedEmployeeId) return
+    if ((monthStatus === 'time_closed' || monthStatus === 'payroll_calculated' || monthStatus === 'payroll_approved' || monthStatus === 'payslip_issued') && !window.confirm('Změna evidence zneplatní spočítanou mzdu a vystavenou pásku. Pokračovat?')) {
+      return
+    }
     const update: Partial<TimeRecord> = { shift: shift as ShiftType }
     if (['volno', 'dovolená', 'nemoc', ''].includes(shift)) {
       update.arrival = ''
@@ -31,13 +44,14 @@ export function useTimeSheetScreen() {
       update.arrival = employee.shiftStart
       update.departure = employee.shiftEnd
     }
-    updateRecord(month, index, update)
+    updateRecord(selectedEmployeeId, month, index, update)
   }
 
   return {
-    title: 'Evidence',
+    title: employee ? `Evidence docházky · ${employee.name}` : 'Evidence docházky',
     month,
     monthLabel: formatMonthLabel(month),
+    emptyState: employee ? '' : 'Nejprve vyberte zaměstnance v kartotéce.',
     shiftOptions: SHIFTS.map(value => ({ value, label: value || '—' })),
     summary: {
       calendarWorkDays: summary.calendarWorkDays,
@@ -83,10 +97,28 @@ export function useTimeSheetScreen() {
         isTimeEditable: !['volno', 'dovolená', 'nemoc', ''].includes(record?.shift || ''),
       }
     }),
-    onMonthChange: setMonth,
-    onResetMonth: () => resetMonth(month),
+    onMonthChange: (nextMonth: string) => {
+      setMonth(nextMonth)
+      if (selectedEmployeeId) initEmployeeMonth(selectedEmployeeId, nextMonth)
+    },
+    onResetMonth: () => {
+      if (!selectedEmployeeId) return
+      resetEmployeeMonth(selectedEmployeeId, month)
+    },
     onShiftChange,
-    onArrivalChange: (index: number, value: string) => updateRecord(month, index, { arrival: value }),
-    onDepartureChange: (index: number, value: string) => updateRecord(month, index, { departure: value }),
+    onArrivalChange: (index: number, value: string) => {
+      if (!selectedEmployeeId) return
+      if ((monthStatus === 'time_closed' || monthStatus === 'payroll_calculated' || monthStatus === 'payroll_approved' || monthStatus === 'payslip_issued') && !window.confirm('Změna evidence zneplatní spočítanou mzdu a vystavenou pásku. Pokračovat?')) {
+        return
+      }
+      updateRecord(selectedEmployeeId, month, index, { arrival: value })
+    },
+    onDepartureChange: (index: number, value: string) => {
+      if (!selectedEmployeeId) return
+      if ((monthStatus === 'time_closed' || monthStatus === 'payroll_calculated' || monthStatus === 'payroll_approved' || monthStatus === 'payslip_issued') && !window.confirm('Změna evidence zneplatní spočítanou mzdu a vystavenou pásku. Pokračovat?')) {
+        return
+      }
+      updateRecord(selectedEmployeeId, month, index, { departure: value })
+    },
   }
 }

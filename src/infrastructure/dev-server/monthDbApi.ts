@@ -1,27 +1,24 @@
 import fs from 'fs/promises'
 import path from 'path'
 import type { IncomingMessage, ServerResponse } from 'http'
-import { getEmploymentStartMonth, getPreviousQuarterMonths, resolveAverageEarnings, sumAverageQuarterTotals, type AverageEarningsEmployeeContext } from '../../domain/payroll/phv'
-import type { EmployerProfile } from '../../domain/shared/types'
-import type { MonthWorkflowStatus } from '../api/monthStorage'
+import {
+  getEmploymentStartMonth,
+  getPreviousQuarterMonths,
+  resolveAverageEarnings,
+  sumAverageQuarterTotals,
+  type AverageEarningsEmployeeContext,
+} from '../../domain/payroll/phv'
+import type { EmployeeSettings, EmployerProfile } from '../../domain/shared/types'
+import type { SavedMonthRecord } from '../api/monthStorage'
 
 const DATA_DIR = path.resolve(process.cwd(), 'month-data')
+const EMPLOYEES_DIR = path.join(DATA_DIR, 'employees')
+const EMPLOYEES_FILE = path.join(DATA_DIR, 'employees.json')
 const MONTH_PATTERN = /^\d{4}-\d{2}$/
 
-export interface PersistedMonthRecord {
-  month: string
+export interface PersistedMonthRecord extends SavedMonthRecord {
   employer?: EmployerProfile
-  employee?: Partial<AverageEarningsEmployeeContext>
-  workflowStatus?: MonthWorkflowStatus
-  grossForAverage?: number
-  workedHoursForAverage?: number
-  workedDaysForAverage?: number
-  snapshot?: {
-    grossWage: number
-    workedHours: number
-    totalSaldo: number
-    savedAt: string
-  }
+  employee?: Partial<AverageEarningsEmployeeContext> & Partial<EmployeeSettings>
 }
 
 const DEFAULT_EMPLOYEE_CONTEXT: AverageEarningsEmployeeContext = {
@@ -35,13 +32,18 @@ const DEFAULT_EMPLOYEE_CONTEXT: AverageEarningsEmployeeContext = {
 
 async function ensureDataDir(): Promise<void> {
   await fs.mkdir(DATA_DIR, { recursive: true })
+  await fs.mkdir(EMPLOYEES_DIR, { recursive: true })
 }
 
-function monthFilePath(month: string): string {
+function employeeDirPath(employeeId: string): string {
+  return path.join(EMPLOYEES_DIR, employeeId)
+}
+
+function monthFilePath(employeeId: string, month: string): string {
   if (!MONTH_PATTERN.test(month)) {
     throw new Error(`Invalid month: ${month}`)
   }
-  return path.join(DATA_DIR, `${month}.json`)
+  return path.join(employeeDirPath(employeeId), `${month}.json`)
 }
 
 async function readJsonBody(req: IncomingMessage): Promise<unknown> {
@@ -53,9 +55,25 @@ async function readJsonBody(req: IncomingMessage): Promise<unknown> {
   return raw ? JSON.parse(raw) : null
 }
 
-async function loadMonthRecord(month: string): Promise<PersistedMonthRecord | null> {
+async function loadEmployees(): Promise<EmployeeSettings[]> {
+  await ensureDataDir()
   try {
-    const file = await fs.readFile(monthFilePath(month), 'utf8')
+    const file = await fs.readFile(EMPLOYEES_FILE, 'utf8')
+    return JSON.parse(file) as EmployeeSettings[]
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return []
+    throw error
+  }
+}
+
+async function saveEmployees(employees: EmployeeSettings[]): Promise<void> {
+  await ensureDataDir()
+  await fs.writeFile(EMPLOYEES_FILE, JSON.stringify(employees, null, 2), 'utf8')
+}
+
+async function loadMonthRecord(employeeId: string, month: string): Promise<PersistedMonthRecord | null> {
+  try {
+    const file = await fs.readFile(monthFilePath(employeeId, month), 'utf8')
     return JSON.parse(file) as PersistedMonthRecord
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null
@@ -63,42 +81,37 @@ async function loadMonthRecord(month: string): Promise<PersistedMonthRecord | nu
   }
 }
 
-async function loadAllMonthRecords(): Promise<PersistedMonthRecord[]> {
+async function listMonthRecords(employeeId: string): Promise<PersistedMonthRecord[]> {
   await ensureDataDir()
-  const entries = await fs.readdir(DATA_DIR, { withFileTypes: true })
-  const records = await Promise.all(
-    entries
-      .filter(entry => entry.isFile() && entry.name.endsWith('.json'))
-      .map(async entry => {
-        const file = await fs.readFile(path.join(DATA_DIR, entry.name), 'utf8')
-        return JSON.parse(file) as PersistedMonthRecord
-      }),
-  )
-  return records
+  const dir = employeeDirPath(employeeId)
+  try {
+    const entries = await fs.readdir(dir, { withFileTypes: true })
+    const months = await Promise.all(
+      entries
+        .filter(entry => entry.isFile() && entry.name.endsWith('.json'))
+        .map(async entry => {
+          const file = await fs.readFile(path.join(dir, entry.name), 'utf8')
+          return JSON.parse(file) as PersistedMonthRecord
+        }),
+    )
+    return months.sort((a, b) => a.month.localeCompare(b.month))
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return []
+    throw error
+  }
 }
 
 function normalizeEmployeeContext(employee?: Partial<AverageEarningsEmployeeContext>): AverageEarningsEmployeeContext | null {
   if (!employee) return null
-
   return {
     employmentStartDate: typeof employee.employmentStartDate === 'string' && employee.employmentStartDate
       ? employee.employmentStartDate
       : DEFAULT_EMPLOYEE_CONTEXT.employmentStartDate,
-    baseSalary: typeof employee.baseSalary === 'number'
-      ? employee.baseSalary
-      : DEFAULT_EMPLOYEE_CONTEXT.baseSalary,
-    personalBonus: typeof employee.personalBonus === 'number'
-      ? employee.personalBonus
-      : DEFAULT_EMPLOYEE_CONTEXT.personalBonus,
-    weeklyHours: typeof employee.weeklyHours === 'number'
-      ? employee.weeklyHours
-      : DEFAULT_EMPLOYEE_CONTEXT.weeklyHours,
-    workDaysPerWeek: typeof employee.workDaysPerWeek === 'number'
-      ? employee.workDaysPerWeek
-      : DEFAULT_EMPLOYEE_CONTEXT.workDaysPerWeek,
-    weekendWorking: typeof employee.weekendWorking === 'boolean'
-      ? employee.weekendWorking
-      : DEFAULT_EMPLOYEE_CONTEXT.weekendWorking,
+    baseSalary: typeof employee.baseSalary === 'number' ? employee.baseSalary : DEFAULT_EMPLOYEE_CONTEXT.baseSalary,
+    personalBonus: typeof employee.personalBonus === 'number' ? employee.personalBonus : DEFAULT_EMPLOYEE_CONTEXT.personalBonus,
+    weeklyHours: typeof employee.weeklyHours === 'number' ? employee.weeklyHours : DEFAULT_EMPLOYEE_CONTEXT.weeklyHours,
+    workDaysPerWeek: typeof employee.workDaysPerWeek === 'number' ? employee.workDaysPerWeek : DEFAULT_EMPLOYEE_CONTEXT.workDaysPerWeek,
+    weekendWorking: typeof employee.weekendWorking === 'boolean' ? employee.weekendWorking : DEFAULT_EMPLOYEE_CONTEXT.weekendWorking,
   }
 }
 
@@ -122,9 +135,59 @@ function sendJson(res: ServerResponse, status: number, body: unknown): void {
   res.end(JSON.stringify(body))
 }
 
-async function handleMonthRecord(req: IncomingMessage, res: ServerResponse, month: string): Promise<void> {
+function hasValidAverageSource(record: PersistedMonthRecord | null): record is PersistedMonthRecord & {
+  grossForAverage: number
+  workedHoursForAverage: number
+  workedDaysForAverage: number
+} {
+  return !!record &&
+    typeof record.grossForAverage === 'number' &&
+    typeof record.workedHoursForAverage === 'number' &&
+    typeof record.workedDaysForAverage === 'number'
+}
+
+async function handleEmployees(req: IncomingMessage, res: ServerResponse): Promise<void> {
   if (req.method === 'GET') {
-    const record = await loadMonthRecord(month)
+    sendJson(res, 200, await loadEmployees())
+    return
+  }
+
+  if (req.method === 'POST') {
+    const body = await readJsonBody(req) as Partial<EmployeeSettings> | null
+    const employees = await loadEmployees()
+    const employee = body as EmployeeSettings
+    employees.push(employee)
+    await saveEmployees(employees)
+    sendJson(res, 201, employee)
+    return
+  }
+
+  sendJson(res, 405, { error: 'method_not_allowed' })
+}
+
+async function handleEmployeeUpdate(req: IncomingMessage, res: ServerResponse, employeeId: string): Promise<void> {
+  if (req.method !== 'PUT') {
+    sendJson(res, 405, { error: 'method_not_allowed' })
+    return
+  }
+  const body = await readJsonBody(req) as Partial<EmployeeSettings> | null
+  const employees = await loadEmployees()
+  const updated = employees.map(employee => employee.id === employeeId ? { ...employee, ...body, id: employeeId } : employee)
+  await saveEmployees(updated)
+  sendJson(res, 200, { ok: true })
+}
+
+async function handleEmployeeMonths(req: IncomingMessage, res: ServerResponse, employeeId: string): Promise<void> {
+  if (req.method !== 'GET') {
+    sendJson(res, 405, { error: 'method_not_allowed' })
+    return
+  }
+  sendJson(res, 200, await listMonthRecords(employeeId))
+}
+
+async function handleEmployeeMonth(req: IncomingMessage, res: ServerResponse, employeeId: string, month: string): Promise<void> {
+  if (req.method === 'GET') {
+    const record = await loadMonthRecord(employeeId, month)
     if (!record) {
       sendJson(res, 404, { error: 'not_found' })
       return
@@ -136,7 +199,8 @@ async function handleMonthRecord(req: IncomingMessage, res: ServerResponse, mont
   if (req.method === 'PUT') {
     const body = await readJsonBody(req)
     await ensureDataDir()
-    await fs.writeFile(monthFilePath(month), JSON.stringify(body, null, 2), 'utf8')
+    await fs.mkdir(employeeDirPath(employeeId), { recursive: true })
+    await fs.writeFile(monthFilePath(employeeId, month), JSON.stringify(body, null, 2), 'utf8')
     sendJson(res, 200, { ok: true })
     return
   }
@@ -144,11 +208,14 @@ async function handleMonthRecord(req: IncomingMessage, res: ServerResponse, mont
   sendJson(res, 405, { error: 'method_not_allowed' })
 }
 
-async function handlePhv(res: ServerResponse, month: string): Promise<void> {
+async function handlePhv(req: IncomingMessage, res: ServerResponse, employeeId: string, month: string): Promise<void> {
   const sourceMonths = getPreviousQuarterMonths(month)
-  const allRecords = await loadAllMonthRecords()
+  const allRecords = await listMonthRecords(employeeId)
+  const fallbackBody = req.method === 'POST' ? await readJsonBody(req) as { employee?: Partial<EmployeeSettings> } | null : null
+  const fallbackEmployeeContext = normalizeEmployeeContext(fallbackBody?.employee)
   const employeeContextMonth = findLatestEmployeeContextMonth(allRecords, month)
-  const employee = pickEmployeeContextForMonth(allRecords, month)
+  const employee = pickEmployeeContextForMonth(allRecords, month) || fallbackEmployeeContext
+
   if (!employee) {
     sendJson(res, 200, resolveAverageEarnings(
       month,
@@ -160,84 +227,79 @@ async function handlePhv(res: ServerResponse, month: string): Promise<void> {
     ))
     return
   }
+
   const employmentStartMonth = getEmploymentStartMonth(employee.employmentStartDate)
   const effectiveSourceMonths = sourceMonths.filter(sourceMonth => sourceMonth >= employmentStartMonth)
-  const loaded = await Promise.all(sourceMonths.map(loadMonthRecord))
+  const loaded = await Promise.all(sourceMonths.map(sourceMonth => loadMonthRecord(employeeId, sourceMonth)))
   const available = sourceMonths.flatMap((sourceMonth, index) => {
     const record = loaded[index]
-    if (!record || sourceMonth < employmentStartMonth || record.workflowStatus === 'save-incomplete') return []
-    if (
-      typeof record.grossForAverage !== 'number' ||
-      typeof record.workedHoursForAverage !== 'number' ||
-      typeof record.workedDaysForAverage !== 'number'
-    ) return []
+    if (sourceMonth < employmentStartMonth || !hasValidAverageSource(record)) return []
     return [{
       grossForAverage: record.grossForAverage,
       workedHoursForAverage: record.workedHoursForAverage,
       workedDaysForAverage: record.workedDaysForAverage,
     }]
   })
-  const missingMonths = effectiveSourceMonths.filter((sourceMonth) => {
-    const actualIndex = sourceMonths.indexOf(sourceMonth)
-    const record = loaded[actualIndex]
-    return !record || record.workflowStatus === 'save-incomplete'
+  const missingMonths = effectiveSourceMonths.filter(sourceMonth => {
+    const index = sourceMonths.indexOf(sourceMonth)
+    return !hasValidAverageSource(loaded[index])
   })
-  const totals = sumAverageQuarterTotals(available)
 
   sendJson(res, 200, resolveAverageEarnings(
     month,
     employee,
     sourceMonths,
-    totals,
-    missingMonths.length > 0 ? missingMonths : [],
+    sumAverageQuarterTotals(available),
+    missingMonths,
     employeeContextMonth,
   ))
+}
+
+function installMiddleware(server: { middlewares: { use: (handler: (req: IncomingMessage, res: ServerResponse, next: () => void) => void | Promise<void>) => void } }) {
+  server.middlewares.use(async (req, res, next) => {
+    const url = req.url || ''
+    const employeesMatch = url.match(/^\/api\/employees$/)
+    const employeeUpdateMatch = url.match(/^\/api\/employees\/([^/]+)$/)
+    const employeeMonthsMatch = url.match(/^\/api\/employees\/([^/]+)\/months$/)
+    const employeeMonthMatch = url.match(/^\/api\/employees\/([^/]+)\/months\/(\d{4}-\d{2})$/)
+    const phvMatch = url.match(/^\/api\/phv\/([^/]+)\/(\d{4}-\d{2})(?:\?.*)?$/)
+
+    try {
+      if (employeesMatch) {
+        await handleEmployees(req, res)
+        return
+      }
+      if (employeeUpdateMatch) {
+        await handleEmployeeUpdate(req, res, employeeUpdateMatch[1])
+        return
+      }
+      if (employeeMonthsMatch) {
+        await handleEmployeeMonths(req, res, employeeMonthsMatch[1])
+        return
+      }
+      if (employeeMonthMatch) {
+        await handleEmployeeMonth(req, res, employeeMonthMatch[1], employeeMonthMatch[2])
+        return
+      }
+      if (phvMatch && (req.method === 'GET' || req.method === 'POST')) {
+        await handlePhv(req, res, phvMatch[1], phvMatch[2])
+        return
+      }
+      next()
+    } catch (error) {
+      sendJson(res, 500, { error: error instanceof Error ? error.message : 'unknown_error' })
+    }
+  })
 }
 
 export function monthDbApiPlugin() {
   return {
     name: 'month-db-api',
-    configureServer(server: { middlewares: { use: (handler: (req: IncomingMessage, res: ServerResponse, next: () => void) => void | Promise<void>) => void } }) {
-      server.middlewares.use(async (req, res, next) => {
-        const url = req.url || ''
-        const monthRecordMatch = url.match(/^\/api\/month-records\/(\d{4}-\d{2})$/)
-        const phvMatch = url.match(/^\/api\/phv\/(\d{4}-\d{2})$/)
-
-        try {
-          if (monthRecordMatch) {
-            await handleMonthRecord(req, res, monthRecordMatch[1])
-            return
-          }
-          if (phvMatch && req.method === 'GET') {
-            await handlePhv(res, phvMatch[1])
-            return
-          }
-          next()
-        } catch (error) {
-          sendJson(res, 500, { error: error instanceof Error ? error.message : 'unknown_error' })
-        }
-      })
+    configureServer(server: Parameters<typeof installMiddleware>[0]) {
+      installMiddleware(server)
     },
-    configurePreviewServer(server: { middlewares: { use: (handler: (req: IncomingMessage, res: ServerResponse, next: () => void) => void | Promise<void>) => void } }) {
-      server.middlewares.use(async (req, res, next) => {
-        const url = req.url || ''
-        const monthRecordMatch = url.match(/^\/api\/month-records\/(\d{4}-\d{2})$/)
-        const phvMatch = url.match(/^\/api\/phv\/(\d{4}-\d{2})$/)
-
-        try {
-          if (monthRecordMatch) {
-            await handleMonthRecord(req, res, monthRecordMatch[1])
-            return
-          }
-          if (phvMatch && req.method === 'GET') {
-            await handlePhv(res, phvMatch[1])
-            return
-          }
-          next()
-        } catch (error) {
-          sendJson(res, 500, { error: error instanceof Error ? error.message : 'unknown_error' })
-        }
-      })
+    configurePreviewServer(server: Parameters<typeof installMiddleware>[0]) {
+      installMiddleware(server)
     },
   }
 }

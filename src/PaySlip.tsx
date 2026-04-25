@@ -10,6 +10,9 @@ export default function PaySlip() {
       employeeHeader={screen.employeeHeader}
       loading={screen.loading}
       error={screen.error}
+      info={screen.info}
+      blocked={screen.blocked}
+      blockedMessage={screen.blockedMessage}
       isDataClosed={screen.isDataClosed}
       printDisabled={screen.printDisabled}
       dataClosedWarning={screen.dataClosedWarning}

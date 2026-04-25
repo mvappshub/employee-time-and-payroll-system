@@ -1,24 +1,45 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { EmployeeSettings, TimeRecord, Holiday, ShiftType, PaySlipInputs, EmploymentType, EmployerProfile } from '../../domain/shared/types'
-import type { MonthWorkflowStatus } from '../api/monthStorage'
-
-const LEGACY_EMPLOYMENT_TYPE_MAP: Record<string, EmploymentType> = {
-  HPP: 'pracovni_pomer',
-}
+import {
+  type EmployeeMonth,
+  type EmployeeSettings,
+  type EmployerProfile,
+  type Holiday,
+  type MonthStatus,
+  type PaySlipInputs,
+  type ShiftType,
+  type TimeRecord,
+} from '../../domain/shared/types'
 import { getDaysInMonth, isWeekend } from '../../domain/payroll/calc'
 import { mergeHolidayYears } from '../../domain/calendar/holidayCalendar'
+import { defaultPaySlipInputs } from '../../application/defaults'
 
-const defaultEmployee: EmployeeSettings = {
-  name: '', employeeNumber: '', employmentType: 'pracovni_pomer', remunerationType: 'mzda', employmentStartDate: '2026-01-01', workload: 1,
-  weeklyHours: 40, workDaysPerWeek: 5,
+const defaultEmployeeTemplate: EmployeeSettings = {
+  id: '',
+  name: '',
+  employeeNumber: '',
+  status: 'active',
+  employmentType: 'pracovni_pomer',
+  remunerationType: 'mzda',
+  employmentStartDate: '2026-01-01',
+  employmentEndDate: '',
+  workload: 1,
+  weeklyHours: 40,
+  workDaysPerWeek: 5,
   weekendWorking: false,
-  shiftStart: '06:00', shiftEnd: '14:30', standardBreak: 0.5,
-  nightWorkAllowed: true, nightFrom: '22:00', nightTo: '06:00',
+  shiftStart: '06:00',
+  shiftEnd: '14:30',
+  standardBreak: 0.5,
+  nightWorkAllowed: true,
+  nightFrom: '22:00',
+  nightTo: '06:00',
   overtimeAllowed: true,
-  baseSalary: 30000, personalBonus: 0.25,
-  nightSurcharge: 0.10, weekendSurcharge: 0.10,
-  holidaySurcharge: 1.00, overtimeSurcharge: 0.25,
+  baseSalary: 30000,
+  personalBonus: 0.25,
+  nightSurcharge: 0.10,
+  weekendSurcharge: 0.10,
+  holidaySurcharge: 1.00,
+  overtimeSurcharge: 0.25,
   sickCompensation: 0.60,
   holidayCompensationMode: 'time-off',
   overtimeCompensationMode: 'premium',
@@ -39,11 +60,46 @@ const defaultEmployer: EmployerProfile = {
 
 const now = new Date()
 const currentYear = now.getFullYear()
-const defaultHolidays: Holiday[] = mergeHolidayYears([], [currentYear, currentYear + 1])
 const currentYM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+const defaultHolidays: Holiday[] = mergeHolidayYears([], [currentYear, currentYear + 1])
+
+type PayrollMonthState = Partial<Omit<EmployeeMonth, 'employeeId' | 'month' | 'status' | 'records' | 'paySlipInputs'>> & {
+  payrollResult?: EmployeeMonth['payrollResult']
+}
+
+function makeId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  return `emp-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+}
 
 function yearFromMonth(month: string): number {
   return parseInt(month.split('-')[0], 10)
+}
+
+function normalizeEmployerProfile(employer?: Partial<EmployerProfile>): EmployerProfile {
+  return {
+    ...defaultEmployer,
+    ...employer,
+  }
+}
+
+export function normalizeEmployeeSettings(employee?: Partial<EmployeeSettings>): EmployeeSettings {
+  return {
+    ...defaultEmployeeTemplate,
+    ...employee,
+    id: employee?.id || defaultEmployeeTemplate.id || makeId(),
+    employmentType: 'pracovni_pomer',
+    status: employee?.status || 'active',
+  }
+}
+
+function normalizePaySlipInputs(paySlipInputs?: Partial<PaySlipInputs>): PaySlipInputs {
+  return {
+    ...defaultPaySlipInputs,
+    ...paySlipInputs,
+  }
 }
 
 function buildEmptyMonthRecords(month: string): TimeRecord[] {
@@ -64,175 +120,475 @@ function buildPrefilledMonthRecords(month: string, employee: EmployeeSettings): 
   }))
 }
 
-function normalizeEmployeeSettings(employee?: Partial<EmployeeSettings>): EmployeeSettings {
+function withEmployeeMonthMap<T>(map: Record<string, Record<string, T>>, employeeId: string): Record<string, T> {
+  return map[employeeId] || {}
+}
+
+function appendAudit(
+  payrollState: PayrollMonthState | undefined,
+  action: string,
+  note?: string,
+): PayrollMonthState {
   return {
-    ...defaultEmployee,
-    ...employee,
+    ...payrollState,
+    auditTrail: [
+      ...(payrollState?.auditTrail || []),
+      {
+        at: new Date().toISOString(),
+        action,
+        note,
+      },
+    ],
   }
 }
 
-function normalizeEmployerProfile(employer?: Partial<EmployerProfile>): EmployerProfile {
-  return {
-    ...defaultEmployer,
-    ...employer,
-  }
+function invalidateDerivedMonthState(
+  payrollState: PayrollMonthState | undefined,
+  reason: string,
+): PayrollMonthState {
+  const nowIso = new Date().toISOString()
+  return appendAudit(
+    {
+      ...payrollState,
+      payrollResult: undefined,
+      calculationSnapshot: undefined,
+      payslipDocument: null,
+      approvedAt: undefined,
+      issuedAt: undefined,
+      invalidatedAt: nowIso,
+      invalidationReason: reason,
+    },
+    'invalidate',
+    reason,
+  )
 }
 
-const defaultPaySlipInputs: PaySlipInputs = {
-  manualReward: 0,
-  includeManualRewardInAverage: false,
-  unworked: 0,
-  sickCarryoverDays: 0,
-}
-
-function normalizePaySlipInputs(paySlipInputs?: Partial<PaySlipInputs>): PaySlipInputs {
-  return {
-    ...defaultPaySlipInputs,
-    ...paySlipInputs,
-  }
-}
-
-interface Store {
+export interface Store {
   employer: EmployerProfile
-  employee: EmployeeSettings
-  records: Record<string, TimeRecord[]>
+  employees: EmployeeSettings[]
+  selectedEmployeeId: string | null
+  recordsByEmployee: Record<string, Record<string, TimeRecord[]>>
   holidays: Holiday[]
   currentMonth: string
-  paySlipInputs: Record<string, PaySlipInputs>
-  monthStatus: Record<string, MonthWorkflowStatus>
-  section: 'employee' | 'timesheet' | 'payslip' | 'holidays' | 'month-close' | 'payroll-sheet' | 'legal-constants'
+  paySlipInputsByEmployee: Record<string, Record<string, PaySlipInputs>>
+  monthStatusByEmployee: Record<string, Record<string, MonthStatus>>
+  payrollByEmployee: Record<string, Record<string, PayrollMonthState>>
+  section: 'employees' | 'timesheet' | 'payroll' | 'holidays' | 'company'
   setEmployer: (u: Partial<EmployerProfile>) => void
-  setEmployee: (u: Partial<EmployeeSettings>) => void
   setSection: (s: Store['section']) => void
   setCurrentMonth: (m: string) => void
-  initMonth: (m: string) => void
-  prefillMonth: (m: string) => void
-  hydrateMonth: (m: string, data: { employer?: EmployerProfile; employee: EmployeeSettings; records: TimeRecord[]; paySlipInputs: PaySlipInputs; workflowStatus?: MonthWorkflowStatus }) => void
-  updateRecord: (month: string, idx: number, u: Partial<TimeRecord>) => void
-  setPaySlipInput: (month: string, u: Partial<PaySlipInputs>) => void
-  setMonthStatus: (month: string, status: Store['monthStatus'][string]) => void
-  closeMonth: (month: string) => void
-  approveMonth: (month: string) => void
+  createEmployee: (data: Partial<EmployeeSettings>) => string
+  updateEmployee: (employeeId: string, patch: Partial<EmployeeSettings>) => void
+  selectEmployee: (employeeId: string | null) => void
+  archiveEmployee: (employeeId: string) => void
+  initEmployeeMonth: (employeeId: string, month: string) => void
+  prefillEmployeeMonth: (employeeId: string, month: string) => void
+  saveEmployeeMonth: (employeeId: string, month: string) => void
+  closeEmployeeTime: (employeeId: string, month: string) => void
+  calculateEmployeePayroll: (employeeId: string, month: string, payload?: PayrollMonthState) => void
+  approveEmployeePayroll: (employeeId: string, month: string) => void
+  issueEmployeePayslip: (employeeId: string, month: string, payload?: PayrollMonthState) => void
+  hydrateEmployeeMonth: (employeeId: string, month: string, data: EmployeeMonth) => void
+  updateRecord: (employeeId: string, month: string, idx: number, u: Partial<TimeRecord>) => void
+  setPaySlipInput: (employeeId: string, month: string, u: Partial<PaySlipInputs>) => void
+  setMonthStatus: (employeeId: string, month: string, status: MonthStatus) => void
+  setPayrollMonthState: (employeeId: string, month: string, patch: PayrollMonthState) => void
   addHoliday: (h: Holiday) => void
   removeHoliday: (i: number) => void
   updateHoliday: (i: number, h: Holiday) => void
-  resetMonth: (m: string) => void
+  resetEmployeeMonth: (employeeId: string, month: string) => void
 }
 
 export const useStore = create<Store>()(
   persist(
     (set, get) => ({
       employer: defaultEmployer,
-      employee: defaultEmployee,
-      records: {},
+      employees: [],
+      selectedEmployeeId: null,
+      recordsByEmployee: {},
       holidays: defaultHolidays,
       currentMonth: currentYM,
-      paySlipInputs: {},
-      monthStatus: {},
-      section: 'employee',
+      paySlipInputsByEmployee: {},
+      monthStatusByEmployee: {},
+      payrollByEmployee: {},
+      section: 'employees',
 
       setEmployer: (u) => set(s => ({ employer: normalizeEmployerProfile({ ...s.employer, ...u }) })),
-      setEmployee: (u) => set(s => {
-        const migrated = { ...u }
-        if (migrated.employmentType && LEGACY_EMPLOYMENT_TYPE_MAP[migrated.employmentType]) {
-          migrated.employmentType = LEGACY_EMPLOYMENT_TYPE_MAP[migrated.employmentType]
-        }
-        return { employee: normalizeEmployeeSettings({ ...s.employee, ...migrated }) }
-      }),
       setSection: (section) => set({ section }),
       setCurrentMonth: (m) => {
         set(s => ({ currentMonth: m, holidays: mergeHolidayYears(s.holidays, [yearFromMonth(m)]) }))
-        get().initMonth(m)
+        const employeeId = get().selectedEmployeeId
+        if (employeeId) get().initEmployeeMonth(employeeId, m)
       },
-      initMonth: (m) => {
-        const st = get()
-        const nextHolidays = mergeHolidayYears(st.holidays, [yearFromMonth(m)])
-        if (nextHolidays.length !== st.holidays.length) set({ holidays: nextHolidays })
-        if (st.records[m]) return
-        set({
-          records: { ...st.records, [m]: buildEmptyMonthRecords(m) },
-          paySlipInputs: { ...st.paySlipInputs, [m]: normalizePaySlipInputs(st.paySlipInputs[m]) },
-          monthStatus: { ...st.monthStatus, [m]: 'empty' },
-        })
-      },
-      prefillMonth: (m) => {
-        const st = get()
-        set({
-          records: { ...st.records, [m]: buildPrefilledMonthRecords(m, st.employee) },
-          paySlipInputs: { ...st.paySlipInputs, [m]: normalizePaySlipInputs(st.paySlipInputs[m]) },
-          monthStatus: { ...st.monthStatus, [m]: 'prefilled' },
-        })
-      },
-      hydrateMonth: (m, data) => {
+
+      createEmployee: (data) => {
+        const employee = normalizeEmployeeSettings({ ...data, id: data.id || makeId() })
         set(s => ({
-          employer: data.employer ? normalizeEmployerProfile(data.employer) : s.employer,
-          employee: normalizeEmployeeSettings(data.employee),
-          records: { ...s.records, [m]: data.records },
-          paySlipInputs: { ...s.paySlipInputs, [m]: normalizePaySlipInputs(data.paySlipInputs) },
-          monthStatus: { ...s.monthStatus, [m]: data.workflowStatus || 'loaded' },
+          employees: [...s.employees, employee],
+          selectedEmployeeId: employee.id,
+          recordsByEmployee: { ...s.recordsByEmployee, [employee.id]: s.recordsByEmployee[employee.id] || {} },
+          paySlipInputsByEmployee: { ...s.paySlipInputsByEmployee, [employee.id]: s.paySlipInputsByEmployee[employee.id] || {} },
+          monthStatusByEmployee: { ...s.monthStatusByEmployee, [employee.id]: s.monthStatusByEmployee[employee.id] || {} },
+          payrollByEmployee: { ...s.payrollByEmployee, [employee.id]: s.payrollByEmployee[employee.id] || {} },
         }))
+        return employee.id
       },
-      resetMonth: (m) => {
-        const st = get()
-        const nextHolidays = mergeHolidayYears(st.holidays, [yearFromMonth(m)])
-        set({
-          holidays: nextHolidays,
-          records: { ...st.records, [m]: buildEmptyMonthRecords(m) },
-          paySlipInputs: { ...st.paySlipInputs, [m]: defaultPaySlipInputs },
-          monthStatus: { ...st.monthStatus, [m]: 'empty' },
-        })
-      },
-      updateRecord: (month, idx, u) => {
-        const st = get()
-        const recs = [...(st.records[month] || [])]
-        if (recs[idx]) {
-          recs[idx] = { ...recs[idx], ...u }
-          set({
-            records: { ...st.records, [month]: recs },
-            monthStatus: { ...st.monthStatus, [month]: 'modified' },
-          })
+
+      updateEmployee: (employeeId, patch) => set(s => ({
+        employees: s.employees.map(employee =>
+          employee.id === employeeId ? normalizeEmployeeSettings({ ...employee, ...patch, id: employeeId }) : employee,
+        ),
+      })),
+
+      selectEmployee: (selectedEmployeeId) => {
+        set({ selectedEmployeeId })
+        if (selectedEmployeeId) {
+          get().initEmployeeMonth(selectedEmployeeId, get().currentMonth)
         }
       },
-      setPaySlipInput: (month, u) => {
-        const st = get()
-        const ex = normalizePaySlipInputs(st.paySlipInputs[month])
+
+      archiveEmployee: (employeeId) => set(s => ({
+        employees: s.employees.map(employee =>
+          employee.id === employeeId ? { ...employee, status: 'archived' } : employee,
+        ),
+      })),
+
+      initEmployeeMonth: (employeeId, month) => {
+        const state = get()
+        const nextHolidays = mergeHolidayYears(state.holidays, [yearFromMonth(month)])
+        const employeeRecords = withEmployeeMonthMap(state.recordsByEmployee, employeeId)
+        const employeeInputs = withEmployeeMonthMap(state.paySlipInputsByEmployee, employeeId)
+        const employeeStatuses = withEmployeeMonthMap(state.monthStatusByEmployee, employeeId)
+        const employeePayroll = withEmployeeMonthMap(state.payrollByEmployee, employeeId)
+        if (employeeRecords[month]) {
+          if (nextHolidays.length !== state.holidays.length) set({ holidays: nextHolidays })
+          return
+        }
         set({
-          paySlipInputs: { ...st.paySlipInputs, [month]: normalizePaySlipInputs({ ...ex, ...u }) },
-          monthStatus: { ...st.monthStatus, [month]: 'modified' },
+          holidays: nextHolidays,
+          recordsByEmployee: {
+            ...state.recordsByEmployee,
+            [employeeId]: { ...employeeRecords, [month]: buildEmptyMonthRecords(month) },
+          },
+          paySlipInputsByEmployee: {
+            ...state.paySlipInputsByEmployee,
+            [employeeId]: { ...employeeInputs, [month]: normalizePaySlipInputs(employeeInputs[month]) },
+          },
+          monthStatusByEmployee: {
+            ...state.monthStatusByEmployee,
+            [employeeId]: { ...employeeStatuses, [month]: 'draft' },
+          },
+          payrollByEmployee: {
+            ...state.payrollByEmployee,
+            [employeeId]: {
+              ...employeePayroll,
+              [month]: appendAudit(employeePayroll[month], 'init-month'),
+            },
+          },
         })
       },
-      setMonthStatus: (month, status) => {
-        set(s => ({ monthStatus: { ...s.monthStatus, [month]: status } }))
+
+      prefillEmployeeMonth: (employeeId, month) => {
+        const state = get()
+        const employee = state.employees.find(item => item.id === employeeId)
+        if (!employee) return
+        const employeeRecords = withEmployeeMonthMap(state.recordsByEmployee, employeeId)
+        const employeeInputs = withEmployeeMonthMap(state.paySlipInputsByEmployee, employeeId)
+        const employeeStatuses = withEmployeeMonthMap(state.monthStatusByEmployee, employeeId)
+        set({
+          recordsByEmployee: {
+            ...state.recordsByEmployee,
+            [employeeId]: { ...employeeRecords, [month]: buildPrefilledMonthRecords(month, employee) },
+          },
+          paySlipInputsByEmployee: {
+            ...state.paySlipInputsByEmployee,
+            [employeeId]: { ...employeeInputs, [month]: normalizePaySlipInputs(employeeInputs[month]) },
+          },
+          monthStatusByEmployee: {
+            ...state.monthStatusByEmployee,
+            [employeeId]: { ...employeeStatuses, [month]: 'draft' },
+          },
+          payrollByEmployee: {
+            ...state.payrollByEmployee,
+            [employeeId]: {
+              ...withEmployeeMonthMap(state.payrollByEmployee, employeeId),
+              [month]: appendAudit(withEmployeeMonthMap(state.payrollByEmployee, employeeId)[month], 'prefill-month'),
+            },
+          },
+        })
       },
-      closeMonth: (month) => {
-        set(s => ({ monthStatus: { ...s.monthStatus, [month]: 'closed' } }))
+
+      saveEmployeeMonth: (employeeId, month) => {
+        const state = get()
+        const payrollState = withEmployeeMonthMap(state.payrollByEmployee, employeeId)[month]
+        set({
+          monthStatusByEmployee: {
+            ...state.monthStatusByEmployee,
+            [employeeId]: { ...withEmployeeMonthMap(state.monthStatusByEmployee, employeeId), [month]: 'time_saved' },
+          },
+          payrollByEmployee: {
+            ...state.payrollByEmployee,
+            [employeeId]: {
+              ...withEmployeeMonthMap(state.payrollByEmployee, employeeId),
+              [month]: appendAudit({ ...payrollState, updatedAt: new Date().toISOString() }, 'save-time'),
+            },
+          },
+        })
       },
-      approveMonth: (month) => {
-        set(s => ({ monthStatus: { ...s.monthStatus, [month]: 'approved' } }))
+
+      closeEmployeeTime: (employeeId, month) => {
+        const state = get()
+        const nowIso = new Date().toISOString()
+        const payrollState = withEmployeeMonthMap(state.payrollByEmployee, employeeId)[month]
+        set({
+          monthStatusByEmployee: {
+            ...state.monthStatusByEmployee,
+            [employeeId]: { ...withEmployeeMonthMap(state.monthStatusByEmployee, employeeId), [month]: 'time_closed' },
+          },
+          payrollByEmployee: {
+            ...state.payrollByEmployee,
+            [employeeId]: {
+              ...withEmployeeMonthMap(state.payrollByEmployee, employeeId),
+              [month]: appendAudit({ ...payrollState, closedAt: nowIso, updatedAt: nowIso }, 'close-time'),
+            },
+          },
+        })
       },
+
+      calculateEmployeePayroll: (employeeId, month, payload) => {
+        const state = get()
+        const nowIso = new Date().toISOString()
+        const payrollState = withEmployeeMonthMap(state.payrollByEmployee, employeeId)[month]
+        set({
+          monthStatusByEmployee: {
+            ...state.monthStatusByEmployee,
+            [employeeId]: { ...withEmployeeMonthMap(state.monthStatusByEmployee, employeeId), [month]: 'payroll_calculated' },
+          },
+          payrollByEmployee: {
+            ...state.payrollByEmployee,
+            [employeeId]: {
+              ...withEmployeeMonthMap(state.payrollByEmployee, employeeId),
+              [month]: appendAudit({ ...payrollState, ...payload, updatedAt: nowIso, invalidatedAt: undefined, invalidationReason: undefined }, 'calculate-payroll'),
+            },
+          },
+        })
+      },
+
+      approveEmployeePayroll: (employeeId, month) => {
+        const state = get()
+        const nowIso = new Date().toISOString()
+        const payrollState = withEmployeeMonthMap(state.payrollByEmployee, employeeId)[month]
+        set({
+          monthStatusByEmployee: {
+            ...state.monthStatusByEmployee,
+            [employeeId]: { ...withEmployeeMonthMap(state.monthStatusByEmployee, employeeId), [month]: 'payroll_approved' },
+          },
+          payrollByEmployee: {
+            ...state.payrollByEmployee,
+            [employeeId]: {
+              ...withEmployeeMonthMap(state.payrollByEmployee, employeeId),
+              [month]: appendAudit({ ...payrollState, approvedAt: nowIso, updatedAt: nowIso }, 'approve-payroll'),
+            },
+          },
+        })
+      },
+
+      issueEmployeePayslip: (employeeId, month, payload) => {
+        const state = get()
+        const nowIso = new Date().toISOString()
+        const payrollState = withEmployeeMonthMap(state.payrollByEmployee, employeeId)[month]
+        set({
+          monthStatusByEmployee: {
+            ...state.monthStatusByEmployee,
+            [employeeId]: { ...withEmployeeMonthMap(state.monthStatusByEmployee, employeeId), [month]: 'payslip_issued' },
+          },
+          payrollByEmployee: {
+            ...state.payrollByEmployee,
+            [employeeId]: {
+              ...withEmployeeMonthMap(state.payrollByEmployee, employeeId),
+              [month]: appendAudit({
+                ...payrollState,
+                ...payload,
+                payslipDocument: { issuedAt: nowIso, month },
+                issuedAt: nowIso,
+                updatedAt: nowIso,
+              }, 'issue-payslip'),
+            },
+          },
+        })
+      },
+
+      hydrateEmployeeMonth: (employeeId, month, data) => {
+        const state = get()
+        set({
+          recordsByEmployee: {
+            ...state.recordsByEmployee,
+            [employeeId]: {
+              ...withEmployeeMonthMap(state.recordsByEmployee, employeeId),
+              [month]: data.records,
+            },
+          },
+          paySlipInputsByEmployee: {
+            ...state.paySlipInputsByEmployee,
+            [employeeId]: {
+              ...withEmployeeMonthMap(state.paySlipInputsByEmployee, employeeId),
+              [month]: normalizePaySlipInputs(data.paySlipInputs),
+            },
+          },
+          monthStatusByEmployee: {
+            ...state.monthStatusByEmployee,
+            [employeeId]: {
+              ...withEmployeeMonthMap(state.monthStatusByEmployee, employeeId),
+              [month]: data.status,
+            },
+          },
+          payrollByEmployee: {
+            ...state.payrollByEmployee,
+            [employeeId]: {
+              ...withEmployeeMonthMap(state.payrollByEmployee, employeeId),
+              [month]: {
+                timeSummary: data.timeSummary,
+                payrollResult: data.payrollResult,
+                calculationSnapshot: data.calculationSnapshot,
+                auditTrail: data.auditTrail,
+                createdAt: data.createdAt,
+                updatedAt: data.updatedAt,
+                closedAt: data.closedAt,
+                approvedAt: data.approvedAt,
+                issuedAt: data.issuedAt,
+                invalidatedAt: data.invalidatedAt,
+                invalidationReason: data.invalidationReason,
+                payslipDocument: data.payslipDocument,
+              },
+            },
+          },
+        })
+      },
+
+      updateRecord: (employeeId, month, idx, u) => {
+        const state = get()
+        const employeeRecords = [...(withEmployeeMonthMap(state.recordsByEmployee, employeeId)[month] || [])]
+        if (!employeeRecords[idx]) return
+        employeeRecords[idx] = { ...employeeRecords[idx], ...u }
+        const previousStatus = withEmployeeMonthMap(state.monthStatusByEmployee, employeeId)[month] || 'draft'
+        const nextStatus = previousStatus === 'draft' ? 'draft' : 'time_saved'
+        const nextPayrollState = previousStatus === 'time_closed' || previousStatus === 'payroll_calculated' || previousStatus === 'payroll_approved' || previousStatus === 'payslip_issued'
+          ? invalidateDerivedMonthState(withEmployeeMonthMap(state.payrollByEmployee, employeeId)[month], 'Změna evidence po uzavření měsíce.')
+          : withEmployeeMonthMap(state.payrollByEmployee, employeeId)[month]
+
+        set({
+          recordsByEmployee: {
+            ...state.recordsByEmployee,
+            [employeeId]: { ...withEmployeeMonthMap(state.recordsByEmployee, employeeId), [month]: employeeRecords },
+          },
+          monthStatusByEmployee: {
+            ...state.monthStatusByEmployee,
+            [employeeId]: { ...withEmployeeMonthMap(state.monthStatusByEmployee, employeeId), [month]: nextStatus },
+          },
+          payrollByEmployee: {
+            ...state.payrollByEmployee,
+            [employeeId]: {
+              ...withEmployeeMonthMap(state.payrollByEmployee, employeeId),
+              [month]: nextPayrollState,
+            },
+          },
+        })
+      },
+
+      setPaySlipInput: (employeeId, month, u) => {
+        const state = get()
+        const previousStatus = withEmployeeMonthMap(state.monthStatusByEmployee, employeeId)[month] || 'draft'
+        const nextStatus = previousStatus === 'draft' ? 'draft' : 'time_saved'
+        const current = normalizePaySlipInputs(withEmployeeMonthMap(state.paySlipInputsByEmployee, employeeId)[month])
+        const nextPayrollState = previousStatus === 'time_closed' || previousStatus === 'payroll_calculated' || previousStatus === 'payroll_approved' || previousStatus === 'payslip_issued'
+          ? invalidateDerivedMonthState(withEmployeeMonthMap(state.payrollByEmployee, employeeId)[month], 'Změna mzdových vstupů po uzavření měsíce.')
+          : withEmployeeMonthMap(state.payrollByEmployee, employeeId)[month]
+        set({
+          paySlipInputsByEmployee: {
+            ...state.paySlipInputsByEmployee,
+            [employeeId]: {
+              ...withEmployeeMonthMap(state.paySlipInputsByEmployee, employeeId),
+              [month]: normalizePaySlipInputs({ ...current, ...u }),
+            },
+          },
+          monthStatusByEmployee: {
+            ...state.monthStatusByEmployee,
+            [employeeId]: { ...withEmployeeMonthMap(state.monthStatusByEmployee, employeeId), [month]: nextStatus },
+          },
+          payrollByEmployee: {
+            ...state.payrollByEmployee,
+            [employeeId]: {
+              ...withEmployeeMonthMap(state.payrollByEmployee, employeeId),
+              [month]: nextPayrollState,
+            },
+          },
+        })
+      },
+
+      setMonthStatus: (employeeId, month, status) => set(s => ({
+        monthStatusByEmployee: {
+          ...s.monthStatusByEmployee,
+          [employeeId]: { ...withEmployeeMonthMap(s.monthStatusByEmployee, employeeId), [month]: status },
+        },
+      })),
+
+      setPayrollMonthState: (employeeId, month, patch) => set(s => ({
+        payrollByEmployee: {
+          ...s.payrollByEmployee,
+          [employeeId]: {
+            ...withEmployeeMonthMap(s.payrollByEmployee, employeeId),
+            [month]: { ...withEmployeeMonthMap(s.payrollByEmployee, employeeId)[month], ...patch },
+          },
+        },
+      })),
+
       addHoliday: (h) => set(s => ({ holidays: [...s.holidays, h].sort((a, b) => a.date.localeCompare(b.date)) })),
       removeHoliday: (i) => set(s => ({ holidays: s.holidays.filter((_, idx) => idx !== i) })),
       updateHoliday: (i, h) => set(s => ({ holidays: s.holidays.map((old, idx) => idx === i ? h : old) })),
+
+      resetEmployeeMonth: (employeeId, month) => {
+        const state = get()
+        set({
+          recordsByEmployee: {
+            ...state.recordsByEmployee,
+            [employeeId]: { ...withEmployeeMonthMap(state.recordsByEmployee, employeeId), [month]: buildEmptyMonthRecords(month) },
+          },
+          paySlipInputsByEmployee: {
+            ...state.paySlipInputsByEmployee,
+            [employeeId]: { ...withEmployeeMonthMap(state.paySlipInputsByEmployee, employeeId), [month]: defaultPaySlipInputs },
+          },
+          monthStatusByEmployee: {
+            ...state.monthStatusByEmployee,
+            [employeeId]: { ...withEmployeeMonthMap(state.monthStatusByEmployee, employeeId), [month]: 'draft' },
+          },
+          payrollByEmployee: {
+            ...state.payrollByEmployee,
+            [employeeId]: {
+              ...withEmployeeMonthMap(state.payrollByEmployee, employeeId),
+              [month]: appendAudit(undefined, 'reset-month'),
+            },
+          },
+        })
+      },
     }),
     {
-      name: 'work-evidence-v1',
-      version: 5,
+      name: 'work-evidence-v2',
+      version: 6,
       migrate: (persisted) => {
         const state = persisted as Partial<Store> | undefined
         return {
-          ...state,
           employer: normalizeEmployerProfile(state?.employer),
-          employee: normalizeEmployeeSettings(state?.employee),
-          // Older versions auto-prefilled many months and persisted them.
-          // Drop month-level data once so the new empty-by-default model is real.
-          records: {},
-          paySlipInputs: Object.fromEntries(
-            Object.entries(state?.paySlipInputs || {}).map(([month, inputs]) => [month, normalizePaySlipInputs(inputs)])
-          ),
-          monthStatus: {},
+          employees: [],
+          selectedEmployeeId: null,
+          recordsByEmployee: {},
+          holidays: state?.holidays || defaultHolidays,
           currentMonth: state?.currentMonth || currentYM,
+          paySlipInputsByEmployee: {},
+          monthStatusByEmployee: {},
+          payrollByEmployee: {},
+          section: state?.section === 'holidays' ? 'holidays' : 'employees',
         } as Store
       },
-    }
-  )
+    },
+  ),
 )

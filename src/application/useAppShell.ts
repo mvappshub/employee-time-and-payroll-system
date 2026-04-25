@@ -7,13 +7,11 @@ export function useAppShell() {
   return {
     section,
     navigationItems: [
-      { key: 'employee', label: 'Zaměstnanec' },
+      { key: 'employees', label: 'Zaměstnanci' },
       { key: 'timesheet', label: 'Evidence' },
-      { key: 'month-close', label: 'Měsíční uzávěrka' },
-      { key: 'payslip', label: 'Výplatní páska' },
-      { key: 'payroll-sheet', label: 'Mzdový list' },
-      { key: 'legal-constants', label: 'Zákonné konstanty' },
+      { key: 'payroll', label: 'Mzda / Výplatní páska' },
       { key: 'holidays', label: 'Svátky' },
+      { key: 'company', label: 'Firma' },
     ] as const,
     onSelectSection: setSection,
   }

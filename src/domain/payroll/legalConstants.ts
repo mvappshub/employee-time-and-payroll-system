@@ -19,6 +19,19 @@ const LEGAL_CONSTANTS: LegalConstant[] = [
   { key: 'socialEmployerRate', value: 0.248, validFrom: '2026-01', source: '2026 social insurance rate' },
 ]
 
+const SNAPSHOT_KEYS = [
+  'sickPayReductionLimitFirst',
+  'sickPayReductionLimitSecond',
+  'sickPayReductionLimitThird',
+  'taxThreshold',
+  'taxpayerCredit',
+  'minimumWage',
+  'healthEmployeeRate',
+  'healthEmployerRate',
+  'socialEmployeeRate',
+  'socialEmployerRate',
+] as const
+
 export function getConstantForMonth(key: string, month: string): number {
   const match = LEGAL_CONSTANTS.find(constant => {
     const starts = constant.validFrom <= month
@@ -31,4 +44,8 @@ export function getConstantForMonth(key: string, month: string): number {
   }
 
   return match.value
+}
+
+export function getLegalConstantsSnapshot(month: string): Record<string, number> {
+  return Object.fromEntries(SNAPSHOT_KEYS.map(key => [key, getConstantForMonth(key, month)]))
 }

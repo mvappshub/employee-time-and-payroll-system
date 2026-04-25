@@ -119,6 +119,8 @@ export interface DayCalc {
   isHoliday: boolean
   holidayName: string
   planHours: number
+  plannedShiftHours: number
+  calendarPlanHours: number
   holidayCredit: number
   holidayWorked: number
   vacation: number
@@ -171,7 +173,7 @@ export function calculateDay(rec: TimeRecord, emp: EmployeeSettings, holidays: H
     date: rec.date, dayName: getDayName(rec.date), shift: rec.shift,
     arrival: rec.arrival, departure: rec.departure,
     breakHours: brk, worked, isHoliday: isHol, holidayName: hol?.name || '',
-    planHours: planH, rawPlanHours: rawPlanH, holidayCredit: holCredit, holidayWorked: holWorked,
+    planHours: planH, plannedShiftHours: scheduledH, calendarPlanHours: calendarPlanH, rawPlanHours: rawPlanH, holidayCredit: holCredit, holidayWorked: holWorked,
     vacation: vac, sickCalendarDay, sickCompensatedHours, sick, nightHours: night, weekendHours: weekend,
     holidayTotal: holTotal, overtime: ot, recognizedHours: recognized, saldo, creditedAbsence,
   }

@@ -8,6 +8,7 @@ export default function TimeSheet() {
     <TimeSheetView
       title={screen.title}
       month={screen.month}
+      emptyState={screen.emptyState}
       shiftOptions={screen.shiftOptions}
       summary={screen.summary}
       rows={screen.rows}

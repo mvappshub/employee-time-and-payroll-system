@@ -44,6 +44,7 @@ type TimeSheetSummary = {
 export interface TimeSheetViewProps {
   title: string
   month: string
+  emptyState?: string
   shiftOptions: ShiftOption[]
   summary: TimeSheetSummary
   rows: TimeSheetRow[]
@@ -57,6 +58,7 @@ export interface TimeSheetViewProps {
 export function TimeSheetView({
   title,
   month,
+  emptyState,
   shiftOptions,
   summary,
   rows,
@@ -82,6 +84,7 @@ export function TimeSheetView({
         <span>Svátky: <strong>{summary.holidayDaysInMonth}</strong></span>
         <span>Fond hodin: <strong>{summary.monthlyFundHours}</strong></span>
       </div>
+      {emptyState && <div className="mb-3 border border-amber-300 bg-amber-50 px-2 py-1 text-amber-800">{emptyState}</div>}
       <div className="overflow-x-auto">
         <table className="whitespace-nowrap border-collapse text-[11px]">
           <thead>

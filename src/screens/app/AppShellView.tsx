@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 
 type NavItem = {
-  key: 'employee' | 'timesheet' | 'month-close' | 'payslip' | 'payroll-sheet' | 'legal-constants' | 'holidays'
+  key: 'employees' | 'timesheet' | 'payroll' | 'holidays' | 'company'
   label: string
 }
 
@@ -10,13 +10,11 @@ export interface AppShellViewProps {
   activeSection: NavItem['key']
   onSelectSection: (section: NavItem['key']) => void
   monthControls: ReactNode
-  employeeScreen: ReactNode
+  employeesScreen: ReactNode
   timeSheetScreen: ReactNode
-  monthCloseScreen: ReactNode
-  paySlipScreen: ReactNode
-  payrollSheetScreen: ReactNode
-  legalConstantsScreen: ReactNode
+  payrollScreen: ReactNode
   holidaysScreen: ReactNode
+  companyScreen: ReactNode
 }
 
 export function AppShellView({
@@ -24,17 +22,15 @@ export function AppShellView({
   activeSection,
   onSelectSection,
   monthControls,
-  employeeScreen,
+  employeesScreen,
   timeSheetScreen,
-  monthCloseScreen,
-  paySlipScreen,
-  payrollSheetScreen,
-  legalConstantsScreen,
+  payrollScreen,
   holidaysScreen,
+  companyScreen,
 }: AppShellViewProps) {
   return (
     <div className="flex min-h-screen bg-[#fcfcfa] text-xs text-slate-800">
-      <nav className="w-36 shrink-0 px-5 pt-10 pb-8">
+      <nav className="w-40 shrink-0 px-5 pt-10 pb-8">
         {navigationItems.map(item => (
           <div
             key={item.key}
@@ -47,13 +43,11 @@ export function AppShellView({
       </nav>
       <main className="min-w-0 flex-1 overflow-auto px-8 pt-10 pb-8 lg:px-10">
         {monthControls}
-        {activeSection === 'employee' && employeeScreen}
+        {activeSection === 'employees' && employeesScreen}
         {activeSection === 'timesheet' && timeSheetScreen}
-        {activeSection === 'month-close' && monthCloseScreen}
-        {activeSection === 'payslip' && paySlipScreen}
-        {activeSection === 'payroll-sheet' && payrollSheetScreen}
-        {activeSection === 'legal-constants' && legalConstantsScreen}
+        {activeSection === 'payroll' && payrollScreen}
         {activeSection === 'holidays' && holidaysScreen}
+        {activeSection === 'company' && companyScreen}
       </main>
     </div>
   )

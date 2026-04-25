@@ -1,10 +1,11 @@
-import Employee from '../Employee'
 import Holidays from '../Holidays'
-import MonthControls from '../MonthControls'
 import PaySlip from '../PaySlip'
 import TimeSheet from '../TimeSheet'
 import { useAppShell } from '../application/useAppShell'
 import { AppShellView } from '../screens/app/AppShellView'
+import { CompanyScreen } from '../screens/company/CompanyScreen'
+import { EmployeesScreen } from '../screens/employees/EmployeesScreen'
+import { MonthControlsScreen } from '../screens/month-controls/MonthControlsScreen'
 
 export default function App() {
   const appShell = useAppShell()
@@ -14,14 +15,12 @@ export default function App() {
       navigationItems={appShell.navigationItems}
       activeSection={appShell.section}
       onSelectSection={appShell.onSelectSection}
-      monthControls={<MonthControls />}
-      employeeScreen={<Employee />}
+      monthControls={<MonthControlsScreen />}
+      employeesScreen={<EmployeesScreen />}
       timeSheetScreen={<TimeSheet />}
-      monthCloseScreen={<div className="text-sm text-slate-500">Měsíční uzávěrka</div>}
-      paySlipScreen={<PaySlip />}
-      payrollSheetScreen={<div className="text-sm text-slate-500">Mzdový list</div>}
-      legalConstantsScreen={<div className="text-sm text-slate-500">Zákonné konstanty</div>}
+      payrollScreen={<PaySlip />}
       holidaysScreen={<Holidays />}
+      companyScreen={<CompanyScreen />}
     />
   )
 }

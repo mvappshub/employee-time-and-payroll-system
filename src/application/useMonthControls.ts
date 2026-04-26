@@ -196,12 +196,24 @@ export function useMonthControls() {
     buttonState,
     onPrintPayslip: () => {
       if (!buttonState.canPrint) return
-      setSection('payroll')
-      requestAnimationFrame(() => {
+      const tryPrint = (attempt = 0) => {
+        setSection('payroll')
         requestAnimationFrame(() => {
-          printDocumentById('issued-payslip-document')
+          requestAnimationFrame(() => {
+            const printed = printDocumentById('issued-payslip-document')
+            if (printed) return
+            if (attempt >= 2) {
+              setError('Tisk výplatní pásky se nepodařilo spustit. Zkuste akci zopakovat.')
+              return
+            }
+            window.setTimeout(() => {
+              tryPrint(attempt + 1)
+            }, 50)
+          })
         })
-      })
+      }
+
+      tryPrint()
     },
     onInitMonth: async () => {
       if (!selectedEmployeeId || !employee) {
@@ -459,7 +471,7 @@ export function useMonthControls() {
         issuedAt: nowIso,
       })
       if (saved && employee) {
-        saved.payslipDocument = buildIssuedPayslipDocument(
+        saved.payslipDocument = JSON.parse(JSON.stringify(buildIssuedPayslipDocument(
           employee,
           employer,
           saved,
@@ -474,7 +486,7 @@ export function useMonthControls() {
             totalSick: summary.totalSick,
           },
           payrollState?.payslipDocument || null,
-        )
+        ))) as NonNullable<typeof saved.payslipDocument>
       }
       if (!saved) return
       try {

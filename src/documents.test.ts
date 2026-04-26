@@ -6,6 +6,7 @@ import {
   buildTimeSheetStatementDocument,
   invalidateDocument,
 } from './domain/documents/builders'
+import { buildEmployeeMonthRecord } from './infrastructure/api/monthStorage'
 import type { EmployeeMonth, EmployeeSettings, EmployerProfile } from './domain/shared/types'
 
 const employer: EmployerProfile = {
@@ -142,6 +143,12 @@ describe('document builders', () => {
     expect(document.snapshot.totals.vacationHours).toBe(8)
   })
 
+  it('keeps incomplete employment contract in draft state when required fields are missing', () => {
+    const document = buildEmploymentContractDocument(employee, { ...employer, representativeName: '', representativeRole: '' })
+
+    expect(document.lifecycleStatus).toBe('draft')
+  })
+
   it('builds issued payslip document with payroll snapshot', () => {
     const document = buildIssuedPayslipDocument(employee, employer, month, {
       workHoursWH: 160,
@@ -175,5 +182,37 @@ describe('document builders', () => {
 
     expect(invalidated?.lifecycleStatus).toBe('invalidated')
     expect(invalidated?.invalidationReason).toBe('Změna dat.')
+  })
+
+  it('preserves issued payslip snapshot through JSON persistence roundtrip', () => {
+    const payslipDocument = buildIssuedPayslipDocument(employee, employer, month, {
+      workHoursWH: 160,
+      workDaysWH: 20,
+      totalNight: 4,
+      totalWeekend: 0,
+      totalHolidayTotal: 0,
+      totalOvertime: 2,
+      totalVacation: 8,
+      totalSick: 0,
+    })
+    const persisted = buildEmployeeMonthRecord({
+      employeeId: month.employeeId,
+      month: month.month,
+      status: 'payslip_issued',
+      employee,
+      employer,
+      records: month.records,
+      paySlipInputs: month.paySlipInputs,
+      timeSummary: month.timeSummary,
+      payrollResult: month.payrollResult,
+      calculationSnapshot: month.calculationSnapshot,
+      payslipDocument,
+    })
+
+    const roundtrip = JSON.parse(JSON.stringify(persisted)) as EmployeeMonth
+
+    expect(roundtrip.payslipDocument?.documentType).toBe('issued_payslip')
+    expect(roundtrip.payslipDocument?.snapshot.documentSummary.workHoursWH).toBe(160)
+    expect(roundtrip.payslipDocument?.snapshot.paySlipInputs.manualReward).toBe(0)
   })
 })

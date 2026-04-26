@@ -8,7 +8,7 @@ import {
   sumAverageQuarterTotals,
   type AverageEarningsEmployeeContext,
 } from '../../domain/payroll/phv'
-import type { EmployeeSettings, EmployerProfile } from '../../domain/shared/types'
+import type { EmployeeSettings, EmployerProfile, IssuedPayslipDocument, PaySlipInputs, PayrollResult, TimeSummary } from '../../domain/shared/types'
 import type { SavedMonthRecord } from '../api/monthStorage'
 
 const DATA_DIR = path.resolve(process.cwd(), 'month-data')
@@ -29,6 +29,181 @@ const DEFAULT_EMPLOYEE_CONTEXT: AverageEarningsEmployeeContext = {
   weeklyHours: 40,
   workDaysPerWeek: 5,
   weekendWorking: false,
+}
+
+function repairEmployerProfile(profile?: EmployerProfile): EmployerProfile {
+  return {
+    name: profile?.name || '',
+    ico: profile?.ico || '',
+    seat: profile?.seat || '',
+    representativeName: profile?.representativeName || '',
+    representativeRole: profile?.representativeRole || '',
+  }
+}
+
+function repairEmployeeSettings(employee?: Partial<EmployeeSettings>): EmployeeSettings {
+  return {
+    id: employee?.id || '',
+    name: employee?.name || '',
+    employeeNumber: employee?.employeeNumber || '',
+    permanentAddress: employee?.permanentAddress || '',
+    status: employee?.status || 'active',
+    employmentType: employee?.employmentType || 'pracovni_pomer',
+    remunerationType: employee?.remunerationType || 'mzda',
+    employmentStartDate: employee?.employmentStartDate || '2026-01-01',
+    employmentEndDate: employee?.employmentEndDate || '',
+    contractJobTitle: employee?.contractJobTitle || '',
+    contractWorkplace: employee?.contractWorkplace || '',
+    contractWorkSchedule: employee?.contractWorkSchedule || '',
+    probationMonths: employee?.probationMonths || 0,
+    fixedTermEndDate: employee?.fixedTermEndDate || '',
+    workload: employee?.workload || 1,
+    weeklyHours: employee?.weeklyHours || 40,
+    workDaysPerWeek: employee?.workDaysPerWeek || 5,
+    weekendWorking: employee?.weekendWorking || false,
+    shiftStart: employee?.shiftStart || '06:00',
+    shiftEnd: employee?.shiftEnd || '14:30',
+    standardBreak: employee?.standardBreak || 0.5,
+    nightWorkAllowed: employee?.nightWorkAllowed || false,
+    nightFrom: employee?.nightFrom || '22:00',
+    nightTo: employee?.nightTo || '06:00',
+    overtimeAllowed: employee?.overtimeAllowed || false,
+    baseSalary: employee?.baseSalary || 0,
+    personalBonus: employee?.personalBonus || 0,
+    nightSurcharge: employee?.nightSurcharge || 0,
+    weekendSurcharge: employee?.weekendSurcharge || 0,
+    holidaySurcharge: employee?.holidaySurcharge || 0,
+    overtimeSurcharge: employee?.overtimeSurcharge || 0,
+    sickCompensation: employee?.sickCompensation || 0,
+    holidayCompensationMode: employee?.holidayCompensationMode || 'time-off',
+    overtimeCompensationMode: employee?.overtimeCompensationMode || 'premium',
+    appliesHealthMinimumBase: employee?.appliesHealthMinimumBase ?? true,
+    healthMinimumBaseExceptionReason: employee?.healthMinimumBaseExceptionReason || '',
+    taxDeclarationSigned: employee?.taxDeclarationSigned || false,
+    taxpayerCreditApplied: employee?.taxpayerCreditApplied || false,
+    vacationEntitlementHours: employee?.vacationEntitlementHours || 0,
+    vacationUsedHours: employee?.vacationUsedHours || 0,
+    vacationRemainingHours: employee?.vacationRemainingHours || 0,
+    employmentContractDocument: employee?.employmentContractDocument || null,
+  }
+}
+
+function repairPaySlipInputs(inputs?: Partial<PaySlipInputs>): PaySlipInputs {
+  return {
+    manualReward: inputs?.manualReward || 0,
+    includeManualRewardInAverage: inputs?.includeManualRewardInAverage || false,
+    unworked: inputs?.unworked || 0,
+    sickCarryoverDays: inputs?.sickCarryoverDays || 0,
+  }
+}
+
+function repairTimeSummary(summary?: Partial<TimeSummary>): TimeSummary | undefined {
+  if (!summary) return undefined
+  return {
+    monthlyFundHours: summary.monthlyFundHours || 0,
+    workedHours: summary.workedHours || 0,
+    workedDays: summary.workedDays || 0,
+    vacationHours: summary.vacationHours || 0,
+    sickHours: summary.sickHours || 0,
+    totalSaldo: summary.totalSaldo || 0,
+  }
+}
+
+function repairDocumentSummary(record: PersistedMonthRecord): IssuedPayslipDocument['snapshot']['documentSummary'] {
+  const payrollResult = (record.payrollResult || {}) as PayrollResult & {
+    dailyFund?: number
+    averageHourlyEarnings?: number
+    nightSurchargeRate?: number
+    weekendSurchargeRate?: number
+    holidaySurchargeRate?: number
+    overtimeSurchargeCalc?: number
+    nightSurchargeCalc?: number
+    weekendSurchargeCalc?: number
+    holidaySurchargeCalc?: number
+  }
+  const timeSummary = repairTimeSummary(record.timeSummary)
+  const employee = repairEmployeeSettings(record.employee)
+  const dailyFund = typeof payrollResult.dailyFund === 'number' && payrollResult.dailyFund > 0 ? payrollResult.dailyFund : 8
+  const averageHourlyEarnings = typeof payrollResult.averageHourlyEarnings === 'number' && payrollResult.averageHourlyEarnings > 0
+    ? payrollResult.averageHourlyEarnings
+    : 0
+  const totalNight = averageHourlyEarnings > 0 && typeof payrollResult.nightSurchargeRate === 'number' && payrollResult.nightSurchargeRate > 0
+    ? Number(payrollResult.nightSurchargeCalc || 0) / (averageHourlyEarnings * payrollResult.nightSurchargeRate)
+    : 0
+  const totalWeekend = averageHourlyEarnings > 0 && typeof payrollResult.weekendSurchargeRate === 'number' && payrollResult.weekendSurchargeRate > 0
+    ? Number(payrollResult.weekendSurchargeCalc || 0) / (averageHourlyEarnings * payrollResult.weekendSurchargeRate)
+    : 0
+  const totalHolidayTotal = averageHourlyEarnings > 0 && typeof payrollResult.holidaySurchargeRate === 'number' && payrollResult.holidaySurchargeRate > 0
+    ? Number(payrollResult.holidaySurchargeCalc || 0) / (averageHourlyEarnings * payrollResult.holidaySurchargeRate)
+    : 0
+  const totalOvertime = averageHourlyEarnings > 0 && employee.overtimeSurcharge > 0
+    ? Number(payrollResult.overtimeSurchargeCalc || 0) / (averageHourlyEarnings * employee.overtimeSurcharge)
+    : 0
+
+  return {
+    workHoursWH: timeSummary?.monthlyFundHours || 0,
+    workDaysWH: dailyFund > 0 ? (timeSummary?.monthlyFundHours || 0) / dailyFund : 0,
+    totalNight,
+    totalWeekend,
+    totalHolidayTotal,
+    totalOvertime,
+    totalVacation: timeSummary?.vacationHours || 0,
+    totalSick: timeSummary?.sickHours || 0,
+  }
+}
+
+export function repairPersistedMonthRecord(record: PersistedMonthRecord): PersistedMonthRecord {
+  const repairedRecord: PersistedMonthRecord = {
+    ...record,
+    employer: repairEmployerProfile(record.employer),
+    employee: repairEmployeeSettings(record.employee),
+    paySlipInputs: repairPaySlipInputs(record.paySlipInputs),
+    timeSummary: repairTimeSummary(record.timeSummary),
+  }
+
+  const payslipDocument = repairedRecord.payslipDocument
+  if (payslipDocument && (!('snapshot' in payslipDocument) || !payslipDocument.snapshot?.documentSummary)) {
+    const employee = repairEmployeeSettings(repairedRecord.employee)
+    repairedRecord.payslipDocument = {
+      documentType: 'issued_payslip',
+      lifecycleStatus: 'issued',
+      issuedAt: payslipDocument.issuedAt || repairedRecord.issuedAt || repairedRecord.updatedAt,
+      updatedAt: repairedRecord.updatedAt,
+      referenceId: repairedRecord.employeeId,
+      sourceMonth: repairedRecord.month,
+      version: typeof (payslipDocument as IssuedPayslipDocument).version === 'number'
+        ? (payslipDocument as IssuedPayslipDocument).version
+        : 1,
+      snapshotOrigin: 'month',
+      snapshot: {
+        employer: repairEmployerProfile(repairedRecord.employer),
+        employee: {
+          id: employee.id,
+          name: employee.name,
+          employeeNumber: employee.employeeNumber,
+          employmentType: employee.employmentType,
+          remunerationType: employee.remunerationType,
+          baseSalary: employee.baseSalary,
+          personalBonus: employee.personalBonus,
+          nightSurcharge: employee.nightSurcharge,
+          weekendSurcharge: employee.weekendSurcharge,
+          sickCompensation: employee.sickCompensation,
+          overtimeSurcharge: employee.overtimeSurcharge,
+          vacationEntitlementHours: employee.vacationEntitlementHours,
+          vacationUsedHours: employee.vacationUsedHours,
+          vacationRemainingHours: employee.vacationRemainingHours,
+        },
+        month: repairedRecord.month,
+        calculationSnapshot: repairedRecord.calculationSnapshot,
+        payrollResult: repairedRecord.payrollResult || {},
+        timeSummary: repairedRecord.timeSummary,
+        paySlipInputs: repairPaySlipInputs(repairedRecord.paySlipInputs),
+        documentSummary: repairDocumentSummary(repairedRecord),
+      },
+    }
+  }
+
+  return repairedRecord
 }
 
 async function ensureDataDir(): Promise<void> {
@@ -99,7 +274,12 @@ async function saveEmployees(employees: EmployeeSettings[]): Promise<void> {
 async function loadMonthRecord(employeeId: string, month: string): Promise<PersistedMonthRecord | null> {
   try {
     const file = await fs.readFile(monthFilePath(employeeId, month), 'utf8')
-    return JSON.parse(file) as PersistedMonthRecord
+    const raw = JSON.parse(file) as PersistedMonthRecord
+    const parsed = repairPersistedMonthRecord(raw)
+    if (JSON.stringify(parsed) !== JSON.stringify(raw)) {
+      await fs.writeFile(monthFilePath(employeeId, month), JSON.stringify(parsed, null, 2), 'utf8')
+    }
+    return parsed
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null
     throw error
@@ -116,7 +296,12 @@ async function listMonthRecords(employeeId: string): Promise<PersistedMonthRecor
         .filter(entry => entry.isFile() && entry.name.endsWith('.json'))
         .map(async entry => {
           const file = await fs.readFile(path.join(dir, entry.name), 'utf8')
-          return JSON.parse(file) as PersistedMonthRecord
+          const raw = JSON.parse(file) as PersistedMonthRecord
+          const parsed = repairPersistedMonthRecord(raw)
+          if (JSON.stringify(parsed) !== JSON.stringify(raw)) {
+            await fs.writeFile(path.join(dir, entry.name), JSON.stringify(parsed, null, 2), 'utf8')
+          }
+          return parsed
         }),
     )
     return months.sort((a, b) => a.month.localeCompare(b.month))
@@ -285,7 +470,7 @@ async function handleEmployeeMonth(req: IncomingMessage, res: ServerResponse, em
   }
 
   if (req.method === 'PUT') {
-    const body = await readJsonBody(req)
+    const body = repairPersistedMonthRecord(await readJsonBody(req) as PersistedMonthRecord)
     await ensureDataDir()
     await fs.mkdir(employeeDirPath(employeeId), { recursive: true })
     await fs.writeFile(monthFilePath(employeeId, month), JSON.stringify(body, null, 2), 'utf8')

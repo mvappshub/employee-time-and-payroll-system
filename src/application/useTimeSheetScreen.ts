@@ -55,6 +55,22 @@ export function useTimeSheetScreen() {
         updatedAt: payrollState?.updatedAt || new Date().toISOString(),
       }, employer)
 
+  const schedulePrint = (attempt = 0) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const printed = printDocumentById('time-sheet-document')
+        if (printed) return
+        if (attempt >= 2) {
+          setError('Tisk výpisu evidence se nepodařilo spustit. Zkuste akci zopakovat.')
+          return
+        }
+        window.setTimeout(() => {
+          schedulePrint(attempt + 1)
+        }, 50)
+      })
+    })
+  }
+
   const onShiftChange = (index: number, shift: string) => {
     if (!employee || !selectedEmployeeId) return
     if ((monthStatus === 'time_closed' || monthStatus === 'payroll_calculated' || monthStatus === 'payroll_approved' || monthStatus === 'payslip_issued') && !window.confirm('Změna evidence zneplatní spočítanou mzdu a vystavenou pásku. Pokračovat?')) {
@@ -143,6 +159,13 @@ export function useTimeSheetScreen() {
         setError(documentBlockedReason || 'Výpis evidence nelze tisknout.')
         return
       }
+      if (timeSheetDocument?.lifecycleStatus === 'issued') {
+        const confirmed = window.confirm('Výpis evidence už byl vystaven. Chcete vytvořit novou verzi dokumentu?')
+        if (!confirmed) {
+          setInfo('Výpis evidence už je vystaven. Pro zachování původní verze nebyla vytvořena nová emise.')
+          return
+        }
+      }
       const sourceMonth: EmployeeMonth = {
         employeeId: selectedEmployeeId,
         month,
@@ -160,7 +183,16 @@ export function useTimeSheetScreen() {
         createdAt: payrollState?.createdAt || new Date().toISOString(),
         updatedAt: payrollState?.updatedAt || new Date().toISOString(),
         timeSheetDocument,
-        auditTrail: payrollState?.auditTrail,
+        auditTrail: [
+          ...(payrollState?.auditTrail || []),
+          {
+            at: new Date().toISOString(),
+            action: timeSheetDocument?.lifecycleStatus === 'issued' ? 'reissue-time-sheet-document' : 'issue-time-sheet-document',
+            note: timeSheetDocument?.lifecycleStatus === 'issued'
+              ? `Nová verze výpisu evidence po předchozí verzi ${timeSheetDocument.version}.`
+              : undefined,
+          },
+        ],
       }
       const document = buildTimeSheetStatementDocument(employee, employer, sourceMonth, holidays, timeSheetDocument)
       const issuedDocument = {
@@ -171,14 +203,14 @@ export function useTimeSheetScreen() {
       }
       try {
         await saveEmployeeMonthApi(selectedEmployeeId, month, { ...sourceMonth, timeSheetDocument: issuedDocument, employer, employee })
-        setPayrollMonthState(selectedEmployeeId, month, { timeSheetDocument: issuedDocument, updatedAt: issuedDocument.updatedAt })
+        setPayrollMonthState(selectedEmployeeId, month, {
+          timeSheetDocument: issuedDocument,
+          updatedAt: issuedDocument.updatedAt,
+          auditTrail: sourceMonth.auditTrail,
+        })
         setInfo('Výpis evidence byl vystaven.')
         setError('')
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            printDocumentById('time-sheet-document')
-          })
-        })
+        schedulePrint()
       } catch (caughtError) {
         setError(caughtError instanceof Error ? caughtError.message : 'Výpis evidence se nepodařilo vystavit.')
       }

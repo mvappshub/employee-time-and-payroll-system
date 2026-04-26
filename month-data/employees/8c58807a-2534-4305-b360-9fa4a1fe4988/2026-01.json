@@ -3,19 +3,27 @@
   "month": "2026-01",
   "status": "payslip_issued",
   "employer": {
-    "name": "",
-    "ico": "",
-    "seat": ""
+    "name": "Fir Firma s.r.o.",
+    "ico": "2141545",
+    "seat": "Na Kipru 1",
+    "representativeName": "Jonh Dovany",
+    "representativeRole": "Jednatel"
   },
   "employee": {
     "id": "8c58807a-2534-4305-b360-9fa4a1fe4988",
-    "name": "Pepa Kos",
+    "name": "Čestmír Svoboda",
     "employeeNumber": "001",
+    "permanentAddress": "",
     "status": "active",
     "employmentType": "pracovni_pomer",
     "remunerationType": "mzda",
     "employmentStartDate": "2026-01-01",
     "employmentEndDate": "",
+    "contractJobTitle": "",
+    "contractWorkplace": "",
+    "contractWorkSchedule": "",
+    "probationMonths": 3,
+    "fixedTermEndDate": "",
     "workload": 1,
     "weeklyHours": 40,
     "workDaysPerWeek": 5,
@@ -42,7 +50,41 @@
     "taxpayerCreditApplied": true,
     "vacationEntitlementHours": 0,
     "vacationUsedHours": 0,
-    "vacationRemainingHours": 0
+    "vacationRemainingHours": 0,
+    "employmentContractDocument": {
+      "documentType": "employment_contract",
+      "lifecycleStatus": "draft",
+      "updatedAt": "2026-04-25T21:18:59.180Z",
+      "referenceId": "8c58807a-2534-4305-b360-9fa4a1fe4988",
+      "version": 1,
+      "snapshotOrigin": "employee",
+      "snapshot": {
+        "employer": {
+          "name": "Fir Firma s.r.o.",
+          "ico": "2141545",
+          "seat": "Na Kipru 1",
+          "representativeName": "Jonh Dovany",
+          "representativeRole": "Jednatel"
+        },
+        "employee": {
+          "id": "8c58807a-2534-4305-b360-9fa4a1fe4988",
+          "name": "Čestmír Svoboda",
+          "employeeNumber": "001",
+          "permanentAddress": "",
+          "employmentStartDate": "2026-01-01",
+          "employmentEndDate": "",
+          "contractJobTitle": "",
+          "contractWorkplace": "",
+          "contractWorkSchedule": "",
+          "probationMonths": 3,
+          "fixedTermEndDate": "",
+          "remunerationType": "mzda",
+          "baseSalary": 30000,
+          "workload": 1,
+          "weeklyHours": 40
+        }
+      }
+    }
   },
   "records": [
     {
@@ -310,9 +352,132 @@
     },
     "calculatedAt": "2026-04-25T01:06:46.540Z"
   },
+  "timeSheetDocument": null,
   "payslipDocument": {
+    "documentType": "issued_payslip",
+    "lifecycleStatus": "invalidated",
     "issuedAt": "2026-04-25T01:08:21.594Z",
-    "month": "2026-01"
+    "updatedAt": "2026-04-25T01:08:21.594Z",
+    "referenceId": "8c58807a-2534-4305-b360-9fa4a1fe4988",
+    "sourceMonth": "2026-01",
+    "version": 1,
+    "snapshotOrigin": "month",
+    "snapshot": {
+      "employer": {
+        "name": "",
+        "ico": "",
+        "seat": "",
+        "representativeName": "",
+        "representativeRole": ""
+      },
+      "employee": {
+        "id": "8c58807a-2534-4305-b360-9fa4a1fe4988",
+        "name": "Pepa Kos",
+        "employeeNumber": "001",
+        "employmentType": "pracovni_pomer",
+        "remunerationType": "mzda",
+        "baseSalary": 30000,
+        "personalBonus": 0.25,
+        "nightSurcharge": 0.1,
+        "weekendSurcharge": 0.1,
+        "sickCompensation": 0.6,
+        "overtimeSurcharge": 0.25,
+        "vacationEntitlementHours": 0,
+        "vacationUsedHours": 0,
+        "vacationRemainingHours": 0
+      },
+      "month": "2026-01",
+      "calculationSnapshot": {
+        "averageEarningsSource": "probable",
+        "averageHourlyEarnings": 223.21428571428572,
+        "legalConstants": {
+          "sickPayReductionLimitFirst": 1633,
+          "sickPayReductionLimitSecond": 2449,
+          "sickPayReductionLimitThird": 4897,
+          "taxThreshold": 146901,
+          "taxpayerCredit": 2570,
+          "minimumWage": 20800,
+          "healthEmployeeRate": 0.045,
+          "healthEmployerRate": 0.09,
+          "socialEmployeeRate": 0.071,
+          "socialEmployerRate": 0.248
+        },
+        "calculatedAt": "2026-04-25T01:06:46.540Z"
+      },
+      "payrollResult": {
+        "dailyFund": 8,
+        "personalBonusBase": 7500,
+        "averageHourlyEarnings": 223.21428571428572,
+        "holidaySurchargeRate": 1,
+        "nightSurchargeRate": 0.1,
+        "weekendSurchargeRate": 0.1,
+        "baseSalaryCalc": 23181.81818181818,
+        "personalBonusCalc": 5795.454545454545,
+        "nightSurchargeCalc": 0,
+        "weekendSurchargeCalc": 0,
+        "holidaySurchargeCalc": 0,
+        "holidayCompLeaveHours": 8,
+        "overtimeSurchargeCalc": 0,
+        "overtimeCompLeaveHours": 0,
+        "unworkedCalc": 0,
+        "unworkedDays": 0,
+        "vacationCalc": 5357.142857142857,
+        "vacationDays": 3,
+        "sickHourlyBasis": 200.89285714285717,
+        "sickCalc": 1928.5714285714287,
+        "sickDays": 2,
+        "hrubaMzda": 34334.41558441558,
+        "contributionBase": 34334.41558441558,
+        "healthContributionBase": 34334.41558441558,
+        "healthMinimumBaseApplied": false,
+        "healthEmployee": 1546,
+        "healthEmployer": 3091,
+        "socialEmployee": 2438,
+        "socialEmployer": 8515,
+        "taxBase": 34400,
+        "taxBeforeCredits": 5160,
+        "taxAfterCredits": 2590,
+        "zpPrac": 34334.41558441558,
+        "zpFirma": 3091,
+        "spPrac": 2438,
+        "spFirma": 8515,
+        "zakladDane": 34400,
+        "dan": 5160,
+        "danSleva": 2590,
+        "slevaPoplatnika": 2570,
+        "cistaMzda": 29688.98701298701,
+        "prumHodinovy": 223.21428571428572,
+        "prumDenni": 1785.7142857142858,
+        "celkemOdpracNeodprac": 176,
+        "saldoMesic": 0
+      },
+      "timeSummary": {
+        "monthlyFundHours": 176,
+        "workedHours": 136,
+        "workedDays": 17,
+        "vacationHours": 24,
+        "sickHours": 16,
+        "totalSaldo": 0
+      },
+      "paySlipInputs": {
+        "manualReward": 0,
+        "includeManualRewardInAverage": false,
+        "unworked": 0,
+        "sickCarryoverDays": 0
+      },
+      "documentSummary": {
+        "workHoursWH": 176,
+        "workDaysWH": 22,
+        "totalNight": 0,
+        "totalWeekend": 0,
+        "totalHolidayTotal": 0,
+        "totalOvertime": 0,
+        "totalVacation": 24,
+        "totalSick": 16
+      }
+    },
+    "invalidatedAt": "2026-04-25T21:18:59.259Z",
+    "invalidationReason": "Změna údajů zaměstnance vyžaduje obnovu dokumentu."
   },
   "auditTrail": [
     {
@@ -338,10 +503,15 @@
     {
       "at": "2026-04-25T01:08:17.516Z",
       "action": "approve-payroll"
+    },
+    {
+      "at": "2026-04-25T21:18:59.259Z",
+      "action": "invalidate-documents",
+      "note": "Změna údajů zaměstnance vyžaduje obnovu dokumentu."
     }
   ],
   "createdAt": "2026-04-25T01:05:12.382Z",
-  "updatedAt": "2026-04-25T01:08:21.594Z",
+  "updatedAt": "2026-04-25T21:18:59.260Z",
   "closedAt": "2026-04-25T01:06:44.927Z",
   "approvedAt": "2026-04-25T01:08:17.516Z",
   "issuedAt": "2026-04-25T01:08:21.594Z"

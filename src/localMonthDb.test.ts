@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest'
 import {
   findLatestEmployeeContextMonth,
   pickEmployeeContextForMonth,
+  repairPersistedMonthRecord,
   type PersistedMonthRecord,
 } from './infrastructure/dev-server/monthDbApi'
+import type { EmployeeSettings } from './domain/shared/types'
 
 const januaryEmployee = {
   employmentStartDate: '2026-01-01',
@@ -14,7 +16,7 @@ const januaryEmployee = {
   weekendWorking: false,
 }
 
-function monthRecord(month: string, employee: Partial<typeof januaryEmployee> = januaryEmployee): PersistedMonthRecord {
+function monthRecord(month: string, employee: Partial<EmployeeSettings> = januaryEmployee): PersistedMonthRecord {
   return {
     employeeId: 'emp-1',
     month,
@@ -84,5 +86,44 @@ describe('local month db employee context resolution', () => {
 
     expect(records[0].employer).toBeUndefined()
     expect(findLatestEmployeeContextMonth(records, '2026-03')).toBe('2026-02')
+  })
+
+  it('repairs legacy issued payslip documents missing snapshot fields', () => {
+    const repaired = repairPersistedMonthRecord({
+      ...monthRecord('2026-02', {
+        ...januaryEmployee,
+        id: 'emp-1',
+        name: 'Jan Novák',
+        employeeNumber: '001',
+        overtimeSurcharge: 0.25,
+      }),
+      timeSummary: {
+        monthlyFundHours: 160,
+        workedHours: 152,
+        workedDays: 19,
+        vacationHours: 8,
+        sickHours: 0,
+        totalSaldo: 0,
+      },
+      payrollResult: {
+        dailyFund: 8,
+        averageHourlyEarnings: 250,
+        nightSurchargeRate: 0.1,
+        weekendSurchargeRate: 0.1,
+        holidaySurchargeRate: 1,
+        nightSurchargeCalc: 100,
+        weekendSurchargeCalc: 0,
+        holidaySurchargeCalc: 0,
+        overtimeSurchargeCalc: 125,
+      },
+      payslipDocument: {
+        issuedAt: '2026-02-28T10:00:00.000Z',
+        month: '2026-02',
+      } as never,
+    })
+
+    expect(repaired.payslipDocument?.documentType).toBe('issued_payslip')
+    expect(repaired.payslipDocument?.snapshot.documentSummary.workHoursWH).toBe(160)
+    expect(repaired.payslipDocument?.snapshot.documentSummary.totalOvertime).toBe(2)
   })
 })

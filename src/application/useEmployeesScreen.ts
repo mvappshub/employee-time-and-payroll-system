@@ -13,9 +13,11 @@ import {
   listEmployeeMonths,
   listEmployees,
   saveEmployeeMonth,
+  saveEmployeeDocument,
   updateEmployee as updateEmployeeApi,
 } from '../infrastructure/api/monthStorage'
 import { useStore, normalizeEmployeeSettings } from '../infrastructure/state/store'
+import { invalidateDocument } from '../domain/documents/builders'
 import type { EmployeeMonth, EmployeeSettings, MonthStatus } from '../domain/shared/types'
 import { calculateMonthDays, calcMonthlySummary } from '../domain/payroll/calc'
 import { formatMonthLabel } from './formatters'
@@ -117,6 +119,87 @@ export function useEmployeesScreen() {
     return typeof statuses[month] !== 'undefined'
   }
 
+  const schedulePrintWithRetry = (
+    documentId: string,
+    setFailure: (message: string) => void,
+    attempt = 0,
+  ) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const printed = printDocumentById(documentId)
+        if (printed) return
+        if (attempt >= 2) {
+          setFailure('Tisk dokumentu se nepodařilo spustit. Zkuste akci zopakovat.')
+          return
+        }
+        window.setTimeout(() => {
+          schedulePrintWithRetry(documentId, setFailure, attempt + 1)
+        }, 50)
+      })
+    })
+  }
+
+  const invalidateIssuedMonthDocuments = async (employee: EmployeeSettings) => {
+    const employeePayroll = payrollByEmployee[employee.id] || {}
+    const employeeStatuses = monthStatusByEmployee[employee.id] || {}
+    const employeeRecords = recordsByEmployee[employee.id] || {}
+    const employeeInputs = paySlipInputsByEmployee[employee.id] || {}
+    const reason = 'Změna údajů zaměstnance vyžaduje obnovu dokumentu.'
+
+    const monthsToRepair = Object.entries(employeePayroll).filter(([, payrollState]) =>
+      payrollState?.timeSheetDocument?.lifecycleStatus === 'issued' || payrollState?.payslipDocument?.lifecycleStatus === 'issued',
+    )
+
+    for (const [month, payrollState] of monthsToRepair) {
+      const nextTimeSheetDocument = invalidateDocument(payrollState?.timeSheetDocument, reason)
+      const nextPayslipDocument = invalidateDocument(payrollState?.payslipDocument, reason)
+      const nextAuditTrail = [
+        ...(payrollState?.auditTrail || []),
+        {
+          at: new Date().toISOString(),
+          action: 'invalidate-documents',
+          note: reason,
+        },
+      ]
+
+      const savedMonth = buildEmployeeMonthRecord({
+        employeeId: employee.id,
+        month,
+        status: employeeStatuses[month] || 'draft',
+        employer,
+        employee,
+        records: employeeRecords[month] || [],
+        paySlipInputs: employeeInputs[month] || defaultPaySlipInputs,
+        existing: payrollState ? {
+          ...payrollState,
+          employeeId: employee.id,
+          month,
+          status: employeeStatuses[month] || 'draft',
+          employee,
+          employer,
+          records: employeeRecords[month] || [],
+          paySlipInputs: employeeInputs[month] || defaultPaySlipInputs,
+        } : null,
+        timeSummary: payrollState?.timeSummary,
+        payrollResult: payrollState?.payrollResult,
+        calculationSnapshot: payrollState?.calculationSnapshot,
+        timeSheetDocument: nextTimeSheetDocument,
+        payslipDocument: nextPayslipDocument,
+        auditTrail: nextAuditTrail,
+        closedAt: payrollState?.closedAt,
+        approvedAt: payrollState?.approvedAt,
+        issuedAt: payrollState?.issuedAt,
+        invalidatedAt: payrollState?.invalidatedAt,
+        invalidationReason: payrollState?.invalidationReason,
+      })
+
+      await saveEmployeeMonth(employee.id, month, savedMonth)
+      hydrateEmployeeMonth(employee.id, month, savedMonth as EmployeeMonth)
+    }
+
+    return monthsToRepair.length
+  }
+
   const monthRows = useMemo(() => {
     if (!activeEmployee?.id) return []
     const employeeId = activeEmployee.id
@@ -204,7 +287,7 @@ export function useEmployeesScreen() {
       if (!activeEmployee?.id) return
       const nextDocument = buildEmploymentContractDocument(activeEmployee, employer, activeEmployee.employmentContractDocument)
       try {
-        await updateEmployeeApi(activeEmployee.id, { employmentContractDocument: nextDocument })
+        await saveEmployeeDocument(activeEmployee.id, nextDocument)
       } catch (saveError) {
         setError(saveError instanceof Error ? saveError.message : 'Draft pracovní smlouvy se nepodařilo obnovit.')
         return
@@ -216,7 +299,7 @@ export function useEmployeesScreen() {
       if (!activeEmployee?.id || !activeEmployee.employmentContractDocument || !canPrintContract) return
       const issuedDocument = issueEmploymentContractDocument(activeEmployee.employmentContractDocument)
       try {
-        await updateEmployeeApi(activeEmployee.id, { employmentContractDocument: issuedDocument })
+        await saveEmployeeDocument(activeEmployee.id, issuedDocument)
       } catch (saveError) {
         setError(saveError instanceof Error ? saveError.message : 'Pracovní smlouvu se nepodařilo vystavit.')
         return
@@ -224,11 +307,7 @@ export function useEmployeesScreen() {
       updateEmployee(activeEmployee.id, { employmentContractDocument: issuedDocument })
       setDraftEmployee(current => current ? { ...current, employmentContractDocument: issuedDocument } : current)
       setInfo('Pracovní smlouva byla vystavena.')
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          printDocumentById('employment-contract-document')
-        })
-      })
+      schedulePrintWithRetry('employment-contract-document', setError)
     },
     onSaveEmployee: async () => {
       if (!activeEmployee) return
@@ -249,21 +328,30 @@ export function useEmployeesScreen() {
         )
         ? buildEmploymentContractDocument(activeEmployee, employer, activeEmployee.employmentContractDocument)
         : activeEmployee.employmentContractDocument
-      const employeePayload = {
-        ...activeEmployee,
-        employmentContractDocument: nextDocument,
+      const employeePayload = { ...activeEmployee, employmentContractDocument: nextDocument }
+      const employeeFields: Partial<EmployeeSettings> = {
+        ...employeePayload,
+        employmentContractDocument: undefined,
       }
       const isPersistedEmployee = !!activeEmployee.id && employees.some(employee => employee.id === activeEmployee.id)
       if (!isPersistedEmployee) {
         let persistedEmployee: EmployeeSettings
         try {
           persistedEmployee = await createEmployeeApi({
-            ...employeePayload,
+            ...employeeFields,
             id: undefined,
           })
+          await saveEmployeeDocument(
+            persistedEmployee.id,
+            buildEmploymentContractDocument({ ...persistedEmployee, employmentContractDocument: null }, employer, nextDocument),
+          )
         } catch (saveError) {
           setError(saveError instanceof Error ? saveError.message : 'Zaměstnance se nepodařilo uložit.')
           return
+        }
+        persistedEmployee = {
+          ...persistedEmployee,
+          employmentContractDocument: buildEmploymentContractDocument({ ...persistedEmployee, employmentContractDocument: null }, employer, nextDocument),
         }
         createEmployee(persistedEmployee)
         selectEmployee(persistedEmployee.id)
@@ -273,14 +361,25 @@ export function useEmployeesScreen() {
       }
 
       try {
-        await updateEmployeeApi(activeEmployee.id, employeePayload)
+        await updateEmployeeApi(activeEmployee.id, employeeFields)
+        await saveEmployeeDocument(activeEmployee.id, nextDocument)
       } catch (saveError) {
         setError(saveError instanceof Error ? saveError.message : 'Zaměstnance se nepodařilo uložit.')
         return
       }
-      updateEmployee(activeEmployee.id, employeePayload)
-      setDraftEmployee(null)
-      setInfo('Změny zaměstnance byly uloženy.')
+
+      const persistedEmployee = { ...employeeFields, employmentContractDocument: nextDocument } as EmployeeSettings
+      try {
+        const invalidatedMonths = await invalidateIssuedMonthDocuments(persistedEmployee)
+        updateEmployee(activeEmployee.id, persistedEmployee)
+        setDraftEmployee(null)
+        setInfo(invalidatedMonths > 0
+          ? 'Změny zaměstnance byly uloženy. Vydané dokumenty zaměstnance byly označeny jako neplatné.'
+          : 'Změny zaměstnance byly uloženy.')
+      } catch (saveError) {
+        setError(saveError instanceof Error ? saveError.message : 'Dokumenty zaměstnance se nepodařilo zneplatnit.')
+        return
+      }
     },
     onArchiveEmployee: async (id: string) => {
       setError('')

@@ -85,7 +85,7 @@ export function CompanyScreen() {
             </div>
           </div>
           <div className="rounded border border-slate-200 bg-slate-50 p-3 text-[12px] text-slate-600">
-            Dokumenty se vydávají ze snapshotu uloženého v JSON API. Runtime store slouží jen jako cache.
+            Pro tisk pracovní smlouvy musí být vyplněno všech pět polí: název, IČO, sídlo, jednající osoba a funkce jednající osoby. Runtime store slouží jen jako cache nad JSON API.
           </div>
         </div>
       </div>

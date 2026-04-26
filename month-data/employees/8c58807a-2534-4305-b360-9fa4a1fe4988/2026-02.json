@@ -5,17 +5,25 @@
   "employer": {
     "name": "",
     "ico": "",
-    "seat": ""
+    "seat": "",
+    "representativeName": "",
+    "representativeRole": ""
   },
   "employee": {
     "id": "8c58807a-2534-4305-b360-9fa4a1fe4988",
     "name": "Pepa Kos",
     "employeeNumber": "001",
+    "permanentAddress": "",
     "status": "active",
     "employmentType": "pracovni_pomer",
     "remunerationType": "mzda",
     "employmentStartDate": "2026-01-01",
     "employmentEndDate": "",
+    "contractJobTitle": "",
+    "contractWorkplace": "",
+    "contractWorkSchedule": "",
+    "probationMonths": 0,
+    "fixedTermEndDate": "",
     "workload": 1,
     "weeklyHours": 40,
     "workDaysPerWeek": 5,
@@ -42,7 +50,8 @@
     "taxpayerCreditApplied": true,
     "vacationEntitlementHours": 0,
     "vacationUsedHours": 0,
-    "vacationRemainingHours": 0
+    "vacationRemainingHours": 0,
+    "employmentContractDocument": null
   },
   "records": [
     {

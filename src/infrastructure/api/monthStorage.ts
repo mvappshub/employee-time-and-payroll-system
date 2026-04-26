@@ -155,6 +155,10 @@ export async function saveCompanyProfile(data: EmployerProfile): Promise<Employe
   return parseJsonResponse<EmployerProfile>(response)
 }
 
+/**
+ * Employment contract documents are persisted separately from general employee settings
+ * so document issuance/refresh stays explicit and does not depend on the broader employee update payload.
+ */
 export async function saveEmployeeDocument(employeeId: string, document: EmploymentContractDocument): Promise<void> {
   const response = await fetch(`/api/employees/${employeeId}/document`, {
     method: 'PUT',

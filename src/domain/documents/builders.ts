@@ -46,13 +46,15 @@ export function hasContractRelevantChange(
 }
 
 export function isEmployerProfileReady(profile: EmployerProfile): boolean {
-  return Boolean(
-    profile.name.trim() &&
-    profile.ico.trim() &&
-    profile.seat.trim() &&
-    profile.representativeName.trim() &&
+  const requiredFields = [
+    profile.name.trim(),
+    profile.ico.trim(),
+    profile.seat.trim(),
+    profile.representativeName.trim(),
     profile.representativeRole.trim(),
-  )
+  ]
+
+  return requiredFields.every(Boolean)
 }
 
 export function getEmploymentContractMissingFields(employee: EmployeeSettings, employer: EmployerProfile): string[] {
@@ -187,6 +189,10 @@ export function buildIssuedPayslipDocument(
   documentSummary: IssuedPayslipDocument['snapshot']['documentSummary'],
   previous?: IssuedPayslipDocument | null,
 ): IssuedPayslipDocument {
+  if (!documentSummary) {
+    throw new Error('Issued payslip document requires documentSummary.')
+  }
+
   const updatedAt = new Date().toISOString()
 
   return {

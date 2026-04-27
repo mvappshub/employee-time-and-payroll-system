@@ -3,7 +3,7 @@ import { loadCompanyProfile, saveCompanyProfile } from '../../infrastructure/api
 import { useStore } from '../../infrastructure/state/store'
 import type { EmployerProfile } from '../../domain/shared/types'
 
-const inp = 'w-full border border-slate-200 bg-white px-2 py-1 text-[12px] outline-none'
+const inp = 'min-h-7 w-full border border-[#1f2937] bg-white px-2 py-1 text-[12px] text-black outline-none'
 
 function CompanyField({
   label,
@@ -16,7 +16,7 @@ function CompanyField({
 }) {
   return (
     <label className="grid gap-1">
-      <span className="text-[11px] uppercase tracking-[0.14em] text-slate-400">{label}</span>
+      <span className="mb-[2px] text-[12px] font-bold text-black">{label}</span>
       <input className={inp} value={value} onChange={e => onChange(e.target.value)} />
     </label>
   )
@@ -63,39 +63,39 @@ export function CompanyScreen() {
   }
 
   return (
-    <section className="max-w-3xl rounded border border-slate-200 bg-white p-4">
-      <div className="mb-4 text-sm font-semibold text-slate-900">Firma</div>
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="space-y-4">
-          <div>
-            <div className="mb-2 text-[11px] uppercase tracking-[0.18em] text-slate-400">Povinné pro uložení</div>
-            <div className="grid gap-3">
+    <section className="max-w-4xl border-2 border-black bg-white p-2">
+      <div className="mb-2 border-2 border-black bg-black px-2 py-1 text-sm font-extrabold text-white">Firma</div>
+      <div className="grid gap-2 lg:grid-cols-2">
+        <div className="space-y-2">
+          <div className="border border-black p-2">
+            <div className="mb-2 text-[12px] font-extrabold text-black">Povinné pro uložení</div>
+            <div className="grid gap-2">
               <CompanyField label="Název" value={employer.name} onChange={value => updateField({ name: value })} />
               <CompanyField label="IČO" value={employer.ico} onChange={value => updateField({ ico: value })} />
               <CompanyField label="Sídlo" value={employer.seat} onChange={value => updateField({ seat: value })} />
             </div>
           </div>
         </div>
-        <div className="space-y-4">
-          <div>
-            <div className="mb-2 text-[11px] uppercase tracking-[0.18em] text-slate-400">Povinné pro tisk smlouvy</div>
-            <div className="grid gap-3">
+        <div className="space-y-2">
+          <div className="border border-black p-2">
+            <div className="mb-2 text-[12px] font-extrabold text-black">Povinné pro tisk smlouvy</div>
+            <div className="grid gap-2">
               <CompanyField label="Jednající osoba" value={employer.representativeName} onChange={value => updateField({ representativeName: value })} />
               <CompanyField label="Funkce / jednání za zaměstnavatele" value={employer.representativeRole} onChange={value => updateField({ representativeRole: value })} />
             </div>
           </div>
-          <div className="rounded border border-slate-200 bg-slate-50 p-3 text-[12px] text-slate-600">
+          <div className="border border-black bg-[#f3f4f6] p-2 text-[12px] text-[#4b5563]">
             Pro tisk pracovní smlouvy musí být vyplněno všech pět polí: název, IČO, sídlo, jednající osoba a funkce jednající osoby. Runtime store slouží jen jako cache nad JSON API.
           </div>
         </div>
       </div>
-      <div className="mt-4 flex items-center gap-3">
-        <button className="border border-slate-300 px-3 py-1 text-[12px] text-slate-700 disabled:border-slate-200 disabled:text-slate-400" onClick={onSave} disabled={saving}>
+      <div className="mt-2 flex items-center justify-end gap-2">
+        <button className="border border-black bg-[#2563eb] px-3 py-1 text-[12px] font-extrabold text-white disabled:border-slate-300 disabled:bg-slate-100 disabled:text-slate-500" onClick={onSave} disabled={saving}>
           Uložit firemní profil
         </button>
-        {info && <span className="text-green-700">{info}</span>}
-        {error && <span className="text-red-700">{error}</span>}
       </div>
+      {info && <div className="mt-2 border border-black bg-[#f3f4f6] px-2 py-1 text-[12px] text-[#4b5563]">{info}</div>}
+      {error && <div className="mt-2 border border-black bg-[#fecaca] px-2 py-1 text-[12px] font-bold text-black">{error}</div>}
     </section>
   )
 }

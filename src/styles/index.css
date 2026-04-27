@@ -1,14 +1,78 @@
 @import "tailwindcss";
 
+:root {
+  --bg-app: #f3f4f6;
+  --bg-panel: #ffffff;
+  --bg-muted: #f3f4f6;
+  --bg-zebra: #f9fafb;
+  --text-main: #111827;
+  --text-body: #374151;
+  --text-muted: #6b7280;
+  --border-main: #e5e7eb;
+  --border-form: #d1d5db;
+  --accent: #2563eb;
+  --danger: #ef4444;
+}
+
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  text-shadow: none !important;
 }
 
 html, body, #root {
   height: 100%;
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--bg-app);
+  color: var(--text-main);
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+}
+
+body {
+  min-width: 1080px;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: var(--text-body);
+  border-radius: 8px;
+  transition: box-shadow 120ms ease, border-color 120ms ease, background-color 120ms ease;
+}
+
+button {
+  border: 1px solid var(--border-main);
+  background: var(--bg-panel);
+  padding: 4px 8px;
+  min-height: 28px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+button:hover:not(:disabled),
+button:focus-visible:not(:disabled) {
+  border-color: #cbd5e1;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+  outline: none;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  color: var(--text-muted);
+  background: #f9fafb;
+  box-shadow: none;
+}
+
+input[type="number"],
+.numeric-cell,
+.numeric-cell * {
+  text-align: right;
 }
 
 input[type="time"],
@@ -17,21 +81,23 @@ input[type="month"],
 input[type="number"],
 input[type="text"],
 select {
-  border-radius: 0;
   -webkit-appearance: none;
   appearance: none;
   font-size: inherit;
   font-family: inherit;
-  padding: 0 2px;
+  padding: 4px 8px;
   margin: 0;
-  min-height: auto;
-  line-height: 1.4;
+  min-height: 28px;
+  line-height: 1.2;
+  border: 1px solid var(--border-form);
+  background: var(--bg-panel);
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
 input[type="time"]::-webkit-calendar-picker-indicator,
 input[type="date"]::-webkit-calendar-picker-indicator,
 input[type="month"]::-webkit-calendar-picker-indicator {
-  opacity: 0.3;
+  opacity: 1;
   cursor: pointer;
   padding: 0;
   margin: 0;
@@ -39,16 +105,20 @@ input[type="month"]::-webkit-calendar-picker-indicator {
 
 select {
   cursor: pointer;
-  background: transparent;
+  background: var(--bg-panel);
 }
 
 table {
   border-spacing: 0;
+  border-collapse: collapse;
+  width: 100%;
+  background: var(--bg-panel);
 }
 
 td, th {
-  padding: 1px 2px;
+  padding: 4px 6px;
   vertical-align: middle;
+  border-bottom: 1px solid var(--border-main);
 }
 
 input[type="checkbox"] {
@@ -69,6 +139,35 @@ input[type="number"]::-webkit-outer-spin-button {
   clip: rect(0 0 0 0);
   clip-path: inset(50%);
   white-space: nowrap;
+}
+
+.brutal-panel {
+  border: 1px solid var(--border-main);
+  background: var(--bg-panel);
+  padding: 16px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.brutal-section-title {
+  margin-bottom: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.brutal-muted {
+  color: var(--text-muted);
+}
+
+.brutal-empty {
+  border: 1px dashed #cbd5e1;
+  background: var(--bg-muted);
+  padding: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 160px;
 }
 
 @media print {
@@ -128,6 +227,9 @@ input[type="number"]::-webkit-outer-spin-button {
     padding: 0 !important;
     page-break-inside: avoid;
     break-inside: avoid;
+    border: 1px solid #000 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
   }
 
   .document-sheet table {

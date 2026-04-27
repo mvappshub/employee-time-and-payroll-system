@@ -1,0 +1,107 @@
+{
+  "employeeId": "b7eea3c3-1a6b-4a29-8f0c-6516cdac270b",
+  "month": "2026-04",
+  "status": "draft",
+  "employee": {
+    "id": "b7eea3c3-1a6b-4a29-8f0c-6516cdac270b",
+    "name": "Pepa Kos",
+    "employeeNumber": "002",
+    "permanentAddress": "V Prdeli 1",
+    "status": "archived",
+    "employmentType": "pracovni_pomer",
+    "remunerationType": "mzda",
+    "employmentStartDate": "2026-01-01",
+    "employmentEndDate": "",
+    "contractJobTitle": "Kosí s kosou pan Kos ",
+    "contractWorkplace": "Adresa Zaměstnavatele",
+    "contractWorkSchedule": "Pracovní smlouva / plný ",
+    "probationMonths": 3,
+    "fixedTermEndDate": "",
+    "workload": 1,
+    "weeklyHours": 40,
+    "workDaysPerWeek": 5,
+    "weekendWorking": false,
+    "shiftStart": "06:00",
+    "shiftEnd": "14:30",
+    "standardBreak": 0.5,
+    "nightWorkAllowed": true,
+    "nightFrom": "22:00",
+    "nightTo": "06:00",
+    "overtimeAllowed": true,
+    "baseSalary": 30000,
+    "personalBonus": 0.25,
+    "nightSurcharge": 0.1,
+    "weekendSurcharge": 0.1,
+    "holidaySurcharge": 1,
+    "overtimeSurcharge": 0.25,
+    "sickCompensation": 0.6,
+    "holidayCompensationMode": "time-off",
+    "overtimeCompensationMode": "premium",
+    "appliesHealthMinimumBase": true,
+    "healthMinimumBaseExceptionReason": "",
+    "taxDeclarationSigned": true,
+    "taxpayerCreditApplied": true,
+    "vacationEntitlementHours": 20,
+    "vacationUsedHours": 0,
+    "vacationRemainingHours": 0,
+    "employmentContractDocument": {
+      "documentType": "employment_contract",
+      "lifecycleStatus": "issued",
+      "issuedAt": "2026-04-26T14:14:03.444Z",
+      "updatedAt": "2026-04-26T14:14:03.444Z",
+      "referenceId": "b7eea3c3-1a6b-4a29-8f0c-6516cdac270b",
+      "version": 3,
+      "snapshotOrigin": "employee",
+      "snapshot": {
+        "employer": {
+          "name": "Fir Firma s.r.o.",
+          "ico": "2141545",
+          "seat": "Na Kipru 1",
+          "representativeName": "Jonh Dovany",
+          "representativeRole": "Jednatel"
+        },
+        "employee": {
+          "id": "b7eea3c3-1a6b-4a29-8f0c-6516cdac270b",
+          "name": "Pepa Kos",
+          "employeeNumber": "002",
+          "permanentAddress": "V Prdeli 1",
+          "employmentStartDate": "2026-01-01",
+          "employmentEndDate": "",
+          "contractJobTitle": "Kosí s kosou pan Kos ",
+          "contractWorkplace": "Adresa Zaměstnavatele",
+          "contractWorkSchedule": "Pracovní smlouva / plný ",
+          "probationMonths": 3,
+          "fixedTermEndDate": "",
+          "remunerationType": "mzda",
+          "baseSalary": 30000,
+          "workload": 1,
+          "weeklyHours": 40
+        }
+      }
+    }
+  },
+  "records": [],
+  "paySlipInputs": {
+    "manualReward": 0,
+    "includeManualRewardInAverage": false,
+    "unworked": 0,
+    "sickCarryoverDays": 0
+  },
+  "timeSheetDocument": null,
+  "payslipDocument": null,
+  "auditTrail": [
+    {
+      "at": "2026-04-27T01:30:42.749Z",
+      "action": "init-month"
+    }
+  ],
+  "createdAt": "2026-04-27T01:30:42.749Z",
+  "updatedAt": "2026-04-27T01:30:42.749Z",
+  "employer": {
+    "name": "",
+    "ico": "",
+    "seat": "",
+    "representativeName": "",
+    "representativeRole": ""
+  }
+}

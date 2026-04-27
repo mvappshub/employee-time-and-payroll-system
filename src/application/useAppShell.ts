@@ -6,6 +6,7 @@ export function useAppShell() {
   const section = useStore(s => s.section)
   const setSection = useStore(s => s.setSection)
   const setEmployer = useStore(s => s.setEmployer)
+  const activeSection: 'employees' | 'holidays' | 'company' = section === 'holidays' || section === 'company' ? section : 'employees'
 
   useEffect(() => {
     let active = true
@@ -21,11 +22,9 @@ export function useAppShell() {
   }, [setEmployer])
 
   return {
-    section,
+    section: activeSection,
     navigationItems: [
       { key: 'employees', label: 'Zaměstnanci' },
-      { key: 'timesheet', label: 'Evidence' },
-      { key: 'payroll', label: 'Mzda / Výplatní páska' },
       { key: 'holidays', label: 'Svátky' },
       { key: 'company', label: 'Firma' },
     ] as const,

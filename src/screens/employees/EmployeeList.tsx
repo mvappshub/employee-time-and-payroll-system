@@ -17,50 +17,55 @@ export interface EmployeeListProps {
 
 export function EmployeeList({ employees, selectedEmployeeId, onSelectEmployee, onCreateEmployee, onArchiveEmployee }: EmployeeListProps) {
   return (
-    <section className="rounded border border-slate-200 bg-white p-4">
-      <div className="mb-3 flex items-center justify-between">
-        <div className="text-sm font-semibold text-slate-900">Zaměstnanci</div>
-        <button className="border border-slate-300 px-2 py-1 text-[11px] text-slate-700" onClick={onCreateEmployee}>Nový zaměstnanec</button>
+    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
+      <div className="mb-4 flex items-center justify-between">
+        <div className="text-base font-semibold text-slate-900">Zaměstnanci</div>
+        <button className="border border-blue-600 bg-blue-600 px-3 py-2 text-[12px] font-semibold text-white" onClick={onCreateEmployee}>Nový zaměstnanec</button>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-[11px]">
-          <thead className="text-slate-500">
-            <tr className="border-b border-slate-200">
-              <th className="py-1 text-left font-normal">Osobní číslo</th>
-              <th className="py-1 text-left font-normal">Jméno</th>
-              <th className="py-1 text-left font-normal">Pracovní poměr</th>
-              <th className="py-1 text-left font-normal">Datum nástupu</th>
-              <th className="py-1 text-left font-normal">Stav</th>
-              <th className="py-1 text-left font-normal">Aktuální měsíc</th>
-              <th className="py-1 text-left font-normal">Stav aktuálního měsíce</th>
-              <th className="py-1 text-left font-normal">Poslední uzavřený měsíc</th>
-              <th className="py-1 text-left font-normal">Poslední schválená mzda</th>
-              <th className="py-1 text-left font-normal">Akce</th>
+          <thead className="bg-white text-slate-500">
+            <tr>
+              <th className="border-b-2 border-slate-200 text-left font-semibold">Osobní číslo</th>
+              <th className="border-b-2 border-slate-200 text-left font-semibold">Jméno</th>
+              <th className="border-b-2 border-slate-200 text-left font-semibold">Pracovní poměr</th>
+              <th className="border-b-2 border-slate-200 text-left font-semibold">Datum nástupu</th>
+              <th className="border-b-2 border-slate-200 text-left font-semibold">Stav</th>
+              <th className="border-b-2 border-slate-200 text-left font-semibold">Aktuální měsíc</th>
+              <th className="border-b-2 border-slate-200 text-left font-semibold">Stav aktuálního měsíce</th>
+              <th className="border-b-2 border-slate-200 text-left font-semibold">Poslední uzavřený měsíc</th>
+              <th className="border-b-2 border-slate-200 text-left font-semibold">Poslední schválená mzda</th>
+              <th className="border-b-2 border-slate-200 text-left font-semibold">Akce</th>
             </tr>
           </thead>
           <tbody>
             {employees.map(employee => (
-              <tr key={employee.id} className={selectedEmployeeId === employee.id ? 'bg-slate-50' : ''}>
-                <td className="py-1">{employee.employeeNumber || '—'}</td>
-                <td className="py-1">{employee.name || '—'}</td>
-                <td className="py-1">Pracovní poměr</td>
-                <td className="py-1">{employee.employmentStartDate || '—'}</td>
-                <td className="py-1">{employee.status}</td>
-                <td className="py-1">{employee.currentMonth}</td>
-                <td className="py-1">{employee.currentMonthStatus}</td>
-                <td className="py-1">{employee.lastClosedMonth}</td>
-                <td className="py-1">{employee.lastApprovedMonth}</td>
-                <td className="py-1">
+              <tr key={employee.id} className={`${selectedEmployeeId === employee.id ? 'bg-blue-50' : ''} even:bg-slate-50`}>
+                <td>{employee.employeeNumber || '—'}</td>
+                <td>{employee.name || '—'}</td>
+                <td>Pracovní poměr</td>
+                <td>{employee.employmentStartDate || '—'}</td>
+                <td>{employee.status}</td>
+                <td>{employee.currentMonth}</td>
+                <td>{employee.currentMonthStatus}</td>
+                <td>{employee.lastClosedMonth}</td>
+                <td>{employee.lastApprovedMonth}</td>
+                <td>
                   <div className="flex gap-2">
-                    <button className="text-slate-700" onClick={() => onSelectEmployee(employee.id)}>Vybrat</button>
-                    <button className="text-slate-500" onClick={() => onArchiveEmployee(employee.id)}>Archivovat</button>
+                    <button className="border border-slate-200 bg-white px-3 py-2 text-[12px] font-medium text-slate-700" onClick={() => onSelectEmployee(employee.id)}>Otevřít</button>
+                    <button className="border border-slate-200 bg-white px-3 py-2 text-[12px] font-medium text-slate-700" onClick={() => onArchiveEmployee(employee.id)}>Archivovat</button>
                   </div>
                 </td>
               </tr>
             ))}
             {employees.length === 0 && (
               <tr>
-                <td colSpan={10} className="py-3 text-slate-500">Zatím není založen žádný zaměstnanec.</td>
+                <td colSpan={10} className="p-0">
+                  <div className="brutal-empty flex-col gap-3 rounded-lg">
+                    <div className="font-semibold text-slate-900">Zatím není založen žádný zaměstnanec.</div>
+                    <button className="border border-blue-600 bg-blue-600 px-3 py-2 text-[12px] font-semibold text-white" onClick={onCreateEmployee}>Založit zaměstnance</button>
+                  </div>
+                </td>
               </tr>
             )}
           </tbody>

@@ -1,0 +1,106 @@
+{
+  "employeeId": "8c58807a-2534-4305-b360-9fa4a1fe4988",
+  "month": "2026-03",
+  "status": "draft",
+  "employee": {
+    "id": "8c58807a-2534-4305-b360-9fa4a1fe4988",
+    "name": "Čestmír Svoboda",
+    "employeeNumber": "001",
+    "permanentAddress": "Z kanálu 3",
+    "status": "active",
+    "employmentType": "pracovni_pomer",
+    "remunerationType": "mzda",
+    "employmentStartDate": "2026-01-01",
+    "employmentEndDate": "",
+    "contractJobTitle": "Řidič",
+    "contractWorkplace": "Adresa zaměstnavatele",
+    "contractWorkSchedule": "Pracovní smlouva plný úvazek ",
+    "probationMonths": 3,
+    "fixedTermEndDate": "",
+    "workload": 1,
+    "weeklyHours": 40,
+    "workDaysPerWeek": 5,
+    "weekendWorking": false,
+    "shiftStart": "06:00",
+    "shiftEnd": "14:30",
+    "standardBreak": 0.5,
+    "nightWorkAllowed": true,
+    "nightFrom": "22:00",
+    "nightTo": "06:00",
+    "overtimeAllowed": true,
+    "baseSalary": 30000,
+    "personalBonus": 0.25,
+    "nightSurcharge": 0.1,
+    "weekendSurcharge": 0.1,
+    "holidaySurcharge": 1,
+    "overtimeSurcharge": 0.25,
+    "sickCompensation": 0.6,
+    "holidayCompensationMode": "time-off",
+    "overtimeCompensationMode": "premium",
+    "appliesHealthMinimumBase": true,
+    "healthMinimumBaseExceptionReason": "",
+    "taxDeclarationSigned": true,
+    "taxpayerCreditApplied": true,
+    "vacationEntitlementHours": 0,
+    "vacationUsedHours": 0,
+    "vacationRemainingHours": 0,
+    "employmentContractDocument": {
+      "documentType": "employment_contract",
+      "lifecycleStatus": "ready",
+      "updatedAt": "2026-04-25T21:21:03.732Z",
+      "referenceId": "8c58807a-2534-4305-b360-9fa4a1fe4988",
+      "version": 4,
+      "snapshotOrigin": "employee",
+      "snapshot": {
+        "employer": {
+          "name": "Fir Firma s.r.o.",
+          "ico": "2141545",
+          "seat": "Na Kipru 1",
+          "representativeName": "Jonh Dovany",
+          "representativeRole": "Jednatel"
+        },
+        "employee": {
+          "id": "8c58807a-2534-4305-b360-9fa4a1fe4988",
+          "name": "Čestmír Svoboda",
+          "employeeNumber": "001",
+          "permanentAddress": "Z kanálu 3",
+          "employmentStartDate": "2026-01-01",
+          "employmentEndDate": "",
+          "contractJobTitle": "Řidič",
+          "contractWorkplace": "Adresa zaměstnavatele",
+          "contractWorkSchedule": "Pracovní smlouva plný úvazek ",
+          "probationMonths": 3,
+          "fixedTermEndDate": "",
+          "remunerationType": "mzda",
+          "baseSalary": 30000,
+          "workload": 1,
+          "weeklyHours": 40
+        }
+      }
+    }
+  },
+  "records": [],
+  "paySlipInputs": {
+    "manualReward": 0,
+    "includeManualRewardInAverage": false,
+    "unworked": 0,
+    "sickCarryoverDays": 0
+  },
+  "timeSheetDocument": null,
+  "payslipDocument": null,
+  "auditTrail": [
+    {
+      "at": "2026-04-26T13:38:56.853Z",
+      "action": "init-month"
+    }
+  ],
+  "createdAt": "2026-04-26T13:38:56.853Z",
+  "updatedAt": "2026-04-26T13:38:56.853Z",
+  "employer": {
+    "name": "",
+    "ico": "",
+    "seat": "",
+    "representativeName": "",
+    "representativeRole": ""
+  }
+}

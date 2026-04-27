@@ -114,6 +114,7 @@ export function useMonthControls() {
   const calculateEmployeePayroll = useStore(s => s.calculateEmployeePayroll)
   const approveEmployeePayroll = useStore(s => s.approveEmployeePayroll)
   const issueEmployeePayslip = useStore(s => s.issueEmployeePayslip)
+  const resetEmployeeMonth = useStore(s => s.resetEmployeeMonth)
   const setMonthStatus = useStore(s => s.setMonthStatus)
   const setPayrollMonthState = useStore(s => s.setPayrollMonthState)
   const setSection = useStore(s => s.setSection)
@@ -194,6 +195,55 @@ export function useMonthControls() {
     lastActionLabel: payrollState?.updatedAt || payrollState?.issuedAt || payrollState?.approvedAt || payrollState?.closedAt || '—',
     monthExists,
     buttonState,
+    onArchiveMonth: async () => {
+      if (!selectedEmployeeId || !employee || !monthExists) {
+        setInfo('Nejprve vyberte existující měsíc.')
+        return
+      }
+      const confirmed = window.confirm('Přesunout měsíc zpět do rozpracovaného stavu? Výpočty a vydané dokumenty budou zneplatněny.')
+      if (!confirmed) return
+      const archived = buildEmployeeMonthRecord({
+        employeeId: selectedEmployeeId,
+        month: currentMonth,
+        status: 'draft',
+        employer,
+        employee,
+        records: [],
+        paySlipInputs: defaultPaySlipInputs,
+        existing: payrollState ? {
+          ...payrollState,
+          employeeId: selectedEmployeeId,
+          month: currentMonth,
+          status: currentStatus,
+          employee,
+          employer,
+          records: monthRecords,
+          paySlipInputs: inputs,
+        } : null,
+        timeSummary: {
+          monthlyFundHours: 0,
+          workedHours: 0,
+          workedDays: 0,
+          vacationHours: 0,
+          sickHours: 0,
+          totalSaldo: 0,
+        },
+        payrollResult: undefined,
+        calculationSnapshot: undefined,
+        timeSheetDocument: null,
+        payslipDocument: null,
+        auditTrail: [
+          ...(payrollState?.auditTrail || []),
+          { at: new Date().toISOString(), action: 'archive-month' },
+        ],
+      })
+      await saveEmployeeMonthApi(selectedEmployeeId, currentMonth, archived)
+      resetEmployeeMonth(selectedEmployeeId, currentMonth)
+      hydrateEmployeeMonth(selectedEmployeeId, currentMonth, archived as EmployeeMonth)
+      setSuccess('Měsíc byl vrácen do rozpracovaného stavu.')
+      setError('')
+      setInfo('')
+    },
     onPrintPayslip: () => {
       if (!buttonState.canPrint) return
       const tryPrint = (attempt = 0) => {

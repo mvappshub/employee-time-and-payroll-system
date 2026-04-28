@@ -1,51 +1,163 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from 'vitest'
 
-import { useStore } from "./store";
+import type { EmployeeMonth } from './domain/shared/types'
+import { useStore } from './infrastructure/state/store'
 
-describe("holiday defaults", () => {
-  it("contains Czech public holidays for 2026", () => {
-    const holidays = useStore.getState().holidays;
+function resetStore() {
+  useStore.setState({
+    employer: { name: '', ico: '', seat: '', representativeName: '', representativeRole: '' },
+    employees: [],
+    selectedEmployeeId: null,
+    recordsByEmployee: {},
+    paySlipInputsByEmployee: {},
+    monthStatusByEmployee: {},
+    payrollByEmployee: {},
+    currentMonth: '2026-04',
+    section: 'employees',
+  })
+}
 
-    expect(holidays.some(h => h.date === "2026-04-06")).toBe(true);
-    expect(holidays.some(h => h.date === "2026-12-25")).toBe(true);
-  });
-});
+function createPersistedEmployee() {
+  return useStore.getState().createEmployee({
+    id: 'emp-1',
+    name: 'Jan Novák',
+    employeeNumber: '001',
+    permanentAddress: 'Praha',
+    employmentStartDate: '2026-01-01',
+    contractJobTitle: 'Operátor',
+    contractWorkplace: 'Praha',
+    contractWorkSchedule: 'plný úvazek',
+    baseSalary: 32000,
+  })
+}
 
-describe("month initialization", () => {
-  it("starts a new month empty instead of prefilled", () => {
-    useStore.getState().initMonth("2030-01");
+describe('holiday defaults', () => {
+  it('contains Czech public holidays for 2026', () => {
+    const holidays = useStore.getState().holidays
 
-    const records = useStore.getState().records["2030-01"];
-    expect(records).toHaveLength(31);
-    expect(records?.every(record => record.shift === "" && record.arrival === "" && record.departure === "")).toBe(true);
-    expect(useStore.getState().monthStatus["2030-01"]).toBe("empty");
-  });
+    expect(holidays.some(h => h.date === '2026-04-06')).toBe(true)
+    expect(holidays.some(h => h.date === '2026-12-25')).toBe(true)
+  })
+})
 
-  it("prefills only the selected month on explicit request", () => {
-    useStore.getState().initMonth("2030-02");
-    useStore.getState().prefillMonth("2030-02");
+describe('store workflow cache', () => {
+  beforeEach(() => {
+    resetStore()
+  })
 
-    const records = useStore.getState().records["2030-02"];
-    expect(records?.some(record => record.shift === "ranní")).toBe(true);
-    expect(useStore.getState().monthStatus["2030-02"]).toBe("prefilled");
-    expect(useStore.getState().records["2030-03"]).toBeUndefined();
-  });
-});
+  it('selecting an employee does not create a month automatically', () => {
+    const employeeId = createPersistedEmployee()
 
-describe("employmentType", () => {
-  it("defaults to pracovni_pomer", () => {
-    const { employee } = useStore.getState();
-    expect(employee.employmentType).toBe("pracovni_pomer");
-  });
+    useStore.getState().selectEmployee(employeeId)
 
-  it("migrates legacy HPP to pracovni_pomer", () => {
-    useStore.getState().setEmployee({ employmentType: "HPP" as never });
-    expect(useStore.getState().employee.employmentType).toBe("pracovni_pomer");
-  });
+    expect(useStore.getState().recordsByEmployee[employeeId]?.['2026-04']).toBeUndefined()
+    expect(useStore.getState().monthStatusByEmployee[employeeId]?.['2026-04']).toBeUndefined()
+  })
 
-  it("does not allow free-text employmentType", () => {
-    const { employee } = useStore.getState();
-    const validTypes = ["pracovni_pomer", "dpc", "dpp"];
-    expect(validTypes.includes(employee.employmentType)).toBe(true);
-  });
-});
+  it('changing currentMonth does not create a month automatically', () => {
+    const employeeId = createPersistedEmployee()
+    useStore.getState().selectEmployee(employeeId)
+
+    useStore.getState().setCurrentMonth('2030-02')
+
+    expect(useStore.getState().recordsByEmployee[employeeId]?.['2030-02']).toBeUndefined()
+    expect(useStore.getState().monthStatusByEmployee[employeeId]?.['2030-02']).toBeUndefined()
+  })
+
+  it('month is created only by explicit initEmployeeMonth', () => {
+    const employeeId = createPersistedEmployee()
+
+    useStore.getState().initEmployeeMonth(employeeId, '2030-01')
+
+    const records = useStore.getState().recordsByEmployee[employeeId]['2030-01']
+    expect(records).toHaveLength(31)
+    expect(records.every(record => record.shift === '' && record.arrival === '' && record.departure === '')).toBe(true)
+    expect(useStore.getState().monthStatusByEmployee[employeeId]['2030-01']).toBe('draft')
+  })
+
+  it('returns month status from payroll phase to time_saved after editing closed evidence', () => {
+    const employeeId = createPersistedEmployee()
+    useStore.getState().initEmployeeMonth(employeeId, '2030-06')
+    useStore.getState().closeEmployeeTime(employeeId, '2030-06')
+    useStore.getState().calculateEmployeePayroll(employeeId, '2030-06', {
+      payrollResult: { hrubaMzda: 40000 },
+      payslipDocument: {
+        documentType: 'issued_payslip',
+        lifecycleStatus: 'issued',
+        issuedAt: '2030-06-10T10:00:00.000Z',
+        updatedAt: '2030-06-10T10:00:00.000Z',
+        referenceId: employeeId,
+        sourceMonth: '2030-06',
+        version: 1,
+        snapshotOrigin: 'month',
+        snapshot: {
+          employer: { name: 'ACME', ico: '123', seat: 'Praha', representativeName: 'Jana', representativeRole: 'jednatelka' },
+          employee: {
+            id: employeeId,
+            name: 'Jan Novák',
+            employeeNumber: '001',
+            employmentType: 'pracovni_pomer',
+            remunerationType: 'mzda',
+            baseSalary: 32000,
+            personalBonus: 0.25,
+            nightSurcharge: 0.1,
+            weekendSurcharge: 0.1,
+            sickCompensation: 0.6,
+            overtimeSurcharge: 0.25,
+            vacationEntitlementHours: 0,
+            vacationUsedHours: 0,
+            vacationRemainingHours: 0,
+          },
+          month: '2030-06',
+          payrollResult: { hrubaMzda: 40000 },
+          paySlipInputs: {
+            manualReward: 0,
+            includeManualRewardInAverage: false,
+            unworked: 0,
+            sickCarryoverDays: 0,
+          },
+          documentSummary: {
+            workHoursWH: 160,
+            workDaysWH: 20,
+            totalNight: 0,
+            totalWeekend: 0,
+            totalHolidayTotal: 0,
+            totalOvertime: 0,
+            totalVacation: 0,
+            totalSick: 0,
+          },
+        },
+      },
+    })
+
+    useStore.getState().updateRecord(employeeId, '2030-06', 0, { shift: 'ranní' })
+
+    expect(useStore.getState().monthStatusByEmployee[employeeId]['2030-06']).toBe('time_saved')
+    expect(useStore.getState().payrollByEmployee[employeeId]['2030-06'].payrollResult).toBeUndefined()
+  })
+
+  it('hydrates persisted workflow status and month data for an employee month', () => {
+    const employeeId = createPersistedEmployee()
+    const monthData: EmployeeMonth = {
+      employeeId,
+      month: '2030-05',
+      status: 'payroll_approved',
+      records: [],
+      paySlipInputs: {
+        manualReward: 0,
+        includeManualRewardInAverage: false,
+        unworked: 0,
+        sickCarryoverDays: 0,
+      },
+      createdAt: '2030-05-01T10:00:00.000Z',
+      updatedAt: '2030-05-02T10:00:00.000Z',
+      approvedAt: '2030-05-03T10:00:00.000Z',
+      auditTrail: [{ at: '2030-05-03T10:00:00.000Z', action: 'approve-payroll' }],
+    }
+
+    useStore.getState().hydrateEmployeeMonth(employeeId, '2030-05', monthData)
+
+    expect(useStore.getState().monthStatusByEmployee[employeeId]['2030-05']).toBe('payroll_approved')
+    expect(useStore.getState().payrollByEmployee[employeeId]['2030-05'].approvedAt).toBe('2030-05-03T10:00:00.000Z')
+  })
+})

@@ -1,0 +1,152 @@
+@import "tailwindcss";
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+input[type="time"],
+input[type="date"],
+input[type="month"],
+input[type="number"],
+input[type="text"],
+select {
+  border-radius: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  font-size: inherit;
+  font-family: inherit;
+  padding: 0 2px;
+  margin: 0;
+  min-height: auto;
+  line-height: 1.4;
+}
+
+input[type="time"]::-webkit-calendar-picker-indicator,
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="month"]::-webkit-calendar-picker-indicator {
+  opacity: 0.3;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+}
+
+select {
+  cursor: pointer;
+  background: transparent;
+}
+
+table {
+  border-spacing: 0;
+}
+
+td, th {
+  padding: 1px 2px;
+  vertical-align: middle;
+}
+
+input[type="checkbox"] {
+  margin: 0;
+  cursor: pointer;
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  opacity: 0.3;
+}
+
+.document-print-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+
+  html, body {
+    background: #fff !important;
+    color: #000 !important;
+    font-size: 11pt;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  [data-print-document][data-print-active="true"],
+  [data-print-document][data-print-active="true"] * {
+    visibility: visible !important;
+  }
+
+  [data-print-document] {
+    display: none !important;
+  }
+
+  [data-print-document][data-print-active="true"] {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    background: #fff !important;
+  }
+
+  .app-chrome,
+  .app-controls {
+    display: none !important;
+  }
+
+  .document-print-only {
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+    clip: auto !important;
+    clip-path: none !important;
+    white-space: normal !important;
+  }
+
+  .document-sheet {
+    min-height: auto !important;
+    padding: 0 !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .document-sheet table {
+    width: 100% !important;
+  }
+
+  .document-sheet tr,
+  .document-sheet td,
+  .document-sheet th,
+  .document-sheet section,
+  .document-sheet header,
+  .document-sheet footer {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .document-sheet .text-red-700,
+  .document-sheet .text-red-600,
+  .document-sheet .text-green-700 {
+    color: #000 !important;
+  }
+}

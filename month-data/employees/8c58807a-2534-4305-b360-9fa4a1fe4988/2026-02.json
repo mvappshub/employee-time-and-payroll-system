@@ -1,0 +1,258 @@
+{
+  "employeeId": "8c58807a-2534-4305-b360-9fa4a1fe4988",
+  "month": "2026-02",
+  "status": "time_closed",
+  "employer": {
+    "name": "",
+    "ico": "",
+    "seat": "",
+    "representativeName": "",
+    "representativeRole": ""
+  },
+  "employee": {
+    "id": "8c58807a-2534-4305-b360-9fa4a1fe4988",
+    "name": "Pepa Kos",
+    "employeeNumber": "001",
+    "permanentAddress": "",
+    "status": "active",
+    "employmentType": "pracovni_pomer",
+    "remunerationType": "mzda",
+    "employmentStartDate": "2026-01-01",
+    "employmentEndDate": "",
+    "contractJobTitle": "",
+    "contractWorkplace": "",
+    "contractWorkSchedule": "",
+    "probationMonths": 0,
+    "fixedTermEndDate": "",
+    "workload": 1,
+    "weeklyHours": 40,
+    "workDaysPerWeek": 5,
+    "weekendWorking": false,
+    "shiftStart": "06:00",
+    "shiftEnd": "14:30",
+    "standardBreak": 0.5,
+    "nightWorkAllowed": true,
+    "nightFrom": "22:00",
+    "nightTo": "06:00",
+    "overtimeAllowed": true,
+    "baseSalary": 30000,
+    "personalBonus": 0.25,
+    "nightSurcharge": 0.1,
+    "weekendSurcharge": 0.1,
+    "holidaySurcharge": 1,
+    "overtimeSurcharge": 0.25,
+    "sickCompensation": 0.6,
+    "holidayCompensationMode": "time-off",
+    "overtimeCompensationMode": "premium",
+    "appliesHealthMinimumBase": true,
+    "healthMinimumBaseExceptionReason": "",
+    "taxDeclarationSigned": true,
+    "taxpayerCreditApplied": true,
+    "vacationEntitlementHours": 0,
+    "vacationUsedHours": 0,
+    "vacationRemainingHours": 0,
+    "employmentContractDocument": null
+  },
+  "records": [
+    {
+      "date": "2026-02-01",
+      "shift": "volno",
+      "arrival": "",
+      "departure": ""
+    },
+    {
+      "date": "2026-02-02",
+      "shift": "noční",
+      "arrival": "22:00",
+      "departure": "06:00"
+    },
+    {
+      "date": "2026-02-03",
+      "shift": "noční",
+      "arrival": "06:00",
+      "departure": "14:30"
+    },
+    {
+      "date": "2026-02-04",
+      "shift": "ranní",
+      "arrival": "06:00",
+      "departure": "14:30"
+    },
+    {
+      "date": "2026-02-05",
+      "shift": "ranní",
+      "arrival": "06:00",
+      "departure": "14:30"
+    },
+    {
+      "date": "2026-02-06",
+      "shift": "ranní",
+      "arrival": "06:00",
+      "departure": "14:30"
+    },
+    {
+      "date": "2026-02-07",
+      "shift": "volno",
+      "arrival": "",
+      "departure": ""
+    },
+    {
+      "date": "2026-02-08",
+      "shift": "volno",
+      "arrival": "",
+      "departure": ""
+    },
+    {
+      "date": "2026-02-09",
+      "shift": "ranní",
+      "arrival": "06:00",
+      "departure": "14:30"
+    },
+    {
+      "date": "2026-02-10",
+      "shift": "ranní",
+      "arrival": "06:00",
+      "departure": "14:30"
+    },
+    {
+      "date": "2026-02-11",
+      "shift": "ranní",
+      "arrival": "06:00",
+      "departure": "14:30"
+    },
+    {
+      "date": "2026-02-12",
+      "shift": "ranní",
+      "arrival": "06:00",
+      "departure": "14:30"
+    },
+    {
+      "date": "2026-02-13",
+      "shift": "ranní",
+      "arrival": "06:00",
+      "departure": "14:30"
+    },
+    {
+      "date": "2026-02-14",
+      "shift": "volno",
+      "arrival": "",
+      "departure": ""
+    },
+    {
+      "date": "2026-02-15",
+      "shift": "volno",
+      "arrival": "",
+      "departure": ""
+    },
+    {
+      "date": "2026-02-16",
+      "shift": "ranní",
+      "arrival": "06:00",
+      "departure": "14:30"
+    },
+    {
+      "date": "2026-02-17",
+      "shift": "ranní",
+      "arrival": "06:00",
+      "departure": "14:30"
+    },
+    {
+      "date": "2026-02-18",
+      "shift": "ranní",
+      "arrival": "06:00",
+      "departure": "14:30"
+    },
+    {
+      "date": "2026-02-19",
+      "shift": "ranní",
+      "arrival": "06:00",
+      "departure": "14:30"
+    },
+    {
+      "date": "2026-02-20",
+      "shift": "ranní",
+      "arrival": "06:00",
+      "departure": "14:30"
+    },
+    {
+      "date": "2026-02-21",
+      "shift": "volno",
+      "arrival": "",
+      "departure": ""
+    },
+    {
+      "date": "2026-02-22",
+      "shift": "volno",
+      "arrival": "",
+      "departure": ""
+    },
+    {
+      "date": "2026-02-23",
+      "shift": "ranní",
+      "arrival": "06:00",
+      "departure": "14:30"
+    },
+    {
+      "date": "2026-02-24",
+      "shift": "ranní",
+      "arrival": "06:00",
+      "departure": "14:30"
+    },
+    {
+      "date": "2026-02-25",
+      "shift": "ranní",
+      "arrival": "06:00",
+      "departure": "14:30"
+    },
+    {
+      "date": "2026-02-26",
+      "shift": "ranní",
+      "arrival": "06:00",
+      "departure": "14:30"
+    },
+    {
+      "date": "2026-02-27",
+      "shift": "ranní",
+      "arrival": "06:00",
+      "departure": "14:30"
+    },
+    {
+      "date": "2026-02-28",
+      "shift": "volno",
+      "arrival": "",
+      "departure": ""
+    }
+  ],
+  "paySlipInputs": {
+    "manualReward": 0,
+    "includeManualRewardInAverage": false,
+    "unworked": 0,
+    "sickCarryoverDays": 0
+  },
+  "timeSummary": {
+    "monthlyFundHours": 160,
+    "workedHours": 159.5,
+    "workedDays": 20,
+    "vacationHours": 0,
+    "sickHours": 0,
+    "totalSaldo": -0.5
+  },
+  "payslipDocument": null,
+  "auditTrail": [
+    {
+      "at": "2026-04-25T01:10:27.108Z",
+      "action": "init-month"
+    },
+    {
+      "at": "2026-04-25T01:10:32.776Z",
+      "action": "prefill-month"
+    },
+    {
+      "at": "2026-04-25T01:12:59.978Z",
+      "action": "save-time"
+    }
+  ],
+  "createdAt": "2026-04-25T01:10:27.108Z",
+  "updatedAt": "2026-04-25T01:13:04.914Z",
+  "closedAt": "2026-04-25T01:13:04.914Z"
+}

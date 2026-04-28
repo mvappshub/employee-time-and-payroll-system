@@ -5,3 +5,4 @@ dist/
 .DS_Store
 month-data/*.json
 !month-data/.gitkeep
+.codetree/

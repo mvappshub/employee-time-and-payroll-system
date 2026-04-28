@@ -4,5 +4,10 @@ dist/
 *.local
 .DS_Store
 month-data/*.json
+month-data/employees/*/
 !month-data/.gitkeep
 .codetree/
+.kilo/
+.playwright-mcp/
+output/
+output-*.log

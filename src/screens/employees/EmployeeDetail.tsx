@@ -17,7 +17,7 @@ export interface EmployeeDetailProps {
   onPrintContract: () => void | Promise<void>
 }
 
-const inp = 'w-full border border-slate-200 bg-white px-2 py-1 text-[12px] outline-none'
+const inp = 'min-h-8 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-[12px] text-slate-700 outline-none focus:border-blue-500'
 
 function InputRow({
   label,
@@ -30,9 +30,9 @@ function InputRow({
 }) {
   return (
     <label className="grid gap-1">
-      <span className="text-[11px] uppercase tracking-[0.14em] text-slate-400">{label}</span>
+      <span className="mb-[2px] text-[12px] font-medium text-slate-700">{label}</span>
       {children}
-      {hint && <span className="text-[11px] text-slate-400">{hint}</span>}
+      {hint && <span className="text-[11px] text-slate-500">{hint}</span>}
     </label>
   )
 }
@@ -52,16 +52,22 @@ export function EmployeeDetail({
   onPrintContract,
 }: EmployeeDetailProps) {
   if (!employee) {
-    return <section className="rounded border border-slate-200 bg-white p-4 text-slate-500">Vyberte zaměstnance nebo založte novou kartu.</section>
+    return (
+      <section className="brutal-empty rounded-lg">
+        <div className="text-center">
+          <div className="mb-2 font-extrabold text-black">Vyberte zaměstnance nebo založte novou kartu.</div>
+        </div>
+      </section>
+    )
   }
 
   return (
-    <section className="relative rounded border border-slate-200 bg-white p-4">
-      <div className="mb-4 text-sm font-semibold text-slate-900">Karta zaměstnance</div>
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="space-y-4">
-          <div>
-            <div className="mb-2 text-[11px] uppercase tracking-[0.18em] text-slate-400">Povinné pro uložení zaměstnance</div>
+    <section className="relative rounded-lg border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
+      <div className="mb-4 text-base font-semibold text-slate-900">Karta zaměstnance</div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="space-y-2">
+          <div className="rounded-lg border border-slate-200 bg-white p-4">
+            <div className="mb-3 text-sm font-semibold text-slate-900">Povinné pro uložení zaměstnance</div>
             <div className="grid gap-3">
               <InputRow label="Jméno">
                 <input className={inp} value={employee.name} onChange={e => onEmployeeChange('name', e.target.value)} />
@@ -78,8 +84,8 @@ export function EmployeeDetail({
             </div>
           </div>
 
-          <div>
-            <div className="mb-2 text-[11px] uppercase tracking-[0.18em] text-slate-400">Povinné pro tisk pracovní smlouvy</div>
+          <div className="rounded-lg border border-slate-200 bg-white p-4">
+            <div className="mb-3 text-sm font-semibold text-slate-900">Povinné pro tisk pracovní smlouvy</div>
             <div className="grid gap-3">
               <InputRow label="Adresa bydliště">
                 <input className={inp} value={employee.permanentAddress} onChange={e => onEmployeeChange('permanentAddress', e.target.value)} />
@@ -97,9 +103,9 @@ export function EmployeeDetail({
           </div>
         </div>
 
-        <div className="space-y-4">
-          <div>
-            <div className="mb-2 text-[11px] uppercase tracking-[0.18em] text-slate-400">Doporučené smluvní údaje</div>
+        <div className="space-y-2">
+          <div className="rounded-lg border border-slate-200 bg-white p-4">
+            <div className="mb-3 text-sm font-semibold text-slate-900">Doporučené smluvní údaje</div>
             <div className="grid gap-3 sm:grid-cols-2">
               <InputRow label="Datum ukončení">
                 <input type="date" className={inp} value={employee.employmentEndDate || ''} onChange={e => onEmployeeChange('employmentEndDate', e.target.value)} />
@@ -122,10 +128,10 @@ export function EmployeeDetail({
             </div>
           </div>
 
-          <div>
-            <div className="mb-2 text-[11px] uppercase tracking-[0.18em] text-slate-400">Daň a dovolená</div>
+          <div className="rounded-lg border border-slate-200 bg-white p-4">
+            <div className="mb-3 text-sm font-semibold text-slate-900">Daň a dovolená</div>
             <div className="grid gap-3">
-              <label className="flex items-center gap-2">
+              <label className="flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
                 <input type="checkbox" checked={employee.appliesHealthMinimumBase} onChange={e => onEmployeeChange('appliesHealthMinimumBase', e.target.checked)} />
                 <span>Uplatnit minimální základ ZP</span>
               </label>
@@ -134,11 +140,11 @@ export function EmployeeDetail({
                   <input className={inp} value={employee.healthMinimumBaseExceptionReason || ''} onChange={e => onEmployeeChange('healthMinimumBaseExceptionReason', e.target.value)} />
                 </InputRow>
               )}
-              <label className="flex items-center gap-2">
+              <label className="flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
                 <input type="checkbox" checked={employee.taxDeclarationSigned} onChange={e => onEmployeeChange('taxDeclarationSigned', e.target.checked)} />
                 <span>Podepsané prohlášení poplatníka</span>
               </label>
-              <label className="flex items-center gap-2">
+              <label className="flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
                 <input type="checkbox" checked={employee.taxpayerCreditApplied} disabled={!employee.taxDeclarationSigned} onChange={e => onEmployeeChange('taxpayerCreditApplied', e.target.checked)} />
                 <span>Uplatnit slevu na poplatníka</span>
               </label>
@@ -158,35 +164,35 @@ export function EmployeeDetail({
         </div>
       </div>
 
-      <div className="mt-4 flex items-center gap-3">
-        <button className="border border-slate-300 px-3 py-1 text-[12px] text-slate-700" onClick={onSaveEmployee}>Uložit zaměstnance</button>
-        {info && <span className="text-green-700">{info}</span>}
-        {error && <span className="text-red-700">{error}</span>}
+      <div className="mt-4 flex items-center justify-end gap-2">
+        <button className="border border-blue-600 bg-blue-600 px-3 py-2 text-[12px] font-semibold text-white" onClick={onSaveEmployee}>Uložit osobní kartu</button>
       </div>
+      {info && <div className="mt-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-[12px] text-slate-600">{info}</div>}
+      {error && <div className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-[12px] font-medium text-red-700">{error}</div>}
 
-      <div className="mt-6 rounded border border-slate-200 bg-slate-50 p-4">
-        <div className="mb-2 text-sm font-semibold text-slate-900">Dokumenty zaměstnance</div>
+      <div className="mt-6 rounded-lg border border-slate-200 bg-slate-50 p-4">
+        <div className="mb-2 text-base font-semibold text-slate-900">Dokumenty zaměstnance</div>
         <div className="mb-3 text-[12px] text-slate-600">
           Pracovní smlouva se zakládá jako draft při uložení zaměstnance. Tisk je dostupný až po doplnění povinných údajů zaměstnance i firmy.
         </div>
         {contractMissingFields.length > 0 && (
-          <div className="mb-3 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-[12px] text-amber-800">
+          <div className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] font-medium text-amber-800">
             Pro tisk pracovní smlouvy doplňte: {contractMissingFields.join(', ')}.
           </div>
         )}
         <div className="flex flex-wrap gap-2">
-          <button className="border border-slate-300 px-3 py-1 text-[12px] text-slate-700 disabled:border-slate-200 disabled:text-slate-400" onClick={onToggleContractPreview} disabled={!contractDocument}>
+          <button className="border border-slate-200 bg-white px-3 py-2 text-[12px] font-medium text-slate-700 disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400" onClick={onToggleContractPreview} disabled={!contractDocument}>
             {showContractPreview ? 'Skrýt náhled' : 'Náhled'}
           </button>
-          <button className="border border-slate-300 px-3 py-1 text-[12px] text-slate-700 disabled:border-slate-200 disabled:text-slate-400" onClick={onRefreshContractDraft} disabled={!contractDocument}>
+          <button className="border border-slate-200 bg-white px-3 py-2 text-[12px] font-medium text-slate-700 disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400" onClick={onRefreshContractDraft} disabled={!contractDocument}>
             Aktualizovat draft
           </button>
-          <button className="border border-slate-300 px-3 py-1 text-[12px] text-slate-700 disabled:border-slate-200 disabled:text-slate-400" onClick={onPrintContract} disabled={!contractDocument || !canPrintContract}>
+          <button className="border border-blue-600 bg-blue-600 px-3 py-2 text-[12px] font-semibold text-white disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400" onClick={onPrintContract} disabled={!contractDocument || !canPrintContract}>
             Tisk / PDF
           </button>
         </div>
         {contractDocument && (
-          <div className="mt-3 text-[12px] text-slate-600">
+          <div className="mt-3 rounded-md border border-slate-200 bg-white px-3 py-2 text-[12px] text-slate-600">
             Stav dokumentu: {contractDocument.lifecycleStatus} · verze {contractDocument.version}
           </div>
         )}

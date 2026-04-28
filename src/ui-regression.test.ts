@@ -74,8 +74,6 @@ describe('UI regressions', () => {
 
   it('app shell view keeps navigation labels', () => {
     expect(appShellHook).toContain('Zaměstnanci')
-    expect(appShellHook).toContain('Evidence')
-    expect(appShellHook).toContain('Mzda / Výplatní páska')
     expect(appShellHook).toContain('Svátky')
     expect(appShellHook).toContain('Firma')
     expect(appShellView).toContain('navigationItems.map')

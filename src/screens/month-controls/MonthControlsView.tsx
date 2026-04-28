@@ -32,7 +32,7 @@ export interface MonthControlsViewProps {
   onPrintPayslip: () => void | Promise<void>
 }
 
-const btn = 'border border-slate-300 px-2 py-1 text-[12px] text-slate-700 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400'
+const btn = 'min-h-7 border border-black bg-white px-2 py-1 text-[12px] font-bold text-black disabled:border-slate-400 disabled:bg-slate-100 disabled:text-slate-500'
 
 export function MonthControlsView({
   error,
@@ -54,12 +54,35 @@ export function MonthControlsView({
   onIssuePayslip,
   onPrintPayslip,
 }: MonthControlsViewProps) {
+  const steps = [
+    { label: 'Načíst', done: buttonState.canLoad, active: false },
+    { label: 'Evidence', done: buttonState.canSave || buttonState.canClose, active: currentStatusLabel === 'Rozpracováno' || currentStatusLabel === 'Evidence uložena' },
+    { label: 'Uzavřít', done: buttonState.canCalculatePayroll || currentStatusLabel === 'Evidence uzavřena', active: currentStatusLabel === 'Evidence uzavřena' },
+    { label: 'Mzda', done: buttonState.canApprove || currentStatusLabel === 'Mzda spočítána', active: currentStatusLabel === 'Mzda spočítána' },
+    { label: 'Schválit', done: buttonState.canIssuePayslip || currentStatusLabel === 'Mzda schválena', active: currentStatusLabel === 'Mzda schválena' },
+    { label: 'Páska', done: buttonState.canPrint || currentStatusLabel === 'Výplatní páska vystavena', active: currentStatusLabel === 'Výplatní páska vystavena' },
+  ]
+
   return (
-    <div className="app-controls mb-8 rounded border border-slate-200 bg-white p-4 text-xs">
-      <div className="mb-3 text-[12px] text-slate-600">
-        Zaměstnanec: {selectedEmployeeName} | Měsíc: {monthLabel} | Stav: {currentStatusLabel} | Poslední akce: {lastActionLabel} | Další krok: {nextStepLabel}
+    <div className="app-controls brutal-panel mb-2 text-xs">
+      <div className="mb-2 grid grid-cols-6 gap-1">
+        {steps.map(step => (
+          <div
+            key={step.label}
+            className={`border px-2 py-1 text-center text-[11px] font-extrabold ${step.active ? 'border-black bg-black text-white' : step.done ? 'border-black bg-slate-300 text-black' : 'border border-dashed border-black bg-white text-slate-700'}`}
+          >
+            {step.label}
+          </div>
+        ))}
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className="mb-2 grid gap-1 md:grid-cols-5">
+        <div className="border border-black bg-white px-2 py-1"><span className="font-extrabold">Zaměstnanec:</span> {selectedEmployeeName}</div>
+        <div className="border border-black bg-white px-2 py-1"><span className="font-extrabold">Měsíc:</span> {monthLabel}</div>
+        <div className="border border-black bg-white px-2 py-1"><span className="font-extrabold">Stav:</span> {currentStatusLabel}</div>
+        <div className="border border-black bg-white px-2 py-1"><span className="font-extrabold">Poslední akce:</span> {lastActionLabel}</div>
+        <div className="border border-black bg-white px-2 py-1"><span className="font-extrabold">Další krok:</span> {nextStepLabel}</div>
+      </div>
+      <div className="flex flex-wrap gap-1">
         <button className={btn} onClick={onLoad} disabled={!buttonState.canLoad} title="Načíst měsíc z perzistentního úložiště. Vyžaduje vybraného zaměstnance a existující měsíc.">Načíst měsíc</button>
         <button className={btn} onClick={onInitMonth} disabled={!buttonState.canInitMonth} title="Založit měsíc. Dostupné pouze po výběru zaměstnance a pokud měsíc ještě neexistuje.">Založit měsíc</button>
         <button className={btn} onClick={onSave} disabled={!buttonState.canSave} title="Uložit evidenci pracovní doby. Dostupné jen pro existující měsíc ve stavu draft nebo time_saved.">Uložit evidenci</button>
@@ -70,9 +93,9 @@ export function MonthControlsView({
         <button className={btn} onClick={onIssuePayslip} disabled={!buttonState.canIssuePayslip} title="Vystavit výplatní pásku. Dostupné až po schválení mzdy.">Vystavit výplatní pásku</button>
         <button className={btn} onClick={onPrintPayslip} disabled={!buttonState.canPrint} title="Tisk / PDF. Dostupné až po vystavení výplatní pásky.">Tisk / PDF</button>
       </div>
-      {success && <div className="mt-3 text-green-700">{success}</div>}
-      {info && <div className="mt-3 text-slate-500">{info}</div>}
-      {error && <div className="mt-3 text-red-700">{error}</div>}
+      {success && <div className="mt-2 border border-black bg-[#dbeafe] px-2 py-1 font-bold text-black">{success}</div>}
+      {info && <div className="mt-2 border border-black bg-[#f3f4f6] px-2 py-1 text-[#4b5563]">{info}</div>}
+      {error && <div className="mt-2 border border-black bg-[#fecaca] px-2 py-1 font-bold text-black">{error}</div>}
     </div>
   )
 }

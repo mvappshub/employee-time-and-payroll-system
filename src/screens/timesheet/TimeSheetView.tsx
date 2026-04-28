@@ -91,7 +91,7 @@ export function TimeSheetView({
   const timeInputClass = 'w-16 bg-transparent text-xs outline-none'
 
   return (
-    <div className="relative text-xs">
+    <div className="text-xs">
       <div className="mb-1 flex items-center gap-3">
         <span className="text-sm font-bold">Evidence docházky</span>
         <span className="text-slate-600">{title}</span>

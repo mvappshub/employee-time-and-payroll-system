@@ -64,35 +64,35 @@ export function PaySlipView({
   onMonthChange,
   onPrintDocument,
 }: PaySlipViewProps) {
-  const inp = 'border-b border-gray-300 bg-transparent text-xs outline-none w-20 text-right'
+  const inp = 'min-h-8 w-20 rounded-md border border-slate-300 bg-white px-2 py-1 text-right text-xs outline-none'
 
   return (
-    <div className="max-w-5xl text-xs">
-      <div className="mb-3 flex items-center gap-3">
-        <span className="text-sm font-bold">Mzda / Výplatní páska</span>
-        <input type="month" value={month} onChange={e => onMonthChange(e.target.value)} className="border-b border-gray-300 bg-transparent text-xs outline-none" />
+    <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.08)] text-xs">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <span className="text-base font-semibold text-slate-900">Mzda / Výplatní páska</span>
+        <input type="month" value={month} onChange={e => onMonthChange(e.target.value)} className="min-h-8 rounded-md border border-slate-300 bg-white px-3 py-2 text-right text-xs outline-none" />
         <button
           type="button"
           disabled={printDisabled || !issuedPayslipDocument}
           onClick={onPrintDocument}
-          className="border border-gray-300 px-2 py-1 text-[11px] text-gray-700 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400"
+          className="border border-blue-600 bg-blue-600 px-3 py-2 text-[12px] font-semibold text-white disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
         >
           Tisk / PDF
         </button>
       </div>
 
-      <div className="mb-3 text-gray-600">{employeeHeader}</div>
+      <div className="mb-3 rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-600">{employeeHeader}</div>
 
-      {blocked && <div className="border border-amber-300 bg-amber-50 px-2 py-1 text-amber-800">{blockedMessage}</div>}
-      {loading && <div className="border border-gray-300 bg-gray-50 px-2 py-1 text-gray-600">Načítání PHV...</div>}
-      {!loading && error && <div className="border border-red-300 bg-red-50 px-2 py-1 text-red-700">{error}</div>}
-      {!loading && info && <div className="mt-2 border border-slate-300 bg-slate-50 px-2 py-1 text-slate-700">{info}</div>}
-      {!loading && dataClosedWarning && <div className="mt-2 border border-amber-300 bg-amber-50 px-2 py-1 text-amber-800">{dataClosedWarning}</div>}
+      {blocked && <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 font-medium text-amber-800">{blockedMessage}</div>}
+      {loading && <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-slate-600">Načítání PHV...</div>}
+      {!loading && error && <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 font-medium text-red-700">{error}</div>}
+      {!loading && info && <div className="mt-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-slate-600">{info}</div>}
+      {!loading && dataClosedWarning && <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 font-medium text-amber-800">{dataClosedWarning}</div>}
 
       {!blocked && !loading && (
         <div className="space-y-4">
-          <section className="rounded border border-gray-300 bg-gray-50 p-3 app-controls">
-            <div className="mb-2 font-semibold">Interní mzdové vstupy</div>
+          <section className="app-controls rounded-lg border border-slate-200 bg-slate-50 p-4">
+            <div className="mb-3 text-sm font-semibold text-slate-900">Interní mzdové vstupy</div>
             <div className="grid gap-4 md:grid-cols-2">
               <table className="w-full">
                 <tbody>
@@ -120,7 +120,7 @@ export function PaySlipView({
 
           {issuedPayslipDocument && issuedDocumentRows && (
             <div className="space-y-4">
-              <section className="rounded border border-slate-200 bg-slate-50 p-3 text-[12px] text-slate-600 app-controls">
+              <section className="app-controls rounded-lg border border-slate-200 bg-slate-50 p-4 text-[12px] text-slate-600">
                 <div className="font-semibold text-slate-900">Výplatní páska pro zaměstnance</div>
                 Auditní dokument se renderuje z issued snapshotu uloženého při vystavení výplatní pásky.
                 <div className="mt-2">Typ pracovního poměru: {employmentTypeLabel}</div>
@@ -140,7 +140,7 @@ export function PaySlipView({
           )}
 
           {!issuedPayslipDocument && isDataClosed && (
-            <div className="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-amber-800">
+            <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 font-medium text-amber-800">
               Vystavený dokument zatím neexistuje. Tisk je dostupný až po kroku „Vystavit výplatní pásku“.
             </div>
           )}
@@ -153,8 +153,8 @@ export function PaySlipView({
 function InputRow({ label, children }: { label: string; children: ReactNode }) {
   return (
     <tr>
-      <td className="py-1 pr-3 text-gray-700">{label}</td>
-      <td className="py-1 text-right">{children}</td>
+      <td className="text-slate-700">{label}</td>
+      <td className="text-right">{children}</td>
     </tr>
   )
 }
@@ -162,8 +162,8 @@ function InputRow({ label, children }: { label: string; children: ReactNode }) {
 function AuditRowView({ label, value }: AuditRow) {
   return (
     <tr>
-      <td className="py-1 pr-3 text-gray-700">{label}</td>
-      <td className="py-1 text-right text-gray-900">{value}</td>
+      <td className="text-slate-700">{label}</td>
+      <td className="text-right text-slate-900">{value}</td>
     </tr>
   )
 }

@@ -21,6 +21,11 @@ import { defaultPaySlipInputs } from '../../domain/payroll/defaults'
 const defaultEmployeeTemplate: EmployeeSettings = {
   id: '',
   name: '',
+  firstName: '',
+  lastName: '',
+  birthDate: '',
+  address: '',
+  personalNumberInternal: '',
   employeeNumber: '',
   permanentAddress: '',
   status: 'active',
@@ -30,8 +35,16 @@ const defaultEmployeeTemplate: EmployeeSettings = {
   contractJobTitle: '',
   contractWorkplace: '',
   contractWorkSchedule: '',
-  probationMonths: 3,
-  fixedTermEndDate: '',
+  contractConclusionDate: '',
+  signaturePlace: '',
+  durationType: 'indefinite',
+  isManager: false,
+  probationEnabled: false,
+  probationMonths: null,
+  fixedTermEndDate: null,
+  grossMonthlyWage: 0,
+  annualVacationWeeks: 4,
+  employeeReceivedCopyAt: '',
   workload: 1,
   shiftOperation: 'single',
   weeklyHours: 40,
@@ -44,7 +57,7 @@ const defaultEmployeeTemplate: EmployeeSettings = {
   nightFrom: '22:00',
   nightTo: '06:00',
   overtimeAllowed: true,
-  baseSalary: 30000,
+  baseSalary: 0,
   personalBonus: 0.25,
   nightSurcharge: 0.10,
   weekendSurcharge: 0.10,
@@ -65,10 +78,20 @@ const defaultEmployeeTemplate: EmployeeSettings = {
 
 const defaultEmployer: EmployerProfile = {
   name: '',
+  legalName: '',
   ico: '',
   seat: '',
+  registeredAddress: '',
   representativeName: '',
   representativeRole: '',
+  wageDueText: '',
+  wagePaymentTerm: '',
+  wagePaymentPlace: '',
+  wagePaymentMethod: '',
+  workScheduleText: '',
+  balancingPeriodText: '',
+  overtimeScopeText: '',
+  socialSecurityAuthority: '',
 }
 
 const now = new Date()
@@ -85,6 +108,8 @@ export interface TimeSheetPresetDay {
   shift: ShiftType
   arrival: string
   departure: string
+  breakStart?: string
+  breakEnd?: string
 }
 
 export interface TimeSheetPreset {
@@ -94,8 +119,8 @@ export interface TimeSheetPreset {
   builtIn?: boolean
 }
 
-function weekdayTemplate(day: number, shift: ShiftType, arrival = '', departure = ''): TimeSheetPresetDay {
-  return { weekday: day, shift, arrival, departure }
+function weekdayTemplate(day: number, shift: ShiftType, arrival = '', departure = '', breakStart = '', breakEnd = ''): TimeSheetPresetDay {
+  return { weekday: day, shift, arrival, departure, breakStart, breakEnd }
 }
 
 function workweekPreset(id: string, name: string, arrival: string, departure: string): TimeSheetPreset {
@@ -104,11 +129,11 @@ function workweekPreset(id: string, name: string, arrival: string, departure: st
     name,
     builtIn: true,
     days: [
-      weekdayTemplate(1, 'ranní', arrival, departure),
-      weekdayTemplate(2, 'ranní', arrival, departure),
-      weekdayTemplate(3, 'ranní', arrival, departure),
-      weekdayTemplate(4, 'ranní', arrival, departure),
-      weekdayTemplate(5, 'ranní', arrival, departure),
+      weekdayTemplate(1, 'ranní', arrival, departure, '11:00', '11:30'),
+      weekdayTemplate(2, 'ranní', arrival, departure, '11:00', '11:30'),
+      weekdayTemplate(3, 'ranní', arrival, departure, '11:00', '11:30'),
+      weekdayTemplate(4, 'ranní', arrival, departure, '11:00', '11:30'),
+      weekdayTemplate(5, 'ranní', arrival, departure, '11:00', '11:30'),
       weekdayTemplate(6, 'volno'),
       weekdayTemplate(0, 'volno'),
     ],
@@ -126,7 +151,7 @@ export const builtInTimeSheetPresets: TimeSheetPreset[] = [
       weekdayTemplate(1, 'volno'),
       weekdayTemplate(2, 'volno'),
       weekdayTemplate(3, 'volno'),
-      weekdayTemplate(4, 'ranní', '06:00', '14:00'),
+      weekdayTemplate(4, 'ranní', '06:00', '14:00', '11:00', '11:30'),
       weekdayTemplate(5, 'odpolední', '14:00', '06:00'),
       weekdayTemplate(6, 'volno'),
       weekdayTemplate(0, 'odpolední', '14:00', '06:00'),
@@ -146,9 +171,15 @@ function yearFromMonth(month: string): number {
 }
 
 function normalizeEmployerProfile(employer?: Partial<EmployerProfile>): EmployerProfile {
+  const legalName = employer?.legalName || employer?.name || ''
+  const registeredAddress = employer?.registeredAddress || employer?.seat || ''
   return {
     ...defaultEmployer,
     ...employer,
+    legalName,
+    name: employer?.name || legalName,
+    registeredAddress,
+    seat: employer?.seat || registeredAddress,
   }
 }
 
@@ -156,16 +187,42 @@ export function normalizeEmployeeSettings(employee?: Partial<EmployeeSettings>):
   const shiftOperation = normalizeShiftOperationType(employee?.shiftOperation)
   const workload = typeof employee?.workload === 'number' ? employee.workload : defaultEmployeeTemplate.workload
   const workDaysPerWeek = typeof employee?.workDaysPerWeek === 'number' ? employee.workDaysPerWeek : defaultEmployeeTemplate.workDaysPerWeek
+  const nameParts = (employee?.name || '').trim().split(/\s+/).filter(Boolean)
+  const firstName = employee?.firstName || (nameParts.length > 1 ? nameParts.slice(0, -1).join(' ') : nameParts[0] || '')
+  const lastName = employee?.lastName || (nameParts.length > 1 ? nameParts.at(-1) || '' : '')
+  const name = employee?.name || `${firstName} ${lastName}`.trim()
+  const address = employee?.address || employee?.permanentAddress || ''
+  const baseSalary = typeof employee?.baseSalary === 'number' ? employee.baseSalary : defaultEmployeeTemplate.baseSalary
+  const grossMonthlyWage = typeof employee?.grossMonthlyWage === 'number' ? employee.grossMonthlyWage : baseSalary
+  const durationType = employee?.durationType || (employee?.fixedTermEndDate ? 'fixed_term' : 'indefinite')
   return {
     ...defaultEmployeeTemplate,
     ...employee,
     id: employee?.id || defaultEmployeeTemplate.id || makeId(),
+    name,
+    firstName,
+    lastName,
+    address,
+    permanentAddress: employee?.permanentAddress || address,
+    personalNumberInternal: employee?.personalNumberInternal || employee?.employeeNumber || '',
     employmentType: 'pracovni_pomer',
     status: employee?.status || 'active',
     workload,
     shiftOperation,
     workDaysPerWeek,
     weeklyHours: calculateShiftOperationWeeklyHours(shiftOperation, workDaysPerWeek, workload),
+    baseSalary,
+    grossMonthlyWage,
+    contractConclusionDate: employee?.contractConclusionDate || employee?.employmentStartDate || defaultEmployeeTemplate.contractConclusionDate,
+    durationType,
+    fixedTermEndDate: durationType === 'fixed_term' ? employee?.fixedTermEndDate || null : null,
+    probationEnabled: Boolean(employee?.probationEnabled),
+    probationMonths: employee?.probationEnabled ? employee?.probationMonths || 3 : null,
+    annualVacationWeeks: typeof employee?.annualVacationWeeks === 'number'
+      ? employee.annualVacationWeeks
+      : employee?.vacationEntitlementHours && calculateShiftOperationWeeklyHours(shiftOperation, workDaysPerWeek, workload) > 0
+        ? Math.round((employee.vacationEntitlementHours / calculateShiftOperationWeeklyHours(shiftOperation, workDaysPerWeek, workload)) * 100) / 100
+        : 4,
     employmentContractDocument: employee?.employmentContractDocument || null,
   }
 }
@@ -189,10 +246,12 @@ function normalizeTimeSheetPresets(presets?: Partial<TimeSheetPreset>[]): TimeSh
         const day = preset.days?.find(item => item.weekday === weekday)
         return weekdayTemplate(
           weekday,
-          day?.shift || 'volno',
-          day?.arrival || '',
-          day?.departure || '',
-        )
+        day?.shift || 'volno',
+        day?.arrival || '',
+        day?.departure || '',
+        day?.breakStart || '',
+        day?.breakEnd || '',
+      )
       }),
     }]
   })
@@ -204,15 +263,20 @@ export function buildEmptyMonthRecords(month: string): TimeRecord[] {
     shift: '',
     arrival: '',
     departure: '',
+    breakStart: '',
+    breakEnd: '',
   }))
 }
 
 export function buildPrefilledMonthRecords(month: string, employee: EmployeeSettings): TimeRecord[] {
+  const isWorkday = (date: string) => !isWeekend(date)
   return getDaysInMonth(month).map(date => ({
     date,
-    shift: (isWeekend(date) ? 'volno' : 'ranní') as ShiftType,
-    arrival: isWeekend(date) ? '' : employee.shiftStart,
-    departure: isWeekend(date) ? '' : employee.shiftEnd,
+    shift: (isWorkday(date) ? 'ranní' : 'volno') as ShiftType,
+    arrival: isWorkday(date) ? employee.shiftStart : '',
+    departure: isWorkday(date) ? employee.shiftEnd : '',
+    breakStart: isWorkday(date) ? '11:00' : '',
+    breakEnd: isWorkday(date) ? '11:30' : '',
   }))
 }
 
@@ -226,6 +290,8 @@ export function buildMonthRecordsFromPreset(month: string, preset: TimeSheetPres
       shift: template?.shift || 'volno',
       arrival: template?.arrival || '',
       departure: template?.departure || '',
+      breakStart: template?.breakStart || '',
+      breakEnd: template?.breakEnd || '',
     }
   })
 }
@@ -241,6 +307,8 @@ export function buildTimeSheetPresetFromRecords(id: string, name: string, record
         record?.shift || 'volno',
         record?.arrival || '',
         record?.departure || '',
+        record?.breakStart || '',
+        record?.breakEnd || '',
       )
     }),
   }

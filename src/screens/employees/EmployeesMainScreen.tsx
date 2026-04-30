@@ -113,6 +113,9 @@ export function EmployeesMainScreen({
           error={screen.error}
           info={screen.info}
           contractDocument={screen.employmentContractDocument}
+          section37Document={screen.section37Document}
+          handoverProtocolDocument={screen.handoverProtocolDocument}
+          onboardingStatus={screen.onboardingStatus}
           contractMissingFields={screen.contractMissingFields}
           showContractPreview={screen.showContractPreview}
           canPrintContract={screen.canPrintContract}
@@ -121,6 +124,8 @@ export function EmployeesMainScreen({
           onToggleContractPreview={screen.onToggleContractPreview}
           onRefreshContractDraft={screen.onRefreshContractDraft}
           onPrintContract={screen.onPrintContract}
+          onPrintSection37={screen.onPrintSection37}
+          onPrintHandoverProtocol={screen.onPrintHandoverProtocol}
         />
       </div>
     </div>

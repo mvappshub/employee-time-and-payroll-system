@@ -1,71 +1,74 @@
-import { ShiftOperationTypeLabels, type EmploymentContractDocument } from '../../domain/shared/types'
-import { DocumentLayout, DocumentMetaGrid, DocumentPart } from './DocumentLayout'
+import type { EmploymentContractDocument, HandoverProtocolDocument, Section37Document } from '../../domain/shared/types'
+import { DocumentLayout, DocumentPart } from './DocumentLayout'
 
-export function EmploymentContractDocumentView({ document }: { document: EmploymentContractDocument }) {
-  const { employer, employee } = document.snapshot
-  const shiftOperation = employee.shiftOperation || 'single'
-  const dailyFund = typeof employee.dailyFund === 'number' ? employee.dailyFund : 8
+type TextDocument = EmploymentContractDocument | Section37Document | HandoverProtocolDocument
+
+function TextDocumentView({
+  document,
+  documentId,
+  title,
+  subtitle,
+}: {
+  document: TextDocument
+  documentId: string
+  title: string
+  subtitle: string
+}) {
+  const sections = Array.isArray(document.snapshot.sections)
+    ? document.snapshot.sections
+    : document.snapshot.text
+      ? [{ heading: undefined, lines: document.snapshot.text.split('\n') }]
+      : [{ heading: undefined, lines: ['Dokument je uložený ve starším formátu. Aktualizujte dokument.'] }]
 
   return (
     <DocumentLayout
+      documentId={documentId}
+      title={title}
+      subtitle={subtitle}
+      issuedAt={document.issuedAt || document.generatedAt || document.updatedAt}
+    >
+      {sections.map(section => (
+        <DocumentPart key={`${section.heading || 'section'}-${section.lines.join('|')}`} heading={section.heading || ''}>
+          <div className="document-prose whitespace-pre-line">
+            {section.lines.map((line, lineIndex) => (
+              line ? <p key={lineIndex}>{line}</p> : <br key={lineIndex} />
+            ))}
+          </div>
+        </DocumentPart>
+      ))}
+    </DocumentLayout>
+  )
+}
+
+export function EmploymentContractDocumentView({ document }: { document: EmploymentContractDocument }) {
+  return (
+    <TextDocumentView
+      document={document}
       documentId="employment-contract-document"
       title="Pracovní smlouva"
-      subtitle={`${employee.name} · ${employee.contractJobTitle}`}
-      issuedAt={document.issuedAt || document.updatedAt}
-      footer={
-        <div className="grid gap-6 md:grid-cols-2">
-          <div>
-            <div className="mb-12 border-b border-slate-400" />
-            <div className="text-[12px] text-slate-600">{employer.representativeName}, {employer.representativeRole}</div>
-          </div>
-          <div>
-            <div className="mb-12 border-b border-slate-400" />
-            <div className="text-[12px] text-slate-600">{employee.name}</div>
-          </div>
-        </div>
-      }
-    >
-      <DocumentPart heading="Smluvní strany">
-        <DocumentMetaGrid
-          rows={[
-            { label: 'Zaměstnavatel', value: employer.name },
-            { label: 'IČO', value: employer.ico },
-            { label: 'Sídlo', value: employer.seat },
-            { label: 'Jednající osoba', value: `${employer.representativeName}, ${employer.representativeRole}` },
-            { label: 'Zaměstnanec', value: employee.name },
-            { label: 'Osobní číslo', value: employee.employeeNumber },
-            { label: 'Bydliště', value: employee.permanentAddress },
-            { label: 'Den nástupu', value: employee.employmentStartDate },
-          ]}
-        />
-      </DocumentPart>
-      <DocumentPart heading="Sjednané podmínky">
-        <DocumentMetaGrid
-          rows={[
-            { label: 'Druh práce', value: employee.contractJobTitle },
-            { label: 'Místo výkonu práce', value: employee.contractWorkplace },
-            { label: 'Pracovní doba / úvazek', value: employee.contractWorkSchedule },
-            { label: 'Směnný provoz', value: ShiftOperationTypeLabels[shiftOperation] },
-            { label: 'Mzdový režim', value: `Mzda ${employee.baseSalary.toLocaleString('cs-CZ')} Kč` },
-            { label: 'Týdenní rozsah', value: `${employee.weeklyHours} hodin` },
-            { label: 'Denní fond', value: `${dailyFund.toLocaleString('cs-CZ')} hodin` },
-            { label: 'Zkušební doba', value: employee.probationMonths ? `${employee.probationMonths} měsíce` : 'nesjednána' },
-            { label: 'Doba určitá do', value: employee.fixedTermEndDate || 'na dobu neurčitou' },
-            { label: 'Datum ukončení', value: employee.employmentEndDate || 'není sjednáno' },
-          ]}
-        />
-      </DocumentPart>
-      <DocumentPart heading="Ujednání">
-        <p>
-          Zaměstnanec nastupuje do pracovního poměru dne {employee.employmentStartDate} na pracovní pozici {employee.contractJobTitle}.
-          Místem výkonu práce je {employee.contractWorkplace}. Sjednaná pracovní doba činí {employee.contractWorkSchedule};
-          zaměstnanec nastupuje do režimu {ShiftOperationTypeLabels[shiftOperation].toLowerCase()} s denním fondem {dailyFund.toLocaleString('cs-CZ')} hodin.
-        </p>
-        <p>
-          Smluvní strany potvrzují, že se seznámily s pracovními podmínkami, mzdovým režimem a dalšími povinnostmi
-          vyplývajícími z pracovněprávního vztahu.
-        </p>
-      </DocumentPart>
-    </DocumentLayout>
+      subtitle={document.snapshot.employee.name}
+    />
+  )
+}
+
+export function Section37DocumentView({ document }: { document: Section37Document }) {
+  return (
+    <TextDocumentView
+      document={document}
+      documentId="section37-document"
+      title="Informace podle § 37"
+      subtitle={document.snapshot.employee.name}
+    />
+  )
+}
+
+export function HandoverProtocolDocumentView({ document }: { document: HandoverProtocolDocument }) {
+  return (
+    <TextDocumentView
+      document={document}
+      documentId="handover-protocol-document"
+      title="Potvrzení o předání dokumentů"
+      subtitle={document.snapshot.employee.name}
+    />
   )
 }

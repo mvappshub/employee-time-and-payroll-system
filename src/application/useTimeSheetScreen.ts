@@ -112,9 +112,13 @@ export function useTimeSheetScreen() {
     if (['volno', 'dovolená', 'nemoc', ''].includes(shift)) {
       update.arrival = ''
       update.departure = ''
+      update.breakStart = ''
+      update.breakEnd = ''
     } else if (shift === 'ranní') {
       update.arrival = employee.shiftStart
       update.departure = employee.shiftEnd
+      update.breakStart = '11:00'
+      update.breakEnd = '11:30'
     }
     updateRecord(selectedEmployeeId, month, index, update)
   }
@@ -169,6 +173,8 @@ export function useTimeSheetScreen() {
         shift: record?.shift || '',
         arrival: record?.arrival || '',
         departure: record?.departure || '',
+        breakStart: record?.breakStart || '',
+        breakEnd: record?.breakEnd || '',
         breakHours: formatCompactNumber(calc.breakHours),
         worked: formatCompactNumber(calc.worked),
         planHours: calc.planHours > 0 ? calc.planHours.toFixed(1) : '',
@@ -303,6 +309,20 @@ export function useTimeSheetScreen() {
         return
       }
       updateRecord(selectedEmployeeId, month, index, { departure: value })
+    },
+    onBreakStartChange: (index: number, value: string) => {
+      if (!selectedEmployeeId) return
+      if (isTimeClosedOrLater(monthStatus) && !window.confirm('Změna evidence zneplatní spočítanou mzdu a vystavenou pásku. Pokračovat?')) {
+        return
+      }
+      updateRecord(selectedEmployeeId, month, index, { breakStart: value })
+    },
+    onBreakEndChange: (index: number, value: string) => {
+      if (!selectedEmployeeId) return
+      if (isTimeClosedOrLater(monthStatus) && !window.confirm('Změna evidence zneplatní spočítanou mzdu a vystavenou pásku. Pokračovat?')) {
+        return
+      }
+      updateRecord(selectedEmployeeId, month, index, { breakEnd: value })
     },
   }
 }

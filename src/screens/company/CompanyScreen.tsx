@@ -7,6 +7,7 @@ import { PageHeader } from '../../components/ui/PageHeader'
 import { useStore } from '../../infrastructure/state/store'
 import { loadCompanyProfile, saveCompanyProfile } from '../../infrastructure/api/monthStorage'
 import type { EmployerProfile } from '../../domain/shared/types'
+import { normalizeIco, validateIco } from '../../domain/documents/builders'
 
 export function CompanyScreen() {
   const employer = useStore(s => s.employer)
@@ -38,8 +39,13 @@ export function CompanyScreen() {
     setSaving(true)
     setInfo('')
     setError('')
+    if (employer.ico && !validateIco(employer.ico)) {
+      setError('IČO zaměstnavatele není platné.')
+      setSaving(false)
+      return
+    }
     try {
-      await saveCompanyProfile(employer)
+      await saveCompanyProfile({ ...employer, ico: normalizeIco(employer.ico) })
       setInfo('Firemní profil byl uložen do perzistentního úložiště.')
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : 'Firemní profil se nepodařilo uložit.')
@@ -55,9 +61,10 @@ export function CompanyScreen() {
         <CardHeader><CardTitle>Základní údaje</CardTitle></CardHeader>
         <CardContent>
           <div className="grid gap-3 md:grid-cols-2">
-            <Input label="Název" value={employer.name} onChange={e => updateField({ name: e.target.value })} />
+            <Input label="Název" value={employer.legalName || employer.name} onChange={e => updateField({ legalName: e.target.value, name: e.target.value })} />
             <Input label="IČO" value={employer.ico} onChange={e => updateField({ ico: e.target.value })} />
-            <Input className="md:col-span-2" label="Sídlo" value={employer.seat} onChange={e => updateField({ seat: e.target.value })} />
+            {employer.ico && !validateIco(employer.ico) && <div className="text-xs text-red-600">IČO musí mít 8 číslic a platnou kontrolní číslici.</div>}
+            <Input className="md:col-span-2" label="Sídlo" value={employer.registeredAddress || employer.seat} onChange={e => updateField({ registeredAddress: e.target.value, seat: e.target.value })} />
           </div>
         </CardContent>
       </Card>

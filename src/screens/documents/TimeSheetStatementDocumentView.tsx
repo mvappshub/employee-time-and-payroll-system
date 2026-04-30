@@ -26,29 +26,31 @@ export function TimeSheetStatementDocumentView({ document }: { document: TimeShe
         />
       </DocumentPart>
       <DocumentPart heading="Denní evidence">
-        <table className="w-full border-collapse text-[12px]">
+        <table className="document-table document-table--compact">
           <thead>
-            <tr className="border-b border-slate-400 text-left text-slate-500">
+            <tr>
               <th>Datum</th>
               <th>Směna</th>
               <th>Příchod</th>
               <th>Odchod</th>
-              <th className="text-right">Odprac.</th>
-              <th className="text-right">Přesčas</th>
-              <th className="text-right">Noční</th>
+              <th>Přestávka</th>
+              <th className="document-numeric">Odprac.</th>
+              <th className="document-numeric">Přesčas</th>
+              <th className="document-numeric">Noční</th>
               <th>Poznámka</th>
             </tr>
           </thead>
           <tbody>
             {rows.map(row => (
-              <tr key={row.date} className="border-b border-slate-200">
+              <tr key={row.date}>
                 <td>{row.date}</td>
                 <td>{row.shift || '—'}</td>
                 <td>{row.arrival || '—'}</td>
                 <td>{row.departure || '—'}</td>
-                <td className="text-right">{row.workedHours.toFixed(1)}</td>
-                <td className="text-right">{row.overtimeHours.toFixed(1)}</td>
-                <td className="text-right">{row.nightHours.toFixed(1)}</td>
+                <td>{row.breakStart && row.breakEnd ? `${row.breakStart}-${row.breakEnd}` : '—'}</td>
+                <td className="document-numeric">{row.workedHours.toFixed(1)}</td>
+                <td className="document-numeric">{row.overtimeHours.toFixed(1)}</td>
+                <td className="document-numeric">{row.nightHours.toFixed(1)}</td>
                 <td>{row.absenceLabel || '—'}</td>
               </tr>
             ))}

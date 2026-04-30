@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   buildEmploymentContractDocument,
+  buildHandoverProtocolDocument,
+  buildSection37Document,
   getEmploymentContractMissingFields,
+  getMinimumMonthlyWage,
   hasContractRelevantChange,
   issueEmploymentContractDocument,
   isEmployerProfileReady,
@@ -67,9 +70,26 @@ export function useEmployeesScreen() {
 
   const selectedEmployee = employees.find(employee => employee.id === selectedEmployeeId) || null
   const activeEmployee = draftEmployee || selectedEmployee
-  const employmentContractDocument = activeEmployee?.employmentContractDocument || null
   const contractMissingFields = activeEmployee ? getEmploymentContractMissingFields(activeEmployee, employer) : []
   const canPrintContract = Boolean(activeEmployee?.id && isEmployerProfileReady(employer) && contractMissingFields.length === 0)
+  const employmentContractDocument = activeEmployee
+    ? buildEmploymentContractDocument(activeEmployee, employer, activeEmployee.employmentContractDocument)
+    : null
+  const section37Document = activeEmployee?.id && canPrintContract ? buildSection37Document(activeEmployee, employer) : null
+  const handoverProtocolDocument = activeEmployee?.id && canPrintContract ? buildHandoverProtocolDocument(activeEmployee, employer) : null
+  const minimumWage = activeEmployee ? getMinimumMonthlyWage(Number(activeEmployee.employmentStartDate.slice(0, 4)) || 2026, activeEmployee.weeklyHours) : 0
+  const grossMonthlyWage = activeEmployee?.grossMonthlyWage ?? activeEmployee?.baseSalary ?? 0
+  const onboardingStatus = activeEmployee ? {
+    contract: contractMissingFields.length > 0
+      ? 'chybí údaje'
+      : employmentContractDocument?.lifecycleStatus === 'issued'
+        ? 'vytištěna'
+        : 'připravena',
+    section37: activeEmployee.employeeReceivedCopyAt ? 'předána' : section37Document ? 'vytvořena' : 'nevytvořena',
+    handover: activeEmployee.employeeReceivedCopyAt ? 'evidováno' : 'neevidováno',
+    wage: grossMonthlyWage <= 0 ? 'chybí' : grossMonthlyWage < minimumWage ? 'pod minimem' : 'OK',
+    vacation: (activeEmployee.annualVacationWeeks ?? 4) < 4 ? 'pod 4 týdny' : 'OK',
+  } : null
 
   useEffect(() => {
     if (loadedEmployees) return
@@ -271,6 +291,9 @@ export function useEmployeesScreen() {
     info,
     monthRows,
     employmentContractDocument,
+    section37Document,
+    handoverProtocolDocument,
+    onboardingStatus,
     contractMissingFields,
     showContractPreview,
     canPrintContract,
@@ -288,6 +311,27 @@ export function useEmployeesScreen() {
     onEmployeeChange: (field: keyof EmployeeSettings, value: string | number | boolean) => {
       if (!activeEmployee) return
       const nextEmployee = { ...activeEmployee, [field]: value } as EmployeeSettings
+      if (field === 'firstName' || field === 'lastName') {
+        nextEmployee.name = `${field === 'firstName' ? value : nextEmployee.firstName || ''} ${field === 'lastName' ? value : nextEmployee.lastName || ''}`.trim()
+      }
+      if (field === 'address') {
+        nextEmployee.permanentAddress = String(value)
+      }
+      if (field === 'grossMonthlyWage') {
+        nextEmployee.baseSalary = Number(value) || 0
+      }
+      if (field === 'baseSalary') {
+        nextEmployee.grossMonthlyWage = Number(value) || 0
+      }
+      if (field === 'durationType' && value === 'indefinite') {
+        nextEmployee.fixedTermEndDate = null
+      }
+      if (field === 'probationEnabled' && value === false) {
+        nextEmployee.probationMonths = null
+      }
+      if (field === 'probationEnabled' && value === true && !nextEmployee.probationMonths) {
+        nextEmployee.probationMonths = 3
+      }
       if (field === 'shiftOperation' || field === 'workload' || field === 'workDaysPerWeek') {
         const shiftOperation = field === 'shiftOperation' ? normalizeShiftOperationType(value) : nextEmployee.shiftOperation
         nextEmployee.shiftOperation = shiftOperation
@@ -315,8 +359,8 @@ export function useEmployeesScreen() {
       setInfo('Draft pracovní smlouvy byl aktualizován.')
     },
     onPrintContract: async () => {
-      if (!activeEmployee?.id || !activeEmployee.employmentContractDocument || !canPrintContract) return
-      const issuedDocument = issueEmploymentContractDocument(activeEmployee.employmentContractDocument)
+      if (!activeEmployee?.id || !employmentContractDocument || !canPrintContract) return
+      const issuedDocument = issueEmploymentContractDocument(employmentContractDocument)
       try {
         await saveEmployeeDocument(activeEmployee.id, issuedDocument)
       } catch (saveError) {
@@ -327,6 +371,14 @@ export function useEmployeesScreen() {
       setDraftEmployee(current => current ? { ...current, employmentContractDocument: issuedDocument } : current)
       setInfo('Pracovní smlouva byla vystavena.')
       printWithRetry('employment-contract-document', setError)
+    },
+    onPrintSection37: async () => {
+      if (!section37Document || !canPrintContract) return
+      printWithRetry('section37-document', setError)
+    },
+    onPrintHandoverProtocol: async () => {
+      if (!handoverProtocolDocument || !canPrintContract) return
+      printWithRetry('handover-protocol-document', setError)
     },
     onSaveEmployee: async () => {
       if (!activeEmployee) return

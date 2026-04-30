@@ -43,12 +43,24 @@ const DEFAULT_EMPLOYEE_CONTEXT: AverageEarningsEmployeeContext = {
 }
 
 function repairEmployerProfile(profile?: EmployerProfile): EmployerProfile {
+  const legalName = profile?.legalName || profile?.name || ''
+  const registeredAddress = profile?.registeredAddress || profile?.seat || ''
   return {
-    name: profile?.name || '',
+    name: profile?.name || legalName,
+    legalName,
     ico: profile?.ico || '',
-    seat: profile?.seat || '',
+    seat: profile?.seat || registeredAddress,
+    registeredAddress,
     representativeName: profile?.representativeName || '',
     representativeRole: profile?.representativeRole || '',
+    wageDueText: profile?.wageDueText || '',
+    wagePaymentTerm: profile?.wagePaymentTerm || '',
+    wagePaymentPlace: profile?.wagePaymentPlace || '',
+    wagePaymentMethod: profile?.wagePaymentMethod || '',
+    workScheduleText: profile?.workScheduleText || '',
+    balancingPeriodText: profile?.balancingPeriodText || '',
+    overtimeScopeText: profile?.overtimeScopeText || '',
+    socialSecurityAuthority: profile?.socialSecurityAuthority || '',
   }
 }
 
@@ -56,11 +68,24 @@ function repairEmployeeSettings(employee?: Partial<EmployeeSettings>): EmployeeS
   const workload = typeof employee?.workload === 'number' ? employee.workload : 1
   const shiftOperation = normalizeShiftOperationType(employee?.shiftOperation)
   const workDaysPerWeek = typeof employee?.workDaysPerWeek === 'number' ? employee.workDaysPerWeek : 5
+  const weeklyHours = calculateShiftOperationWeeklyHours(shiftOperation, workDaysPerWeek, workload)
+  const nameParts = (employee?.name || '').trim().split(/\s+/).filter(Boolean)
+  const firstName = employee?.firstName || (nameParts.length > 1 ? nameParts.slice(0, -1).join(' ') : nameParts[0] || '')
+  const lastName = employee?.lastName || (nameParts.length > 1 ? nameParts.at(-1) || '' : '')
+  const name = employee?.name || `${firstName} ${lastName}`.trim()
+  const address = employee?.address || employee?.permanentAddress || ''
+  const baseSalary = employee?.baseSalary || 0
+  const durationType = employee?.durationType || (employee?.fixedTermEndDate ? 'fixed_term' : 'indefinite')
   return {
     id: employee?.id || '',
-    name: employee?.name || '',
+    name,
+    firstName,
+    lastName,
+    birthDate: employee?.birthDate || '',
+    address,
+    personalNumberInternal: employee?.personalNumberInternal || employee?.employeeNumber || '',
     employeeNumber: employee?.employeeNumber || '',
-    permanentAddress: employee?.permanentAddress || '',
+    permanentAddress: employee?.permanentAddress || address,
     status: employee?.status || 'active',
     employmentType: employee?.employmentType || 'pracovni_pomer',
     employmentStartDate: employee?.employmentStartDate || '2026-01-01',
@@ -68,11 +93,23 @@ function repairEmployeeSettings(employee?: Partial<EmployeeSettings>): EmployeeS
     contractJobTitle: employee?.contractJobTitle || '',
     contractWorkplace: employee?.contractWorkplace || '',
     contractWorkSchedule: employee?.contractWorkSchedule || '',
-    probationMonths: employee?.probationMonths || 0,
-    fixedTermEndDate: employee?.fixedTermEndDate || '',
+    contractConclusionDate: employee?.contractConclusionDate || employee?.employmentStartDate || '2026-01-01',
+    signaturePlace: employee?.signaturePlace || '',
+    durationType,
+    isManager: Boolean(employee?.isManager),
+    probationEnabled: Boolean(employee?.probationEnabled),
+    probationMonths: employee?.probationEnabled ? employee?.probationMonths || 3 : null,
+    fixedTermEndDate: durationType === 'fixed_term' ? employee?.fixedTermEndDate || null : null,
+    grossMonthlyWage: typeof employee?.grossMonthlyWage === 'number' ? employee.grossMonthlyWage : baseSalary,
+    annualVacationWeeks: typeof employee?.annualVacationWeeks === 'number'
+      ? employee.annualVacationWeeks
+      : employee?.vacationEntitlementHours && weeklyHours > 0
+        ? Math.round((employee.vacationEntitlementHours / weeklyHours) * 100) / 100
+        : 4,
+    employeeReceivedCopyAt: employee?.employeeReceivedCopyAt || '',
     workload,
     shiftOperation,
-    weeklyHours: calculateShiftOperationWeeklyHours(shiftOperation, workDaysPerWeek, workload),
+    weeklyHours,
     workDaysPerWeek,
     weekendWorking: employee?.weekendWorking || false,
     shiftStart: employee?.shiftStart || '06:00',
@@ -82,7 +119,7 @@ function repairEmployeeSettings(employee?: Partial<EmployeeSettings>): EmployeeS
     nightFrom: employee?.nightFrom || '22:00',
     nightTo: employee?.nightTo || '06:00',
     overtimeAllowed: employee?.overtimeAllowed || false,
-    baseSalary: employee?.baseSalary || 0,
+    baseSalary,
     personalBonus: employee?.personalBonus || 0,
     nightSurcharge: employee?.nightSurcharge || 0,
     weekendSurcharge: employee?.weekendSurcharge || 0,
@@ -265,16 +302,15 @@ async function loadCompanyProfile(): Promise<EmployerProfile> {
   await ensureDataDir()
   try {
     const file = await fs.readFile(COMPANY_FILE, 'utf8')
-    return JSON.parse(file) as EmployerProfile
+    const raw = JSON.parse(file) as EmployerProfile
+    const repaired = repairEmployerProfile(raw)
+    if (JSON.stringify(repaired) !== JSON.stringify(raw)) {
+      await saveCompanyProfile(repaired)
+    }
+    return repaired
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return {
-        name: '',
-        ico: '',
-        seat: '',
-        representativeName: '',
-        representativeRole: '',
-      }
+      return repairEmployerProfile()
     }
     throw error
   }
@@ -386,7 +422,9 @@ async function handleEmployees(req: IncomingMessage, res: ServerResponse): Promi
   if (req.method === 'POST') {
     const body = await readJsonBody(req) as Partial<EmployeeSettings> | null
     const employees = await loadEmployees()
-    if (!body?.name || !body.employmentStartDate || typeof body.baseSalary !== 'number' || body.baseSalary <= 0) {
+    const employeeName = body?.name || `${body?.firstName || ''} ${body?.lastName || ''}`.trim()
+    const wage = typeof body?.grossMonthlyWage === 'number' ? body.grossMonthlyWage : body?.baseSalary
+    if (!employeeName || !body?.employmentStartDate || typeof wage !== 'number' || wage <= 0) {
       sendJson(res, 400, { error: 'invalid_employee_payload' })
       return
     }
@@ -415,13 +453,7 @@ async function handleCompany(req: IncomingMessage, res: ServerResponse): Promise
 
   if (req.method === 'PUT') {
     const body = await readJsonBody(req) as Partial<EmployerProfile> | null
-    const profile: EmployerProfile = {
-      name: body?.name || '',
-      ico: body?.ico || '',
-      seat: body?.seat || '',
-      representativeName: body?.representativeName || '',
-      representativeRole: body?.representativeRole || '',
-    }
+    const profile = repairEmployerProfile(body || undefined)
     await saveCompanyProfile(profile)
     sendJson(res, 200, profile)
     return

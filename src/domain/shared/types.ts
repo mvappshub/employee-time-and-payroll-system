@@ -45,13 +45,23 @@ export type MonthStatus =
 
 export interface EmployerProfile {
   name: string
+  legalName?: string
   ico: string
   seat: string
+  registeredAddress?: string
   representativeName: string
   representativeRole: string
+  wageDueText?: string
+  wagePaymentTerm?: string
+  wagePaymentPlace?: string
+  wagePaymentMethod?: string
+  workScheduleText?: string
+  balancingPeriodText?: string
+  overtimeScopeText?: string
+  socialSecurityAuthority?: string
 }
 
-export type DocumentType = 'employment_contract' | 'time_sheet_statement' | 'issued_payslip'
+export type DocumentType = 'employment_contract' | 'section37_information' | 'handover_protocol' | 'time_sheet_statement' | 'issued_payslip'
 export type DocumentLifecycleStatus = 'draft' | 'ready' | 'issued' | 'invalidated'
 
 export interface DocumentMetadata {
@@ -66,28 +76,77 @@ export interface DocumentMetadata {
   snapshotOrigin: 'employee' | 'month'
   invalidatedAt?: string
   invalidationReason?: string
+  documentId?: string
+  generatedAt?: string
+  hash?: string
+  templateVersion?: string
 }
 
 export interface EmploymentContractSnapshot {
-  employer: EmployerProfile
+  employer: {
+    legalName: string
+    ico: string
+    registeredAddress: string
+    representativeName: string
+    representativeRole: string
+  }
   employee: {
     id: string
     name: string
-    employeeNumber: string
-    permanentAddress: string
-    employmentStartDate: string
-    employmentEndDate?: string
-    contractJobTitle: string
-    contractWorkplace: string
-    contractWorkSchedule: string
-    probationMonths?: number
-    fixedTermEndDate?: string
-    baseSalary: number
-    workload: number
-    shiftOperation: ShiftOperationType
-    weeklyHours: number
-    dailyFund: number
+    firstName: string
+    lastName: string
+    birthDate: string
+    address: string
+    personalNumberInternal?: string
   }
+  contract: {
+    jobType: string
+    workplace: string
+    startDate: string
+    contractConclusionDate: string
+    signaturePlace: string
+    durationType: 'indefinite' | 'fixed_term'
+    fixedTermEndDate: string | null
+    weeklyHours: number
+    isManager: boolean
+    probationEnabled: boolean
+    probationMonths: number | null
+    grossMonthlyWage: number
+    annualVacationWeeks: number
+    employeeReceivedCopyAt?: string
+  }
+  text: string
+  sections: Array<{ heading?: string; lines: string[] }>
+}
+
+export interface Section37Snapshot {
+  employer: EmploymentContractSnapshot['employer'] & {
+    wageDueText: string
+    wagePaymentTerm: string
+    wagePaymentPlace: string
+    wagePaymentMethod: string
+    workScheduleText: string
+    balancingPeriodText: string
+    overtimeScopeText: string
+    socialSecurityAuthority: string
+  }
+  employee: EmploymentContractSnapshot['employee']
+  contract: EmploymentContractSnapshot['contract']
+  generatedAt: string
+  handedOverAt?: string
+  handoverMethod?: string
+  text: string
+  sections: Array<{ heading?: string; lines: string[] }>
+}
+
+export interface HandoverProtocolSnapshot {
+  employee: EmploymentContractSnapshot['employee']
+  generatedAt: string
+  handedOverAt?: string
+  handoverMethod?: string
+  hasBopDocuments?: boolean
+  text: string
+  sections: Array<{ heading?: string; lines: string[] }>
 }
 
 export interface TimeSheetStatementSnapshot {
@@ -106,6 +165,8 @@ export interface TimeSheetStatementSnapshot {
     shift: ShiftType
     arrival: string
     departure: string
+    breakStart?: string
+    breakEnd?: string
     workedHours: number
     overtimeHours: number
     nightHours: number
@@ -160,6 +221,16 @@ export interface EmploymentContractDocument extends DocumentMetadata {
   snapshot: EmploymentContractSnapshot
 }
 
+export interface Section37Document extends DocumentMetadata {
+  documentType: 'section37_information'
+  snapshot: Section37Snapshot
+}
+
+export interface HandoverProtocolDocument extends DocumentMetadata {
+  documentType: 'handover_protocol'
+  snapshot: HandoverProtocolSnapshot
+}
+
 export interface TimeSheetStatementDocument extends DocumentMetadata {
   documentType: 'time_sheet_statement'
   snapshot: TimeSheetStatementSnapshot
@@ -173,6 +244,11 @@ export interface IssuedPayslipDocument extends DocumentMetadata {
 export interface EmployeeSettings {
   id: string
   name: string
+  firstName?: string
+  lastName?: string
+  birthDate?: string
+  address?: string
+  personalNumberInternal?: string
   employeeNumber: string
   permanentAddress: string
   status: EmployeeLifecycleStatus
@@ -182,8 +258,16 @@ export interface EmployeeSettings {
   contractJobTitle: string
   contractWorkplace: string
   contractWorkSchedule: string
-  probationMonths?: number
-  fixedTermEndDate?: string
+  contractConclusionDate?: string
+  signaturePlace?: string
+  durationType?: 'indefinite' | 'fixed_term'
+  isManager?: boolean
+  probationEnabled?: boolean
+  probationMonths?: number | null
+  fixedTermEndDate?: string | null
+  grossMonthlyWage?: number
+  annualVacationWeeks?: number
+  employeeReceivedCopyAt?: string
   workload: number
   shiftOperation: ShiftOperationType
   weeklyHours: number
@@ -220,6 +304,8 @@ export interface TimeRecord {
   shift: ShiftType
   arrival: string
   departure: string
+  breakStart?: string
+  breakEnd?: string
 }
 
 export interface Holiday {

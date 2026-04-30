@@ -67,8 +67,11 @@ function calcRawDuration(arrival: string, departure: string): number {
   return Math.max(0, dep - a)
 }
 
-function calcBreak(shift: ShiftType, arrival: string, departure: string, standardBreak: number): number {
+function calcBreak(shift: ShiftType, arrival: string, departure: string, standardBreak: number, breakStart?: string, breakEnd?: string): number {
   if (!['ranní', 'odpolední', 'noční', 'přesčas'].includes(shift)) return 0
+  if (breakStart && breakEnd) {
+    return Math.min(calcRawDuration(breakStart, breakEnd), calcRawDuration(arrival, departure))
+  }
   return calcRawDuration(arrival, departure) >= 6 ? standardBreak : 0
 }
 
@@ -149,7 +152,7 @@ export interface DayCalc {
 
 export function calculateDay(rec: TimeRecord, emp: EmployeeSettings, holidays: Holiday[]): DayCalc {
   const dailyFund = getEmployeeDailyFund(emp)
-  const brk = calcBreak(rec.shift, rec.arrival, rec.departure, emp.standardBreak)
+  const brk = calcBreak(rec.shift, rec.arrival, rec.departure, emp.standardBreak, rec.breakStart, rec.breakEnd)
   const worked = calcWorked(rec.arrival, rec.departure, brk)
   const hol = findHoliday(rec.date, holidays)
   const isHol = !!hol

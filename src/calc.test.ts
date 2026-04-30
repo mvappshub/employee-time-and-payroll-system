@@ -493,6 +493,22 @@ describe("calculateDay", () => {
     expect(day.worked).toBe(8);
   });
 
+  it("uses explicit break start and end when filled in the timesheet", () => {
+    const record: TimeRecord = {
+      date: "2026-04-07",
+      shift: "ranní",
+      arrival: "06:00",
+      departure: "14:30",
+      breakStart: "11:00",
+      breakEnd: "11:30",
+    };
+
+    const day = calculateDay(record, employee, []);
+
+    expect(day.breakHours).toBe(0.5);
+    expect(day.worked).toBe(8);
+  });
+
   it("does not subtract a meal break from a short shift under six hours", () => {
     const customEmployee = { ...employee, standardBreak: 0.75 };
     const record: TimeRecord = {

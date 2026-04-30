@@ -15,6 +15,8 @@ type TimeSheetRow = {
   shift: string
   arrival: string
   departure: string
+  breakStart: string
+  breakEnd: string
   breakHours: string
   worked: string
   planHours: string
@@ -70,6 +72,8 @@ export interface TimeSheetViewProps {
   onShiftChange: (index: number, shift: string) => void
   onArrivalChange: (index: number, value: string) => void
   onDepartureChange: (index: number, value: string) => void
+  onBreakStartChange: (index: number, value: string) => void
+  onBreakEndChange: (index: number, value: string) => void
 }
 
 export function TimeSheetView({
@@ -91,6 +95,8 @@ export function TimeSheetView({
   onShiftChange,
   onArrivalChange,
   onDepartureChange,
+  onBreakStartChange,
+  onBreakEndChange,
 }: TimeSheetViewProps) {
   return (
     <div className="space-y-2">
@@ -130,7 +136,7 @@ export function TimeSheetView({
           <table className="w-full border-collapse text-[11px]">
             <thead className="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-600">
               <tr>
-                {['Den', 'Datum', 'Směna', 'Příchod', 'Odchod', 'Přest.', 'Odprac.', 'Plán', 'Sv.kr.', 'Dovol.', 'Nemoc', 'Noční', 'Víkend', 'Svátek', 'Přesčas', 'Saldo', 'Svátek/pozn.'].map(h => (
+                {['Den', 'Datum', 'Směna', 'Příchod', 'Odchod', 'Přest. od', 'Přest. do', 'Přest.', 'Odprac.', 'Plán', 'Sv.kr.', 'Dovol.', 'Nemoc', 'Noční', 'Víkend', 'Svátek', 'Přesčas', 'Saldo', 'Svátek/pozn.'].map(h => (
                   <th key={h} className="whitespace-nowrap border-b border-slate-200 px-1.5 py-1.5 text-left font-semibold">{h}</th>
                 ))}
               </tr>
@@ -176,6 +182,26 @@ export function TimeSheetView({
                       />
                     ) : ''}
                   </td>
+                  <td className="px-1.5">
+                    {row.isTimeEditable ? (
+                      <input
+                        type="time"
+                        value={row.breakStart}
+                        onChange={e => onBreakStartChange(index, e.target.value)}
+                        className="h-5 w-[72px] rounded border border-transparent bg-transparent px-0.5 text-[11px] tabular hover:border-slate-300 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500/20"
+                      />
+                    ) : ''}
+                  </td>
+                  <td className="px-1.5">
+                    {row.isTimeEditable ? (
+                      <input
+                        type="time"
+                        value={row.breakEnd}
+                        onChange={e => onBreakEndChange(index, e.target.value)}
+                        className="h-5 w-[72px] rounded border border-transparent bg-transparent px-0.5 text-[11px] tabular hover:border-slate-300 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500/20"
+                      />
+                    ) : ''}
+                  </td>
                   <td className="px-1.5 text-center tabular text-slate-500">{row.breakHours}</td>
                   <td className="px-1.5 text-center tabular font-medium text-slate-900">{row.worked}</td>
                   <td className="px-1.5 text-center tabular text-slate-500">{row.planHours}</td>
@@ -195,7 +221,7 @@ export function TimeSheetView({
             </tbody>
             <tfoot>
               <tr className="h-7 border-t-2 border-slate-300 bg-slate-50 font-semibold text-slate-900">
-                <td className="px-1.5" colSpan={5}>Σ celkem</td>
+                <td className="px-1.5" colSpan={7}>Σ celkem</td>
                 <td className="px-1.5 text-center tabular"></td>
                 <td className="px-1.5 text-center tabular">{summary.workedHours}</td>
                 <td className="px-1.5 text-center tabular">{summary.workHoursWH}</td>

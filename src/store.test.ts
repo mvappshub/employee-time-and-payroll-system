@@ -12,6 +12,7 @@ function resetStore() {
     paySlipInputsByEmployee: {},
     monthStatusByEmployee: {},
     payrollByEmployee: {},
+    timeSheetPresets: [],
     currentMonth: '2026-04',
     section: 'employees',
   })
@@ -76,11 +77,11 @@ describe('store workflow cache', () => {
     expect(useStore.getState().monthStatusByEmployee[employeeId]['2030-01']).toBe('draft')
   })
 
-  it('can load the special shift preset without changing the regular prefill', () => {
+  it('can load the built-in special shift preset without changing the regular prefill', () => {
     const employeeId = createPersistedEmployee()
 
     useStore.getState().initEmployeeMonth(employeeId, '2026-01')
-    useStore.getState().prefillSpecialEmployeeMonth(employeeId, '2026-01')
+    useStore.getState().applyTimeSheetPreset(employeeId, '2026-01', 'builtin-special')
 
     const records = useStore.getState().recordsByEmployee[employeeId]['2026-01']
     expect(records[0]).toMatchObject({ date: '2026-01-01', shift: 'ranní', arrival: '06:00', departure: '14:00' })
@@ -88,6 +89,22 @@ describe('store workflow cache', () => {
     expect(records[2]).toMatchObject({ date: '2026-01-03', shift: 'volno', arrival: '', departure: '' })
     expect(records[3]).toMatchObject({ date: '2026-01-04', shift: 'odpolední', arrival: '14:00', departure: '06:00' })
     expect(records[4]).toMatchObject({ date: '2026-01-05', shift: 'volno', arrival: '', departure: '' })
+  })
+
+  it('saves the current weekday layout as a reusable preset', () => {
+    const employeeId = createPersistedEmployee()
+
+    useStore.getState().initEmployeeMonth(employeeId, '2026-01')
+    useStore.getState().updateRecord(employeeId, '2026-01', 0, { shift: 'ranní', arrival: '07:00', departure: '15:30' })
+    useStore.getState().updateRecord(employeeId, '2026-01', 1, { shift: 'odpolední', arrival: '13:00', departure: '21:30' })
+    const presetId = useStore.getState().saveTimeSheetPreset('Moje směny', useStore.getState().recordsByEmployee[employeeId]['2026-01'])
+
+    useStore.getState().initEmployeeMonth(employeeId, '2026-02')
+    useStore.getState().applyTimeSheetPreset(employeeId, '2026-02', presetId)
+
+    const records = useStore.getState().recordsByEmployee[employeeId]['2026-02']
+    expect(records[4]).toMatchObject({ date: '2026-02-05', shift: 'ranní', arrival: '07:00', departure: '15:30' })
+    expect(records[5]).toMatchObject({ date: '2026-02-06', shift: 'odpolední', arrival: '13:00', departure: '21:30' })
   })
 
   it('returns month status from payroll phase to time_saved after editing closed evidence', () => {

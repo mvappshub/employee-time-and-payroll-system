@@ -5,6 +5,7 @@ import { useMonthControls } from '../../application/useMonthControls'
 import { useTimeSheetScreen } from '../../application/useTimeSheetScreen'
 import { Button } from '../../components/ui/Button'
 import { EmptyState } from '../../components/ui/EmptyState'
+import { Select } from '../../components/ui/Select'
 import { useStore } from '../../infrastructure/state/store'
 import { cn } from '../../utils/cn'
 import { EmployeeMonthOverview } from '../employees/EmployeeMonthOverview'
@@ -154,8 +155,22 @@ export function TimeTrackingMainScreen({
           onPrintDocument={timeSheet.onPrintDocument}
           extraActions={(
             <>
-              <Button variant="secondary" size="xs" onClick={timeSheet.onLoadSpecialPreset} disabled={!timeSheet.canLoadSpecialPreset}>
-                Speciální směny
+              <Select
+                density="compact"
+                aria-label="Preset směn"
+                value={timeSheet.selectedPresetId}
+                onChange={event => timeSheet.onPresetChange(event.target.value)}
+                className="w-44"
+              >
+                {timeSheet.presetOptions.map(option => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </Select>
+              <Button variant="secondary" size="xs" onClick={timeSheet.onApplySelectedPreset} disabled={!timeSheet.canApplyPreset}>
+                Načíst preset
+              </Button>
+              <Button variant="ghost" size="xs" onClick={timeSheet.onSaveCurrentAsPreset} disabled={!timeSheet.canSavePreset}>
+                Uložit preset
               </Button>
               <Button variant="primary" size="xs" onClick={monthControls.onCloseAndCalculate} disabled={!monthControls.buttonState.canCloseAndCalculate}>
                 Uzavřít a spočítat

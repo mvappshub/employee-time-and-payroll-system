@@ -80,6 +80,60 @@ type PayrollMonthState = Partial<Omit<EmployeeMonth, 'employeeId' | 'month' | 's
   payrollResult?: EmployeeMonth['payrollResult']
 }
 
+export interface TimeSheetPresetDay {
+  weekday: number
+  shift: ShiftType
+  arrival: string
+  departure: string
+}
+
+export interface TimeSheetPreset {
+  id: string
+  name: string
+  days: TimeSheetPresetDay[]
+  builtIn?: boolean
+}
+
+function weekdayTemplate(day: number, shift: ShiftType, arrival = '', departure = ''): TimeSheetPresetDay {
+  return { weekday: day, shift, arrival, departure }
+}
+
+function workweekPreset(id: string, name: string, arrival: string, departure: string): TimeSheetPreset {
+  return {
+    id,
+    name,
+    builtIn: true,
+    days: [
+      weekdayTemplate(1, 'ranní', arrival, departure),
+      weekdayTemplate(2, 'ranní', arrival, departure),
+      weekdayTemplate(3, 'ranní', arrival, departure),
+      weekdayTemplate(4, 'ranní', arrival, departure),
+      weekdayTemplate(5, 'ranní', arrival, departure),
+      weekdayTemplate(6, 'volno'),
+      weekdayTemplate(0, 'volno'),
+    ],
+  }
+}
+
+export const builtInTimeSheetPresets: TimeSheetPreset[] = [
+  workweekPreset('builtin-morning-0600', 'Klasická ranní 6:00-14:30', '06:00', '14:30'),
+  workweekPreset('builtin-office-0800', 'Po-Pá 8:00-16:30', '08:00', '16:30'),
+  {
+    id: 'builtin-special',
+    name: 'Speciální směny',
+    builtIn: true,
+    days: [
+      weekdayTemplate(1, 'volno'),
+      weekdayTemplate(2, 'volno'),
+      weekdayTemplate(3, 'volno'),
+      weekdayTemplate(4, 'ranní', '06:00', '14:00'),
+      weekdayTemplate(5, 'odpolední', '14:00', '06:00'),
+      weekdayTemplate(6, 'volno'),
+      weekdayTemplate(0, 'odpolední', '14:00', '06:00'),
+    ],
+  },
+]
+
 function makeId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID()
@@ -125,6 +179,25 @@ function normalizePaySlipInputs(paySlipInputs?: Partial<PaySlipInputs>): PaySlip
   }
 }
 
+function normalizeTimeSheetPresets(presets?: Partial<TimeSheetPreset>[]): TimeSheetPreset[] {
+  return (presets || []).flatMap((preset) => {
+    if (!preset.id || !preset.name || !Array.isArray(preset.days)) return []
+    return [{
+      id: preset.id,
+      name: preset.name,
+      days: Array.from({ length: 7 }, (_, weekday) => {
+        const day = preset.days?.find(item => item.weekday === weekday)
+        return weekdayTemplate(
+          weekday,
+          day?.shift || 'volno',
+          day?.arrival || '',
+          day?.departure || '',
+        )
+      }),
+    }]
+  })
+}
+
 export function buildEmptyMonthRecords(month: string): TimeRecord[] {
   return getDaysInMonth(month).map(date => ({
     date,
@@ -143,13 +216,34 @@ export function buildPrefilledMonthRecords(month: string, employee: EmployeeSett
   }))
 }
 
-export function buildSpecialShiftPresetMonthRecords(month: string): TimeRecord[] {
+export function buildMonthRecordsFromPreset(month: string, preset: TimeSheetPreset): TimeRecord[] {
+  const templateByWeekday = new Map(preset.days.map(day => [day.weekday, day]))
   return getDaysInMonth(month).map(date => {
     const day = new Date(date + 'T12:00:00').getDay()
-    if (day === 4) return { date, shift: 'ranní' as ShiftType, arrival: '06:00', departure: '14:00' }
-    if (day === 5 || day === 0) return { date, shift: 'odpolední' as ShiftType, arrival: '14:00', departure: '06:00' }
-    return { date, shift: 'volno' as ShiftType, arrival: '', departure: '' }
+    const template = templateByWeekday.get(day)
+    return {
+      date,
+      shift: template?.shift || 'volno',
+      arrival: template?.arrival || '',
+      departure: template?.departure || '',
+    }
   })
+}
+
+export function buildTimeSheetPresetFromRecords(id: string, name: string, records: TimeRecord[]): TimeSheetPreset {
+  return {
+    id,
+    name,
+    days: Array.from({ length: 7 }, (_, weekday) => {
+      const record = records.find(item => new Date(item.date + 'T12:00:00').getDay() === weekday)
+      return weekdayTemplate(
+        weekday,
+        record?.shift || 'volno',
+        record?.arrival || '',
+        record?.departure || '',
+      )
+    }),
+  }
 }
 
 export function buildInitialEmployeeMonthRecords(month: string, employee?: EmployeeSettings | null): TimeRecord[] {
@@ -210,6 +304,7 @@ export interface Store {
   paySlipInputsByEmployee: Record<string, Record<string, PaySlipInputs>>
   monthStatusByEmployee: Record<string, Record<string, MonthStatus>>
   payrollByEmployee: Record<string, Record<string, PayrollMonthState>>
+  timeSheetPresets: TimeSheetPreset[]
   section: 'employees' | 'time-tracking' | 'payroll' | 'company' | 'holidays'
   setEmployer: (u: Partial<EmployerProfile>) => void
   setSection: (s: Store['section']) => void
@@ -221,7 +316,8 @@ export interface Store {
   archiveEmployee: (employeeId: string) => void
   initEmployeeMonth: (employeeId: string, month: string) => void
   prefillEmployeeMonth: (employeeId: string, month: string) => void
-  prefillSpecialEmployeeMonth: (employeeId: string, month: string) => void
+  applyTimeSheetPreset: (employeeId: string, month: string, presetId: string) => void
+  saveTimeSheetPreset: (name: string, records: TimeRecord[]) => string
   saveEmployeeMonth: (employeeId: string, month: string) => void
   closeEmployeeTime: (employeeId: string, month: string) => void
   calculateEmployeePayroll: (employeeId: string, month: string, payload?: PayrollMonthState) => void
@@ -250,6 +346,7 @@ export const useStore = create<Store>()(
       paySlipInputsByEmployee: {},
       monthStatusByEmployee: {},
       payrollByEmployee: {},
+      timeSheetPresets: [],
       section: 'employees',
 
       setEmployer: (u) => set(s => ({ employer: normalizeEmployerProfile({ ...s.employer, ...u }) })),
@@ -359,15 +456,17 @@ export const useStore = create<Store>()(
         })
       },
 
-      prefillSpecialEmployeeMonth: (employeeId, month) => {
+      applyTimeSheetPreset: (employeeId, month, presetId) => {
         const state = get()
+        const preset = [...builtInTimeSheetPresets, ...state.timeSheetPresets].find(item => item.id === presetId)
+        if (!preset) return
         const employeeRecords = withEmployeeMonthMap(state.recordsByEmployee, employeeId)
         const employeeInputs = withEmployeeMonthMap(state.paySlipInputsByEmployee, employeeId)
         const employeeStatuses = withEmployeeMonthMap(state.monthStatusByEmployee, employeeId)
         set({
           recordsByEmployee: {
             ...state.recordsByEmployee,
-            [employeeId]: { ...employeeRecords, [month]: buildSpecialShiftPresetMonthRecords(month) },
+            [employeeId]: { ...employeeRecords, [month]: buildMonthRecordsFromPreset(month, preset) },
           },
           paySlipInputsByEmployee: {
             ...state.paySlipInputsByEmployee,
@@ -381,10 +480,22 @@ export const useStore = create<Store>()(
             ...state.payrollByEmployee,
             [employeeId]: {
               ...withEmployeeMonthMap(state.payrollByEmployee, employeeId),
-              [month]: appendAudit(withEmployeeMonthMap(state.payrollByEmployee, employeeId)[month], 'prefill-special-shift-preset'),
+              [month]: appendAudit(withEmployeeMonthMap(state.payrollByEmployee, employeeId)[month], 'apply-time-sheet-preset', preset.name),
             },
           },
         })
+      },
+
+      saveTimeSheetPreset: (name, records) => {
+        const id = `preset-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+        const preset = buildTimeSheetPresetFromRecords(id, name, records)
+        set(s => ({
+          timeSheetPresets: [
+            ...s.timeSheetPresets.filter(item => item.name.toLowerCase() !== name.toLowerCase()),
+            preset,
+          ],
+        }))
+        return id
       },
 
       saveEmployeeMonth: (employeeId, month) => {
@@ -652,6 +763,7 @@ export const useStore = create<Store>()(
       partialize: (state) => ({
         employer: state.employer,
         holidays: state.holidays,
+        timeSheetPresets: state.timeSheetPresets,
         currentMonth: state.currentMonth,
         selectedEmployeeId: state.selectedEmployeeId,
         section: state.section,
@@ -668,6 +780,7 @@ export const useStore = create<Store>()(
           paySlipInputsByEmployee: {},
           monthStatusByEmployee: {},
           payrollByEmployee: {},
+          timeSheetPresets: normalizeTimeSheetPresets(state?.timeSheetPresets),
           section: ['employees', 'time-tracking', 'payroll', 'company', 'holidays'].includes(String(state?.section))
             ? state?.section
             : 'employees',

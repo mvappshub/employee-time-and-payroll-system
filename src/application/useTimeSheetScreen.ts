@@ -5,7 +5,7 @@ import { saveEmployeeMonth as saveEmployeeMonthApi } from '../infrastructure/api
 import { autosaveEmployeeMonthDraft } from './autosaveMonth'
 import { defaultPaySlipInputs } from './defaults'
 import { formatCompactNumber, formatMonthLabel } from './formatters'
-import { useStore } from '../infrastructure/state/store'
+import { builtInTimeSheetPresets, useStore } from '../infrastructure/state/store'
 import type { EmployeeMonth, ShiftType, TimeRecord } from '../domain/shared/types'
 import { isTimeClosedOrLater, isTimeSavedOrLater } from '../domain/monthWorkflow'
 import { printWithRetry } from '../adapters/browser/printWithRetry'
@@ -25,13 +25,16 @@ export function useTimeSheetScreen() {
   const updateRecord = useStore(s => s.updateRecord)
   const resetEmployeeMonth = useStore(s => s.resetEmployeeMonth)
   const prefillEmployeeMonth = useStore(s => s.prefillEmployeeMonth)
-  const prefillSpecialEmployeeMonth = useStore(s => s.prefillSpecialEmployeeMonth)
+  const applyTimeSheetPreset = useStore(s => s.applyTimeSheetPreset)
+  const saveTimeSheetPreset = useStore(s => s.saveTimeSheetPreset)
+  const customTimeSheetPresets = useStore(s => s.timeSheetPresets)
   const paySlipInputsByEmployee = useStore(s => s.paySlipInputsByEmployee)
   const setPayrollMonthState = useStore(s => s.setPayrollMonthState)
 
   const [info, setInfo] = useState('')
   const [error, setError] = useState('')
   const [showDocumentPreview, setShowDocumentPreview] = useState(false)
+  const [selectedPresetId, setSelectedPresetId] = useState(builtInTimeSheetPresets[0]?.id || '')
 
   const employee = employees.find(item => item.id === selectedEmployeeId) || null
   const monthExists = selectedEmployeeId ? typeof monthStatusByEmployee[selectedEmployeeId]?.[month] !== 'undefined' : false
@@ -134,6 +137,11 @@ export function useTimeSheetScreen() {
     canPreviewDocument: !documentBlockedReason && Boolean(timeSheetDocument),
     documentBlockedReason: documentBlockedReason || '',
     shiftOptions: SHIFTS.map(value => ({ value, label: value || '—' })),
+    presetOptions: [...builtInTimeSheetPresets, ...customTimeSheetPresets].map(preset => ({
+      value: preset.id,
+      label: preset.name,
+    })),
+    selectedPresetId,
     summary: {
       calendarWorkDays: summary.calendarWorkDays,
       freeDaysInMonth: summary.freeDaysInMonth,
@@ -186,19 +194,40 @@ export function useTimeSheetScreen() {
       if (!selectedEmployeeId) return
       resetEmployeeMonth(selectedEmployeeId, month)
     },
-    canLoadSpecialPreset: Boolean(selectedEmployeeId && monthExists && (monthStatus === 'draft' || monthStatus === 'time_saved')),
-    onLoadSpecialPreset: () => {
+    canApplyPreset: Boolean(selectedEmployeeId && monthExists && (monthStatus === 'draft' || monthStatus === 'time_saved')),
+    canSavePreset: monthRecords.length > 0,
+    onPresetChange: (presetId: string) => {
+      setSelectedPresetId(presetId)
+    },
+    onApplySelectedPreset: () => {
       if (!selectedEmployeeId) return
       if (!monthExists) {
         setInfo('Měsíc ještě není založen.')
         return
       }
       if (monthStatus !== 'draft' && monthStatus !== 'time_saved') {
-        setInfo('Speciální přednastavení lze načíst jen před uzavřením evidence.')
+        setInfo('Preset lze načíst jen před uzavřením evidence.')
         return
       }
-      prefillSpecialEmployeeMonth(selectedEmployeeId, month)
-      setInfo('Speciální přednastavení směn bylo načteno.')
+      if (!selectedPresetId) {
+        setInfo('Vyberte preset směn.')
+        return
+      }
+      applyTimeSheetPreset(selectedEmployeeId, month, selectedPresetId)
+      setInfo('Preset směn byl načten.')
+      setError('')
+    },
+    onSaveCurrentAsPreset: () => {
+      if (monthRecords.length === 0) {
+        setInfo('Nejdřív nastavte směny v měsíci.')
+        return
+      }
+      const name = window.prompt('Název presetu směn')
+      const trimmed = name?.trim()
+      if (!trimmed) return
+      const presetId = saveTimeSheetPreset(trimmed, monthRecords)
+      setSelectedPresetId(presetId)
+      setInfo('Preset směn byl uložen.')
       setError('')
     },
     onToggleDocumentPreview: () => {

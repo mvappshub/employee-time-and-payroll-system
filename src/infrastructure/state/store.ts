@@ -143,6 +143,15 @@ export function buildPrefilledMonthRecords(month: string, employee: EmployeeSett
   }))
 }
 
+export function buildSpecialShiftPresetMonthRecords(month: string): TimeRecord[] {
+  return getDaysInMonth(month).map(date => {
+    const day = new Date(date + 'T12:00:00').getDay()
+    if (day === 4) return { date, shift: 'ranní' as ShiftType, arrival: '06:00', departure: '14:00' }
+    if (day === 5 || day === 0) return { date, shift: 'odpolední' as ShiftType, arrival: '14:00', departure: '06:00' }
+    return { date, shift: 'volno' as ShiftType, arrival: '', departure: '' }
+  })
+}
+
 export function buildInitialEmployeeMonthRecords(month: string, employee?: EmployeeSettings | null): TimeRecord[] {
   return employee ? buildPrefilledMonthRecords(month, employee) : buildEmptyMonthRecords(month)
 }
@@ -212,6 +221,7 @@ export interface Store {
   archiveEmployee: (employeeId: string) => void
   initEmployeeMonth: (employeeId: string, month: string) => void
   prefillEmployeeMonth: (employeeId: string, month: string) => void
+  prefillSpecialEmployeeMonth: (employeeId: string, month: string) => void
   saveEmployeeMonth: (employeeId: string, month: string) => void
   closeEmployeeTime: (employeeId: string, month: string) => void
   calculateEmployeePayroll: (employeeId: string, month: string, payload?: PayrollMonthState) => void
@@ -344,6 +354,34 @@ export const useStore = create<Store>()(
             [employeeId]: {
               ...withEmployeeMonthMap(state.payrollByEmployee, employeeId),
               [month]: appendAudit(withEmployeeMonthMap(state.payrollByEmployee, employeeId)[month], 'prefill-month'),
+            },
+          },
+        })
+      },
+
+      prefillSpecialEmployeeMonth: (employeeId, month) => {
+        const state = get()
+        const employeeRecords = withEmployeeMonthMap(state.recordsByEmployee, employeeId)
+        const employeeInputs = withEmployeeMonthMap(state.paySlipInputsByEmployee, employeeId)
+        const employeeStatuses = withEmployeeMonthMap(state.monthStatusByEmployee, employeeId)
+        set({
+          recordsByEmployee: {
+            ...state.recordsByEmployee,
+            [employeeId]: { ...employeeRecords, [month]: buildSpecialShiftPresetMonthRecords(month) },
+          },
+          paySlipInputsByEmployee: {
+            ...state.paySlipInputsByEmployee,
+            [employeeId]: { ...employeeInputs, [month]: normalizePaySlipInputs(employeeInputs[month]) },
+          },
+          monthStatusByEmployee: {
+            ...state.monthStatusByEmployee,
+            [employeeId]: { ...employeeStatuses, [month]: 'draft' },
+          },
+          payrollByEmployee: {
+            ...state.payrollByEmployee,
+            [employeeId]: {
+              ...withEmployeeMonthMap(state.payrollByEmployee, employeeId),
+              [month]: appendAudit(withEmployeeMonthMap(state.payrollByEmployee, employeeId)[month], 'prefill-special-shift-preset'),
             },
           },
         })

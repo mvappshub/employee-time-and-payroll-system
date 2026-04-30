@@ -153,9 +153,14 @@ export function TimeTrackingMainScreen({
           onToggleDocumentPreview={timeSheet.onToggleDocumentPreview}
           onPrintDocument={timeSheet.onPrintDocument}
           extraActions={(
-            <Button variant="primary" size="xs" onClick={monthControls.onCloseAndCalculate} disabled={!monthControls.buttonState.canCloseAndCalculate}>
-              Uzavřít a spočítat
-            </Button>
+            <>
+              <Button variant="secondary" size="xs" onClick={timeSheet.onLoadSpecialPreset} disabled={!timeSheet.canLoadSpecialPreset}>
+                Speciální směny
+              </Button>
+              <Button variant="primary" size="xs" onClick={monthControls.onCloseAndCalculate} disabled={!monthControls.buttonState.canCloseAndCalculate}>
+                Uzavřít a spočítat
+              </Button>
+            </>
           )}
           onShiftChange={timeSheet.onShiftChange}
           onArrivalChange={timeSheet.onArrivalChange}

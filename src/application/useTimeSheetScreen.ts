@@ -25,6 +25,7 @@ export function useTimeSheetScreen() {
   const updateRecord = useStore(s => s.updateRecord)
   const resetEmployeeMonth = useStore(s => s.resetEmployeeMonth)
   const prefillEmployeeMonth = useStore(s => s.prefillEmployeeMonth)
+  const prefillSpecialEmployeeMonth = useStore(s => s.prefillSpecialEmployeeMonth)
   const paySlipInputsByEmployee = useStore(s => s.paySlipInputsByEmployee)
   const setPayrollMonthState = useStore(s => s.setPayrollMonthState)
 
@@ -184,6 +185,21 @@ export function useTimeSheetScreen() {
     onResetMonth: () => {
       if (!selectedEmployeeId) return
       resetEmployeeMonth(selectedEmployeeId, month)
+    },
+    canLoadSpecialPreset: Boolean(selectedEmployeeId && monthExists && (monthStatus === 'draft' || monthStatus === 'time_saved')),
+    onLoadSpecialPreset: () => {
+      if (!selectedEmployeeId) return
+      if (!monthExists) {
+        setInfo('Měsíc ještě není založen.')
+        return
+      }
+      if (monthStatus !== 'draft' && monthStatus !== 'time_saved') {
+        setInfo('Speciální přednastavení lze načíst jen před uzavřením evidence.')
+        return
+      }
+      prefillSpecialEmployeeMonth(selectedEmployeeId, month)
+      setInfo('Speciální přednastavení směn bylo načteno.')
+      setError('')
     },
     onToggleDocumentPreview: () => {
       setShowDocumentPreview(value => !value)

@@ -76,6 +76,20 @@ describe('store workflow cache', () => {
     expect(useStore.getState().monthStatusByEmployee[employeeId]['2030-01']).toBe('draft')
   })
 
+  it('can load the special shift preset without changing the regular prefill', () => {
+    const employeeId = createPersistedEmployee()
+
+    useStore.getState().initEmployeeMonth(employeeId, '2026-01')
+    useStore.getState().prefillSpecialEmployeeMonth(employeeId, '2026-01')
+
+    const records = useStore.getState().recordsByEmployee[employeeId]['2026-01']
+    expect(records[0]).toMatchObject({ date: '2026-01-01', shift: 'ranní', arrival: '06:00', departure: '14:00' })
+    expect(records[1]).toMatchObject({ date: '2026-01-02', shift: 'odpolední', arrival: '14:00', departure: '06:00' })
+    expect(records[2]).toMatchObject({ date: '2026-01-03', shift: 'volno', arrival: '', departure: '' })
+    expect(records[3]).toMatchObject({ date: '2026-01-04', shift: 'odpolední', arrival: '14:00', departure: '06:00' })
+    expect(records[4]).toMatchObject({ date: '2026-01-05', shift: 'volno', arrival: '', departure: '' })
+  })
+
   it('returns month status from payroll phase to time_saved after editing closed evidence', () => {
     const employeeId = createPersistedEmployee()
     useStore.getState().initEmployeeMonth(employeeId, '2030-06')

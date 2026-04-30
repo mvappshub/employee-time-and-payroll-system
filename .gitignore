@@ -10,5 +10,14 @@ month-data/employees/*/
 .kilo/
 .planner-reviewer/
 .playwright-mcp/
+.playwright-cli/
 output/
 output-*.log
+*-employees-list.png
+*-month-detail.png
+*-year-overview.png
+*-employee-detail.png
+*-payroll-overview.png
+*-payroll-month-detail.png
+*-company.png
+*-holidays.png

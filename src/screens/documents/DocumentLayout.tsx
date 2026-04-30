@@ -1,5 +1,22 @@
 import type { ReactNode } from 'react'
 
+function formatIssuedDate(value?: string): string | null {
+  if (!value) {
+    return null
+  }
+
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return value
+  }
+
+  return new Intl.DateTimeFormat('cs-CZ', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(date)
+}
+
 export function DocumentLayout({
   documentId,
   title,
@@ -15,18 +32,27 @@ export function DocumentLayout({
   children: ReactNode
   footer?: ReactNode
 }) {
+  const formattedIssuedAt = formatIssuedDate(issuedAt)
+
   return (
     <article
       data-print-document={documentId}
-      className="document-sheet rounded-lg border border-slate-200 bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.08)]"
+      className="document-sheet"
     >
-      <header className="mb-5 border-b border-slate-200 pb-4">
-        <div className="text-xl font-semibold text-slate-900">{title}</div>
-        <div className="mt-1 text-[13px] text-slate-600">{subtitle}</div>
-        {issuedAt && <div className="mt-3 text-[12px] text-slate-500">Datum vystavení: {issuedAt}</div>}
+      <header className="document-header">
+        <div>
+          <h1 className="document-title">{title}</h1>
+          <p className="document-subtitle">{subtitle}</p>
+        </div>
+        {formattedIssuedAt && (
+          <div className="document-issued-box">
+            <span>Datum vystavení</span>
+            <strong>{formattedIssuedAt}</strong>
+          </div>
+        )}
       </header>
-      <div className="space-y-4 text-[13px] leading-6 text-slate-700">{children}</div>
-      {footer && <footer className="mt-6 border-t border-slate-200 pt-4">{footer}</footer>}
+      <div className="document-body">{children}</div>
+      {footer && <footer className="document-footer">{footer}</footer>}
     </article>
   )
 }
@@ -39,8 +65,8 @@ export function DocumentPart({
   children: ReactNode
 }) {
   return (
-    <section>
-      <div className="mb-2 text-sm font-semibold text-slate-900">{heading}</div>
+    <section className="document-part">
+      <h2 className="document-part-title">{heading}</h2>
       {children}
     </section>
   )
@@ -52,13 +78,49 @@ export function DocumentMetaGrid({
   rows: Array<{ label: string; value: string }>
 }) {
   return (
-    <div className="grid gap-3 md:grid-cols-2">
+    <dl className="document-meta-grid">
       {rows.map(row => (
-        <div key={row.label} className="rounded-md border border-slate-200 px-3 py-2">
-          <div className="text-[11px] font-medium text-slate-500">{row.label}</div>
-          <div className="mt-1 text-[13px] text-slate-900">{row.value || '—'}</div>
+        <div key={row.label} className="document-meta-row">
+          <dt>{row.label}</dt>
+          <dd>{row.value || '—'}</dd>
         </div>
       ))}
+    </dl>
+  )
+}
+
+export function DocumentSignatureGrid({
+  signatures,
+}: {
+  signatures: Array<{ label: string; name: string; role?: string }>
+}) {
+  return (
+    <div className="document-signatures">
+      {signatures.map(signature => (
+        <div key={signature.label} className="document-signature">
+          <div className="document-signature-line" />
+          <div className="document-signature-label">{signature.label}</div>
+          <div className="document-signature-name">{signature.name}</div>
+          {signature.role && <div className="document-signature-role">{signature.role}</div>}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+export function DocumentTotalLine({
+  label,
+  value,
+  primary = false,
+}: {
+  label: string
+  value: string
+  primary?: boolean
+}) {
+  return (
+    <div className={`document-total-line${primary ? ' document-total-line--primary' : ''}`}>
+      <span>{label}</span>
+      <strong>{value}</strong>
     </div>
   )
 }

@@ -43,4 +43,34 @@ describe('UI architecture boundaries', () => {
     expect(app).not.toContain("from '../TimeSheet'")
     expect(app).not.toContain("from '../Employee'")
   })
+
+  it('document layout is a paper document, not an app card', () => {
+    const documentLayout = readFileSync(new URL('./screens/documents/DocumentLayout.tsx', import.meta.url), 'utf8')
+    const sheetClassMatch = documentLayout.match(/className="document-sheet([^"]*)"/)
+
+    expect(sheetClassMatch?.[0]).toBe('className="document-sheet"')
+    expect(sheetClassMatch?.[0]).not.toContain('rounded')
+    expect(sheetClassMatch?.[0]).not.toContain('shadow')
+    expect(sheetClassMatch?.[0]).not.toContain('border-slate')
+    expect(sheetClassMatch?.[0]).not.toContain('text-slate')
+  })
+
+  it('document views use print-oriented document tables', () => {
+    const payslipDocumentView = readFileSync(new URL('./screens/documents/IssuedPayslipDocumentView.tsx', import.meta.url), 'utf8')
+    const timeSheetDocumentView = readFileSync(new URL('./screens/documents/TimeSheetStatementDocumentView.tsx', import.meta.url), 'utf8')
+
+    expect(payslipDocumentView).toContain('document-table document-table--financial')
+    expect(payslipDocumentView).toContain('DocumentTotalLine')
+    expect(timeSheetDocumentView).toContain('document-table document-table--compact')
+  })
+
+  it('print CSS isolates only the active document and declares A4 paper', () => {
+    const css = readFileSync(new URL('./styles/index.css', import.meta.url), 'utf8')
+
+    expect(css).toContain('@page')
+    expect(css).toContain('size: A4')
+    expect(css).toContain('[data-print-document][data-print-active="true"]')
+    expect(css).toContain('[data-print-document]:not([data-print-active="true"])')
+    expect(css).toContain('table-header-group')
+  })
 })

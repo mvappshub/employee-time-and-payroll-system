@@ -1,5 +1,5 @@
 import type { IssuedPayslipDocument } from '../../domain/shared/types'
-import { DocumentLayout, DocumentMetaGrid, DocumentPart } from './DocumentLayout'
+import { DocumentLayout, DocumentMetaGrid, DocumentPart, DocumentTotalLine } from './DocumentLayout'
 
 export function IssuedPayslipDocumentView({
   document,
@@ -43,14 +43,14 @@ export function IssuedPayslipDocumentView({
       </DocumentPart>
       <DocumentPart heading="Mzdové položky">
         <DocumentRows rows={earningsRows} />
-        <div className="mt-3 border-t-2 border-slate-400 pt-2 text-right text-sm font-semibold">Hrubá mzda: {grossWage}</div>
+        <DocumentTotalLine label="Hrubá mzda" value={grossWage} />
       </DocumentPart>
       <DocumentPart heading="Odvody a daň">
         <DocumentRows rows={contributionRows} />
-        <div className="mt-3 border-t border-slate-300 pt-3">
+        <div className="document-table-group">
           <DocumentRows rows={taxRows} />
         </div>
-        <div className="mt-3 border-t-2 border-slate-400 pt-2 text-right text-base font-semibold">Čistá mzda: {netWage}</div>
+        <DocumentTotalLine label="Čistá mzda k výplatě" value={netWage} primary />
       </DocumentPart>
       <DocumentPart heading="Rekapitulace">
         <DocumentRows rows={recapRows} />
@@ -65,22 +65,22 @@ function DocumentRows({
   rows: Array<{ label: string; hrs?: string; days?: string; czk?: string; bold?: boolean; neg?: boolean }>
 }) {
   return (
-    <table className="w-full border-collapse text-[12px]">
+    <table className="document-table document-table--financial">
       <thead>
-        <tr className="border-b border-slate-300 text-left text-slate-500">
+        <tr>
           <th>Položka</th>
-          <th className="text-right">h</th>
-          <th className="text-right">dnů</th>
-          <th className="text-right">Kč</th>
+          <th className="document-numeric">h</th>
+          <th className="document-numeric">dnů</th>
+          <th className="document-numeric">Kč</th>
         </tr>
       </thead>
       <tbody>
         {rows.map(row => (
-          <tr key={row.label} className={`border-b border-slate-200 ${row.bold ? 'font-semibold' : ''}`}>
+          <tr key={row.label} className={row.bold ? 'document-row--strong' : undefined}>
             <td>{row.label}</td>
-            <td className="text-right">{row.hrs || ''}</td>
-            <td className="text-right">{row.days || ''}</td>
-            <td className={`text-right ${row.neg ? 'text-red-700' : ''}`}>{row.czk || ''}</td>
+            <td className="document-numeric">{row.hrs || ''}</td>
+            <td className="document-numeric">{row.days || ''}</td>
+            <td className={row.neg ? 'document-numeric document-amount--negative' : 'document-numeric'}>{row.czk || ''}</td>
           </tr>
         ))}
       </tbody>

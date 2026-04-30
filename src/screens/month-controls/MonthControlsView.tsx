@@ -13,22 +13,16 @@ export interface MonthControlsViewProps {
   buttonState: {
     canLoad: boolean
     canInitMonth: boolean
-    canSave: boolean
-    canPrefill: boolean
-    canClose: boolean
-    canCalculatePayroll: boolean
-    canApprove: boolean
-    canIssuePayslip: boolean
+    canCloseAndCalculate: boolean
+    canApproveAndIssue: boolean
+    canRequestArchive: boolean
     canPrint: boolean
   }
   onLoad: () => void | Promise<void>
   onInitMonth: () => void | Promise<void>
-  onSave: () => void | Promise<void>
-  onPrefill: () => void
-  onCloseMonth: () => void | Promise<void>
-  onCalculatePayroll: () => void | Promise<void>
-  onApproveMonth: () => void | Promise<void>
-  onIssuePayslip: () => void | Promise<void>
+  onCloseAndCalculate: () => void | Promise<void>
+  onApproveAndIssue: () => void | Promise<void>
+  onRequestArchive: () => void
   onPrintPayslip: () => void | Promise<void>
 }
 
@@ -46,20 +40,15 @@ export function MonthControlsView({
   buttonState,
   onLoad,
   onInitMonth,
-  onSave,
-  onPrefill,
-  onCloseMonth,
-  onCalculatePayroll,
-  onApproveMonth,
-  onIssuePayslip,
+  onCloseAndCalculate,
+  onApproveAndIssue,
+  onRequestArchive,
   onPrintPayslip,
 }: MonthControlsViewProps) {
   const steps = [
     { label: 'Načíst', done: buttonState.canLoad, active: false },
-    { label: 'Evidence', done: buttonState.canSave || buttonState.canClose, active: currentStatusLabel === 'Rozpracováno' || currentStatusLabel === 'Evidence uložena' },
-    { label: 'Uzavřít', done: buttonState.canCalculatePayroll || currentStatusLabel === 'Evidence uzavřena', active: currentStatusLabel === 'Evidence uzavřena' },
-    { label: 'Mzda', done: buttonState.canApprove || currentStatusLabel === 'Mzda spočítána', active: currentStatusLabel === 'Mzda spočítána' },
-    { label: 'Schválit', done: buttonState.canIssuePayslip || currentStatusLabel === 'Mzda schválena', active: currentStatusLabel === 'Mzda schválena' },
+    { label: 'Evidence', done: buttonState.canCloseAndCalculate, active: currentStatusLabel === 'Rozpracováno' || currentStatusLabel === 'Evidence uložena' },
+    { label: 'Výpočet', done: buttonState.canApproveAndIssue || currentStatusLabel === 'Mzda spočítána', active: currentStatusLabel === 'Mzda spočítána' },
     { label: 'Páska', done: buttonState.canPrint || currentStatusLabel === 'Výplatní páska vystavena', active: currentStatusLabel === 'Výplatní páska vystavena' },
   ]
 
@@ -85,12 +74,9 @@ export function MonthControlsView({
       <div className="flex flex-wrap gap-1">
         <button className={btn} onClick={onLoad} disabled={!buttonState.canLoad} title="Načíst měsíc z perzistentního úložiště. Vyžaduje vybraného zaměstnance a existující měsíc.">Načíst měsíc</button>
         <button className={btn} onClick={onInitMonth} disabled={!buttonState.canInitMonth} title="Založit měsíc. Dostupné pouze po výběru zaměstnance a pokud měsíc ještě neexistuje.">Založit měsíc</button>
-        <button className={btn} onClick={onSave} disabled={!buttonState.canSave} title="Uložit evidenci pracovní doby. Dostupné jen pro existující měsíc ve stavu draft nebo time_saved.">Uložit evidenci</button>
-        <button className={btn} onClick={onPrefill} disabled={!buttonState.canPrefill} title="Předvyplnit docházku podle směnového plánu. Dostupné jen pro existující měsíc ve stavu draft nebo time_saved.">Předvyplnit měsíc</button>
-        <button className={btn} onClick={onCloseMonth} disabled={!buttonState.canClose} title="Uzavřít evidenci. Dostupné po založení měsíce a validním stavu draft nebo time_saved.">Uzavřít evidenci</button>
-        <button className={btn} onClick={onCalculatePayroll} disabled={!buttonState.canCalculatePayroll} title="Spočítat mzdu. Dostupné až po uzavření evidence.">Spočítat mzdu</button>
-        <button className={btn} onClick={onApproveMonth} disabled={!buttonState.canApprove} title="Schválit mzdu. Dostupné až po výpočtu mzdy.">Schválit mzdu</button>
-        <button className={btn} onClick={onIssuePayslip} disabled={!buttonState.canIssuePayslip} title="Vystavit výplatní pásku. Dostupné až po schválení mzdy.">Vystavit výplatní pásku</button>
+        <button className={btn} onClick={onCloseAndCalculate} disabled={!buttonState.canCloseAndCalculate} title="Uzavřít evidenci a spočítat mzdu. Dostupné pro rozpracovaný nebo uložený měsíc.">Uzavřít evidenci a spočítat mzdu</button>
+        <button className={btn} onClick={onApproveAndIssue} disabled={!buttonState.canApproveAndIssue} title="Schválit mzdu a vystavit výplatní pásku. Dostupné až po výpočtu mzdy.">Schválit a vystavit výplatní pásku</button>
+        <button className={btn} onClick={onRequestArchive} disabled={!buttonState.canRequestArchive} title="Zrušit uzávěrku a vrátit měsíc k úpravám. Dostupné až po uzavření evidence.">Zrušit uzávěrku</button>
         <button className={btn} onClick={onPrintPayslip} disabled={!buttonState.canPrint} title="Tisk / PDF. Dostupné až po vystavení výplatní pásky.">Tisk / PDF</button>
       </div>
       {success && <div className="mt-2 border border-black bg-[#dbeafe] px-2 py-1 font-bold text-black">{success}</div>}

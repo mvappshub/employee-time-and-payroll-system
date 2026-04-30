@@ -22,7 +22,6 @@ const defaultEmployeeTemplate: EmployeeSettings = {
   permanentAddress: '',
   status: 'active',
   employmentType: 'pracovni_pomer',
-  remunerationType: 'mzda',
   employmentStartDate: '2026-01-01',
   employmentEndDate: '',
   contractJobTitle: '',
@@ -110,10 +109,12 @@ function normalizePaySlipInputs(paySlipInputs?: Partial<PaySlipInputs>): PaySlip
   return {
     ...defaultPaySlipInputs,
     ...paySlipInputs,
+    unworked: 0,
+    sickCarryoverDays: 0,
   }
 }
 
-function buildEmptyMonthRecords(month: string): TimeRecord[] {
+export function buildEmptyMonthRecords(month: string): TimeRecord[] {
   return getDaysInMonth(month).map(date => ({
     date,
     shift: '',
@@ -122,13 +123,17 @@ function buildEmptyMonthRecords(month: string): TimeRecord[] {
   }))
 }
 
-function buildPrefilledMonthRecords(month: string, employee: EmployeeSettings): TimeRecord[] {
+export function buildPrefilledMonthRecords(month: string, employee: EmployeeSettings): TimeRecord[] {
   return getDaysInMonth(month).map(date => ({
     date,
     shift: (isWeekend(date) ? 'volno' : 'ranní') as ShiftType,
     arrival: isWeekend(date) ? '' : employee.shiftStart,
     departure: isWeekend(date) ? '' : employee.shiftEnd,
   }))
+}
+
+export function buildInitialEmployeeMonthRecords(month: string, employee?: EmployeeSettings | null): TimeRecord[] {
+  return employee ? buildPrefilledMonthRecords(month, employee) : buildEmptyMonthRecords(month)
 }
 
 function withEmployeeMonthMap<T>(map: Record<string, Record<string, T>>, employeeId: string): Record<string, T> {
@@ -185,7 +190,7 @@ export interface Store {
   paySlipInputsByEmployee: Record<string, Record<string, PaySlipInputs>>
   monthStatusByEmployee: Record<string, Record<string, MonthStatus>>
   payrollByEmployee: Record<string, Record<string, PayrollMonthState>>
-  section: 'employees' | 'timesheet' | 'payroll' | 'holidays' | 'company'
+  section: 'employees' | 'time-tracking' | 'payroll' | 'company' | 'holidays'
   setEmployer: (u: Partial<EmployerProfile>) => void
   setSection: (s: Store['section']) => void
   setCurrentMonth: (m: string) => void
@@ -274,6 +279,7 @@ export const useStore = create<Store>()(
         const employeeInputs = withEmployeeMonthMap(state.paySlipInputsByEmployee, employeeId)
         const employeeStatuses = withEmployeeMonthMap(state.monthStatusByEmployee, employeeId)
         const employeePayroll = withEmployeeMonthMap(state.payrollByEmployee, employeeId)
+        const employee = state.employees.find(item => item.id === employeeId)
         if (employeeRecords[month]) {
           if (nextHolidays.length !== state.holidays.length) set({ holidays: nextHolidays })
           return
@@ -282,7 +288,7 @@ export const useStore = create<Store>()(
           holidays: nextHolidays,
           recordsByEmployee: {
             ...state.recordsByEmployee,
-            [employeeId]: { ...employeeRecords, [month]: buildEmptyMonthRecords(month) },
+            [employeeId]: { ...employeeRecords, [month]: buildInitialEmployeeMonthRecords(month, employee) },
           },
           paySlipInputsByEmployee: {
             ...state.paySlipInputsByEmployee,
@@ -513,9 +519,14 @@ export const useStore = create<Store>()(
       setPaySlipInput: (employeeId, month, u) => {
         const state = get()
         const previousStatus = withEmployeeMonthMap(state.monthStatusByEmployee, employeeId)[month] || 'draft'
-        const nextStatus = previousStatus === 'draft' ? 'draft' : 'time_saved'
+        const wasPayrollPhase = previousStatus === 'time_closed' || previousStatus === 'payroll_calculated' || previousStatus === 'payroll_approved' || previousStatus === 'payslip_issued'
+        const nextStatus = wasPayrollPhase
+          ? 'time_closed'
+          : previousStatus === 'draft'
+            ? 'draft'
+            : 'time_saved'
         const current = normalizePaySlipInputs(withEmployeeMonthMap(state.paySlipInputsByEmployee, employeeId)[month])
-        const nextPayrollState = previousStatus === 'time_closed' || previousStatus === 'payroll_calculated' || previousStatus === 'payroll_approved' || previousStatus === 'payslip_issued'
+        const nextPayrollState = wasPayrollPhase
           ? invalidateDerivedMonthState(withEmployeeMonthMap(state.payrollByEmployee, employeeId)[month], 'Změna mzdových vstupů po uzavření měsíce.')
           : withEmployeeMonthMap(state.payrollByEmployee, employeeId)[month]
         set({
@@ -608,7 +619,9 @@ export const useStore = create<Store>()(
           paySlipInputsByEmployee: {},
           monthStatusByEmployee: {},
           payrollByEmployee: {},
-          section: state?.section === 'holidays' ? 'holidays' : 'employees',
+          section: ['employees', 'time-tracking', 'payroll', 'company', 'holidays'].includes(String(state?.section))
+            ? state?.section
+            : 'employees',
         } as unknown as Store
       },
     },

@@ -24,7 +24,6 @@ const employee: EmployeeSettings = {
   permanentAddress: "Praha",
   status: "active",
   employmentType: "pracovni_pomer",
-  remunerationType: "mzda",
   employmentStartDate: "2026-01-01",
   employmentEndDate: "",
   contractJobTitle: "Operátor",
@@ -230,7 +229,6 @@ describe("calcPaySlip", () => {
     const payslip = calcPaySlip(
       {
         ...employee,
-        remunerationType: "mzda",
         nightSurcharge: 0.05,
         weekendSurcharge: 0.05,
       },
@@ -247,29 +245,6 @@ describe("calcPaySlip", () => {
     expect(payslip.weekendSurchargeRate).toBe(0.1);
     expect(payslip.nightSurchargeCalc).toBe(100);
     expect(payslip.weekendSurchargeCalc).toBe(200);
-  });
-
-  it("enforces higher legal minimums for weekend and night work in pay-grade regime", () => {
-    const payslip = calcPaySlip(
-      {
-        ...employee,
-        remunerationType: "plat",
-        nightSurcharge: 0.1,
-        weekendSurcharge: 0.1,
-      },
-      monthlySummary({
-        totalNight: 4,
-        totalWeekend: 8,
-      }),
-      0,
-      0,
-      250,
-    );
-
-    expect(payslip.nightSurchargeRate).toBe(0.2);
-    expect(payslip.weekendSurchargeRate).toBe(0.25);
-    expect(payslip.nightSurchargeCalc).toBe(200);
-    expect(payslip.weekendSurchargeCalc).toBe(500);
   });
 
   it("prefers compensatory time off for holiday work unless premium mode is enabled", () => {

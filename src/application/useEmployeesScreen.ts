@@ -16,25 +16,26 @@ import {
   saveEmployeeDocument,
   updateEmployee as updateEmployeeApi,
 } from '../infrastructure/api/monthStorage'
-import { useStore, normalizeEmployeeSettings } from '../infrastructure/state/store'
+import { useStore, normalizeEmployeeSettings, buildInitialEmployeeMonthRecords } from '../infrastructure/state/store'
 import { invalidateDocument } from '../domain/documents/builders'
-import type { EmployeeMonth, EmployeeSettings, MonthStatus } from '../domain/shared/types'
+import type { EmployeeMonth, EmployeeSettings, MonthStatus, TimeSummary } from '../domain/shared/types'
 import { calculateMonthDays, calcMonthlySummary } from '../domain/payroll/calc'
 import { formatMonthLabel } from './formatters'
 import { defaultPaySlipInputs } from './defaults'
+import { formatMonthStatus, isPayrollStatus, payslipStatusLabel } from './statusLabels'
 
 function actionLabelForStatus(status?: MonthStatus): string {
   if (!status) return 'Založit měsíc'
   switch (status) {
     case 'draft':
     case 'time_saved':
-      return 'Otevřít evidenci'
+      return 'Uzavřít evidenci a spočítat mzdu'
     case 'time_closed':
       return 'Spočítat mzdu'
     case 'payroll_calculated':
-      return 'Schválit mzdu'
+      return 'Schválit a vystavit výplatní pásku'
     case 'payroll_approved':
-      return 'Vystavit výplatní pásku'
+      return 'Otevřít mzdy'
     case 'payslip_issued':
       return 'Tisk / PDF'
     default:
@@ -46,6 +47,17 @@ function buildMonthList(currentMonth: string, loadedMonths: string[]): string[] 
   const year = currentMonth.split('-')[0]
   const generated = Array.from({ length: 12 }, (_, index) => `${year}-${String(index + 1).padStart(2, '0')}`)
   return Array.from(new Set([...generated, ...loadedMonths])).sort()
+}
+
+function buildTimeSummary(summary: ReturnType<typeof calcMonthlySummary>): TimeSummary {
+  return {
+    monthlyFundHours: summary.monthlyFundHours,
+    workedHours: summary.workedHours,
+    workedDays: summary.workedDays,
+    vacationHours: summary.totalVacation,
+    sickHours: summary.totalSick,
+    totalSaldo: summary.totalSaldo,
+  }
 }
 
 export function useEmployeesScreen() {
@@ -223,9 +235,9 @@ export function useEmployeesScreen() {
         sickHours: summary?.totalSick ?? 0,
         vacationHours: summary?.totalVacation ?? 0,
         saldo: summary?.totalSaldo ?? 0,
-        timeStatus: status || 'bez dat',
-        payrollStatus: status === 'payroll_calculated' || status === 'payroll_approved' || status === 'payslip_issued' ? status : '—',
-        payslipStatus: status === 'payslip_issued' ? 'vystavena' : '—',
+        timeStatus: formatMonthStatus(status),
+        payrollStatus: isPayrollStatus(status) ? formatMonthStatus(status) : '—',
+        payslipStatus: payslipStatusLabel(status),
         updatedAt: payrollState?.updatedAt || payrollState?.closedAt || payrollState?.approvedAt || '—',
         actionLabel: actionLabelForStatus(status),
         actionRoute: (!status ? 'init' : (status === 'draft' || status === 'time_saved' ? 'timesheet' : 'payroll')) as 'init' | 'timesheet' | 'payroll',
@@ -254,6 +266,43 @@ export function useEmployeesScreen() {
       lastApprovedMonth,
     }
   }), [currentMonth, employees, monthStatusByEmployee])
+
+  const initMonthForActiveEmployee = async (month: string) => {
+    if (!activeEmployee?.id || !employees.some(employee => employee.id === activeEmployee.id)) {
+      setError('Nejprve uložte zaměstnance.')
+      return
+    }
+    if (monthExists(activeEmployee.id, month)) {
+      setInfo('Měsíc už existuje.')
+      return
+    }
+    setError('')
+    setInfo('')
+    const records = buildInitialEmployeeMonthRecords(month, activeEmployee)
+    const summary = calcMonthlySummary(calculateMonthDays(records, activeEmployee, holidays, defaultPaySlipInputs.sickCarryoverDays))
+    const draft = buildEmployeeMonthRecord({
+      employeeId: activeEmployee.id,
+      month,
+      status: 'draft',
+      employer,
+      employee: activeEmployee,
+      records,
+      paySlipInputs: defaultPaySlipInputs,
+      timeSummary: buildTimeSummary(summary),
+      auditTrail: [{ at: new Date().toISOString(), action: 'init-month' }],
+    })
+    try {
+      await saveEmployeeMonth(activeEmployee.id, month, draft)
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Měsíc se nepodařilo založit.')
+      return
+    }
+    initEmployeeMonth(activeEmployee.id, month)
+    hydrateEmployeeMonth(activeEmployee.id, month, draft as EmployeeMonth)
+    setCurrentMonth(month)
+    setSection('time-tracking')
+    setInfo('Měsíc byl založen.')
+  }
 
   return {
     employees: employeeRows,
@@ -393,44 +442,33 @@ export function useEmployeesScreen() {
       archiveEmployee(id)
       setInfo('Zaměstnanec byl archivován.')
     },
-    onInitMonth: async (month: string) => {
-      if (!activeEmployee?.id || !employees.some(employee => employee.id === activeEmployee.id)) {
-        setError('Nejprve uložte zaměstnance.')
+    onInitMonth: initMonthForActiveEmployee,
+    onRunMonthAction: async (month: string) => {
+      if (!activeEmployee?.id) return
+      const status = monthStatusByEmployee[activeEmployee.id]?.[month]
+      if (!status) {
+        await initMonthForActiveEmployee(month)
         return
       }
-      if (monthExists(activeEmployee.id, month)) {
-        setInfo('Měsíc už existuje.')
+      if (status === 'draft' || status === 'time_saved') {
+        setCurrentMonth(month)
+        setSection('time-tracking')
         return
       }
-      setError('')
-      setInfo('')
-      const draft = buildEmployeeMonthRecord({
-        employeeId: activeEmployee.id,
-        month,
-        status: 'draft',
-        employee: activeEmployee,
-        records: [],
-        paySlipInputs: defaultPaySlipInputs,
-        auditTrail: [{ at: new Date().toISOString(), action: 'init-month' }],
-      })
-      try {
-        await saveEmployeeMonth(activeEmployee.id, month, draft)
-      } catch (saveError) {
-        setError(saveError instanceof Error ? saveError.message : 'Měsíc se nepodařilo založit.')
+      if (status === 'time_closed' || status === 'payroll_calculated') {
+        setCurrentMonth(month)
+        setSection('payroll')
         return
       }
-      initEmployeeMonth(activeEmployee.id, month)
-      hydrateEmployeeMonth(activeEmployee.id, month, draft as EmployeeMonth)
       setCurrentMonth(month)
-      setSection('timesheet')
-      setInfo('Měsíc byl založen.')
+      setSection('payroll')
     },
     onOpenMonth: (month: string) => {
       if (!activeEmployee?.id) return
       setCurrentMonth(month)
       const status = monthStatusByEmployee[activeEmployee.id]?.[month]
       if (status === 'draft' || status === 'time_saved' || !status) {
-        setSection('timesheet')
+        setSection('time-tracking')
         return
       }
       setSection('payroll')
@@ -438,7 +476,7 @@ export function useEmployeesScreen() {
     onOpenTimeSheetDocument: (month: string) => {
       if (!activeEmployee?.id) return
       setCurrentMonth(month)
-      setSection('timesheet')
+      setSection('time-tracking')
     },
   }
 }

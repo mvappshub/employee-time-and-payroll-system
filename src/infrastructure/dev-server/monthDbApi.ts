@@ -49,7 +49,6 @@ function repairEmployeeSettings(employee?: Partial<EmployeeSettings>): EmployeeS
     permanentAddress: employee?.permanentAddress || '',
     status: employee?.status || 'active',
     employmentType: employee?.employmentType || 'pracovni_pomer',
-    remunerationType: employee?.remunerationType || 'mzda',
     employmentStartDate: employee?.employmentStartDate || '2026-01-01',
     employmentEndDate: employee?.employmentEndDate || '',
     contractJobTitle: employee?.contractJobTitle || '',
@@ -92,8 +91,9 @@ function repairPaySlipInputs(inputs?: Partial<PaySlipInputs>): PaySlipInputs {
   return {
     manualReward: inputs?.manualReward || 0,
     includeManualRewardInAverage: inputs?.includeManualRewardInAverage || false,
-    unworked: inputs?.unworked || 0,
-    sickCarryoverDays: inputs?.sickCarryoverDays || 0,
+    unworked: 0,
+    sickCarryoverDays: 0,
+    holidayCompensationMode: inputs?.holidayCompensationMode || 'time-off',
   }
 }
 
@@ -182,7 +182,6 @@ export function repairPersistedMonthRecord(record: PersistedMonthRecord): Persis
           name: employee.name,
           employeeNumber: employee.employeeNumber,
           employmentType: employee.employmentType,
-          remunerationType: employee.remunerationType,
           baseSalary: employee.baseSalary,
           personalBonus: employee.personalBonus,
           nightSurcharge: employee.nightSurcharge,

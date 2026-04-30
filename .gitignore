@@ -8,6 +8,7 @@ month-data/employees/*/
 !month-data/.gitkeep
 .codetree/
 .kilo/
+.planner-reviewer/
 .playwright-mcp/
 output/
 output-*.log

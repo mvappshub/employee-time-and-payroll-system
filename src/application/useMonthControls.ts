@@ -10,7 +10,7 @@ import {
   saveEmployeeMonth as saveEmployeeMonthApi,
   type SavedMonthRecord,
 } from '../infrastructure/api/monthStorage'
-import { useStore } from '../infrastructure/state/store'
+import { buildInitialEmployeeMonthRecords, useStore } from '../infrastructure/state/store'
 import { printDocumentById } from '../screens/documents/print'
 import { defaultPaySlipInputs } from './defaults'
 import type { EmployeeMonth, EmployeeSettings, MonthStatus, TimeRecord, TimeSummary } from '../domain/shared/types'
@@ -32,15 +32,15 @@ function nextStepLabel(status: MonthStatus): string {
   switch (status) {
     case 'empty':
     case 'draft':
-      return 'Uložit evidenci'
+      return 'Uzavřít evidenci a spočítat mzdu'
     case 'time_saved':
-      return 'Uzavřít evidenci'
+      return 'Uzavřít evidenci a spočítat mzdu'
     case 'time_closed':
       return 'Spočítat mzdu'
     case 'payroll_calculated':
-      return 'Schválit mzdu'
+      return 'Schválit a vystavit výplatní pásku'
     case 'payroll_approved':
-      return 'Vystavit výplatní pásku'
+      return 'Otevřít mzdy'
     case 'payslip_issued':
       return 'Tisk / PDF'
     default:
@@ -114,7 +114,6 @@ export function useMonthControls() {
   const calculateEmployeePayroll = useStore(s => s.calculateEmployeePayroll)
   const approveEmployeePayroll = useStore(s => s.approveEmployeePayroll)
   const issueEmployeePayslip = useStore(s => s.issueEmployeePayslip)
-  const resetEmployeeMonth = useStore(s => s.resetEmployeeMonth)
   const setMonthStatus = useStore(s => s.setMonthStatus)
   const setPayrollMonthState = useStore(s => s.setPayrollMonthState)
   const setSection = useStore(s => s.setSection)
@@ -122,6 +121,7 @@ export function useMonthControls() {
   const [error, setError] = useState('')
   const [info, setInfo] = useState('')
   const [success, setSuccess] = useState('')
+  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false)
 
   const employee = employees.find(item => item.id === selectedEmployeeId) || null
   const inputs = selectedEmployeeId ? paySlipInputsByEmployee[selectedEmployeeId]?.[currentMonth] || defaultPaySlipInputs : defaultPaySlipInputs
@@ -129,6 +129,7 @@ export function useMonthControls() {
   const currentStatus = selectedEmployeeId ? monthStatusByEmployee[selectedEmployeeId]?.[currentMonth] || 'empty' : 'empty'
   const payrollState = selectedEmployeeId ? payrollByEmployee[selectedEmployeeId]?.[currentMonth] : undefined
   const monthExists = selectedEmployeeId ? typeof monthStatusByEmployee[selectedEmployeeId]?.[currentMonth] !== 'undefined' : false
+  const payrollEmployee = employee ? { ...employee, holidayCompensationMode: inputs.holidayCompensationMode } : null
 
   const days = useMemo(
     () => employee ? calculateMonthDays(monthRecords, employee, holidays, inputs.sickCarryoverDays) : [],
@@ -177,9 +178,12 @@ export function useMonthControls() {
     canSave: !!selectedEmployeeId && monthExists && (currentStatus === 'draft' || currentStatus === 'time_saved'),
     canPrefill: !!selectedEmployeeId && monthExists && (currentStatus === 'draft' || currentStatus === 'time_saved'),
     canClose: !!selectedEmployeeId && monthExists && (currentStatus === 'draft' || currentStatus === 'time_saved'),
+    canCloseAndCalculate: !!selectedEmployeeId && monthExists && (currentStatus === 'draft' || currentStatus === 'time_saved'),
     canCalculatePayroll: !!selectedEmployeeId && monthExists && (currentStatus === 'time_closed' || currentStatus === 'payroll_calculated'),
     canApprove: !!selectedEmployeeId && monthExists && currentStatus === 'payroll_calculated',
+    canApproveAndIssue: !!selectedEmployeeId && monthExists && currentStatus === 'payroll_calculated',
     canIssuePayslip: !!selectedEmployeeId && monthExists && currentStatus === 'payroll_approved',
+    canRequestArchive: !!selectedEmployeeId && monthExists && ['time_closed', 'payroll_calculated', 'payroll_approved', 'payslip_issued'].includes(currentStatus),
     canPrint: !!selectedEmployeeId && monthExists && currentStatus === 'payslip_issued',
   }
 
@@ -194,22 +198,29 @@ export function useMonthControls() {
     nextStepLabel: nextStepLabel(currentStatus),
     lastActionLabel: payrollState?.updatedAt || payrollState?.issuedAt || payrollState?.approvedAt || payrollState?.closedAt || '—',
     monthExists,
+    showArchiveConfirm,
     buttonState,
-    onArchiveMonth: async () => {
+    onRequestArchive: () => {
+      setShowArchiveConfirm(true)
+    },
+    onCancelArchive: () => {
+      setShowArchiveConfirm(false)
+    },
+    onConfirmArchive: async () => {
       if (!selectedEmployeeId || !employee || !monthExists) {
         setInfo('Nejprve vyberte existující měsíc.')
         return
       }
-      const confirmed = window.confirm('Přesunout měsíc zpět do rozpracovaného stavu? Výpočty a vydané dokumenty budou zneplatněny.')
-      if (!confirmed) return
+      setShowArchiveConfirm(false)
+      const nowIso = new Date().toISOString()
       const archived = buildEmployeeMonthRecord({
         employeeId: selectedEmployeeId,
         month: currentMonth,
         status: 'draft',
         employer,
         employee,
-        records: [],
-        paySlipInputs: defaultPaySlipInputs,
+        records: monthRecords,
+        paySlipInputs: inputs,
         existing: payrollState ? {
           ...payrollState,
           employeeId: selectedEmployeeId,
@@ -220,25 +231,29 @@ export function useMonthControls() {
           records: monthRecords,
           paySlipInputs: inputs,
         } : null,
-        timeSummary: {
-          monthlyFundHours: 0,
-          workedHours: 0,
-          workedDays: 0,
-          vacationHours: 0,
-          sickHours: 0,
-          totalSaldo: 0,
-        },
+        timeSummary: buildTimeSummary(summary),
         payrollResult: undefined,
         calculationSnapshot: undefined,
         timeSheetDocument: null,
         payslipDocument: null,
         auditTrail: [
           ...(payrollState?.auditTrail || []),
-          { at: new Date().toISOString(), action: 'archive-month' },
+          { at: nowIso, action: 'undo-closure' },
         ],
+        closedAt: undefined,
+        approvedAt: undefined,
+        issuedAt: undefined,
+        invalidatedAt: nowIso,
+        invalidationReason: 'Zrušení uzávěrky a návrat k úpravám.',
       })
+      archived.payrollResult = undefined
+      archived.calculationSnapshot = undefined
+      archived.timeSheetDocument = null
+      archived.payslipDocument = null
+      delete archived.closedAt
+      delete archived.approvedAt
+      delete archived.issuedAt
       await saveEmployeeMonthApi(selectedEmployeeId, currentMonth, archived)
-      resetEmployeeMonth(selectedEmployeeId, currentMonth)
       hydrateEmployeeMonth(selectedEmployeeId, currentMonth, archived as EmployeeMonth)
       setSuccess('Měsíc byl vrácen do rozpracovaného stavu.')
       setError('')
@@ -277,21 +292,23 @@ export function useMonthControls() {
       setError('')
       setInfo('')
       setSuccess('')
+      const records = buildInitialEmployeeMonthRecords(currentMonth, employee)
+      const initialSummary = calcMonthlySummary(calculateMonthDays(records, employee, holidays, defaultPaySlipInputs.sickCarryoverDays))
       const draft = buildEmployeeMonthRecord({
         employeeId: selectedEmployeeId,
         month: currentMonth,
         status: 'draft',
         employer,
         employee,
-        records: [],
+        records,
         paySlipInputs: defaultPaySlipInputs,
         timeSummary: {
-          monthlyFundHours: 0,
-          workedHours: 0,
-          workedDays: 0,
-          vacationHours: 0,
-          sickHours: 0,
-          totalSaldo: 0,
+          monthlyFundHours: initialSummary.monthlyFundHours,
+          workedHours: initialSummary.workedHours,
+          workedDays: initialSummary.workedDays,
+          vacationHours: initialSummary.totalVacation,
+          sickHours: initialSummary.totalSick,
+          totalSaldo: initialSummary.totalSaldo,
         },
         auditTrail: [{ at: new Date().toISOString(), action: 'init-month' }],
       })
@@ -299,7 +316,7 @@ export function useMonthControls() {
         await saveEmployeeMonthApi(selectedEmployeeId, currentMonth, draft)
         initEmployeeMonth(selectedEmployeeId, currentMonth)
         hydrateEmployeeMonth(selectedEmployeeId, currentMonth, draft as EmployeeMonth)
-        setSection('timesheet')
+        setSection('time-tracking')
         setSuccess('Měsíc byl založen.')
       } catch (caughtError) {
         setError(caughtError instanceof Error ? caughtError.message : 'Měsíc se nepodařilo založit.')
@@ -361,7 +378,7 @@ export function useMonthControls() {
           ...averageSource,
           snapshot: averageHourlyEarnings > 0
             ? {
-                grossWage: calcPaySlip(employee, summary, inputs.manualReward, inputs.unworked, averageHourlyEarnings, currentMonth).hrubaMzda,
+                grossWage: calcPaySlip(payrollEmployee || employee, summary, inputs.manualReward, 0, averageHourlyEarnings, currentMonth).hrubaMzda,
                 workedHours: summary.workedHours,
                 totalSaldo: summary.totalSaldo,
                 savedAt: new Date().toISOString(),
@@ -437,6 +454,72 @@ export function useMonthControls() {
         setError(caughtError instanceof Error ? caughtError.message : 'Evidenci se nepodařilo uzavřít.')
       }
     },
+    onCloseAndCalculate: async () => {
+      if (!selectedEmployeeId) return
+      setError('')
+      setInfo('')
+      setSuccess('')
+      if (!monthExists) {
+        setInfo('Měsíc ještě není založen.')
+        return
+      }
+      if (!(currentStatus === 'draft' || currentStatus === 'time_saved')) {
+        setInfo('Evidenci lze uzavřít až po založení nebo uložení měsíce.')
+        return
+      }
+      if (!employee) {
+        setError('Nejprve vyberte zaměstnance.')
+        return
+      }
+      const validationErrors = validateBeforeClose(monthRecords, employee, summary.monthlyFundHours)
+      if (validationErrors.length > 0) {
+        setError(validationErrors.join(' '))
+        return
+      }
+
+      const closed = buildSavedMonth('time_closed', { closedAt: new Date().toISOString() })
+      if (closed) {
+        closed.timeSheetDocument = buildTimeSheetStatementDocument(employee, employer, closed, holidays, payrollState?.timeSheetDocument || null)
+      }
+      if (!closed) return
+
+      try {
+        await saveEmployeeMonthApi(selectedEmployeeId, currentMonth, closed)
+        closeEmployeeTime(selectedEmployeeId, currentMonth)
+        setPayrollMonthState(selectedEmployeeId, currentMonth, {
+          timeSummary: closed.timeSummary,
+          timeSheetDocument: closed.timeSheetDocument,
+          updatedAt: closed.updatedAt,
+          closedAt: closed.closedAt,
+        })
+
+        const averageResponse = await fetchQuarterlyPhv(currentMonth, selectedEmployeeId, employee)
+        const averageHourlyEarnings = assertAvailableAverageEarnings(averageResponse)
+        const payrollResult = calcPaySlip(payrollEmployee || employee, summary, inputs.manualReward, 0, averageHourlyEarnings, currentMonth)
+        const calculated = buildSavedMonth('payroll_calculated', {
+          closedAt: closed.closedAt,
+          timeSheetDocument: closed.timeSheetDocument,
+          payrollResult: payrollResult as unknown as EmployeeMonth['payrollResult'],
+          calculationSnapshot: {
+            averageEarningsSource: averageResponse.sourceType,
+            averageHourlyEarnings,
+            legalConstants: getLegalConstantsSnapshot(currentMonth),
+            calculatedAt: new Date().toISOString(),
+          },
+        })
+        if (!calculated) return
+        await saveEmployeeMonthApi(selectedEmployeeId, currentMonth, calculated)
+        calculateEmployeePayroll(selectedEmployeeId, currentMonth, {
+          payrollResult: payrollResult as unknown as EmployeeMonth['payrollResult'],
+          calculationSnapshot: calculated.calculationSnapshot,
+          timeSummary: calculated.timeSummary,
+        })
+        setMonthStatus(selectedEmployeeId, currentMonth, 'payroll_calculated')
+        setSuccess('Docházka byla uzavřena a mzda byla spočítána.')
+      } catch (caughtError) {
+        setError(caughtError instanceof Error ? caughtError.message : AUTOMATIC_PHV_ERROR_MESSAGE)
+      }
+    },
     onCalculatePayroll: async () => {
       if (!employee || !selectedEmployeeId) return
       if (!monthExists) {
@@ -453,7 +536,7 @@ export function useMonthControls() {
       try {
         const averageResponse = await fetchQuarterlyPhv(currentMonth, selectedEmployeeId, employee)
         const averageHourlyEarnings = assertAvailableAverageEarnings(averageResponse)
-        const payrollResult = calcPaySlip(employee, summary, inputs.manualReward, inputs.unworked, averageHourlyEarnings, currentMonth)
+        const payrollResult = calcPaySlip(payrollEmployee || employee, summary, inputs.manualReward, 0, averageHourlyEarnings, currentMonth)
         const saved = buildSavedMonth('payroll_calculated', {
           payrollResult: payrollResult as unknown as EmployeeMonth['payrollResult'],
           calculationSnapshot: {
@@ -501,6 +584,65 @@ export function useMonthControls() {
         setSuccess('Mzda byla schválena.')
       } catch (caughtError) {
         setError(caughtError instanceof Error ? caughtError.message : 'Mzdu se nepodařilo schválit.')
+      }
+    },
+    onApproveAndIssue: async () => {
+      if (!selectedEmployeeId) return
+      if (!monthExists) {
+        setInfo('Měsíc ještě není založen.')
+        return
+      }
+      setError('')
+      setInfo('')
+      setSuccess('')
+      if (currentStatus !== 'payroll_calculated') {
+        setInfo('Mzdu lze schválit až po výpočtu mzdy.')
+        return
+      }
+      const approved = buildSavedMonth('payroll_approved', { approvedAt: new Date().toISOString() })
+      if (!approved) return
+
+      try {
+        await saveEmployeeMonthApi(selectedEmployeeId, currentMonth, approved)
+        approveEmployeePayroll(selectedEmployeeId, currentMonth)
+        setPayrollMonthState(selectedEmployeeId, currentMonth, {
+          approvedAt: approved.approvedAt,
+          updatedAt: approved.updatedAt,
+        })
+
+        const nowIso = new Date().toISOString()
+        const issued = buildSavedMonth('payslip_issued', {
+          approvedAt: approved.approvedAt,
+          issuedAt: nowIso,
+        })
+        if (issued && employee) {
+          issued.payslipDocument = JSON.parse(JSON.stringify(buildIssuedPayslipDocument(
+            employee,
+            employer,
+            issued,
+            {
+              workHoursWH: summary.workHoursWH,
+              workDaysWH: summary.workDaysWH,
+              totalNight: summary.totalNight,
+              totalWeekend: summary.totalWeekend,
+              totalHolidayTotal: summary.totalHolidayTotal,
+              totalOvertime: summary.totalOvertime,
+              totalVacation: summary.totalVacation,
+              totalSick: summary.totalSick,
+            },
+            payrollState?.payslipDocument || null,
+          ))) as NonNullable<typeof issued.payslipDocument>
+        }
+        if (!issued) return
+        await saveEmployeeMonthApi(selectedEmployeeId, currentMonth, issued)
+        issueEmployeePayslip(selectedEmployeeId, currentMonth, {
+          payslipDocument: issued.payslipDocument,
+          issuedAt: issued.issuedAt,
+          updatedAt: issued.updatedAt,
+        })
+        setSuccess('Mzda byla schválena a výplatní páska byla vystavena.')
+      } catch (caughtError) {
+        setError(caughtError instanceof Error ? caughtError.message : 'Mzdu se nepodařilo schválit nebo vystavit výplatní pásku.')
       }
     },
     onIssuePayslip: async () => {

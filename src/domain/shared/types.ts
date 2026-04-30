@@ -6,7 +6,6 @@ export const EmploymentTypeLabels: Record<EmploymentType, string> = {
 export type EmployeeLifecycleStatus = 'active' | 'archived'
 export type HolidayCompensationMode = 'time-off' | 'premium'
 export type OvertimeCompensationMode = 'time-off' | 'premium'
-export type RemunerationType = 'mzda' | 'plat'
 export type ShiftType = 'ranní' | 'odpolední' | 'noční' | 'přesčas' | 'volno' | 'dovolená' | 'nemoc' | ''
 
 export type MonthStatus =
@@ -57,7 +56,6 @@ export interface EmploymentContractSnapshot {
     contractWorkSchedule: string
     probationMonths?: number
     fixedTermEndDate?: string
-    remunerationType: RemunerationType
     baseSalary: number
     workload: number
     weeklyHours: number
@@ -102,7 +100,6 @@ export interface IssuedPayslipSnapshot {
     name: string
     employeeNumber: string
     employmentType: EmploymentType
-    remunerationType: RemunerationType
     baseSalary: number
     personalBonus: number
     nightSurcharge: number
@@ -152,7 +149,6 @@ export interface EmployeeSettings {
   permanentAddress: string
   status: EmployeeLifecycleStatus
   employmentType: EmploymentType
-  remunerationType: RemunerationType
   employmentStartDate: string
   employmentEndDate?: string
   contractJobTitle: string
@@ -207,6 +203,7 @@ export interface PaySlipInputs {
   includeManualRewardInAverage: boolean
   unworked: number
   sickCarryoverDays: number
+  holidayCompensationMode: HolidayCompensationMode
 }
 
 export interface TimeSummary {

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import type { TimeSheetStatementDocument } from '../../domain/shared/types'
 import { TimeSheetStatementDocumentView } from '../documents/TimeSheetStatementDocumentView'
 
@@ -54,6 +55,7 @@ export interface TimeSheetViewProps {
   timeSheetDocument: TimeSheetStatementDocument | null
   canPreviewDocument: boolean
   documentBlockedReason: string
+  extraActions?: ReactNode
   shiftOptions: ShiftOption[]
   summary: TimeSheetSummary
   rows: TimeSheetRow[]
@@ -68,7 +70,6 @@ export interface TimeSheetViewProps {
 
 export function TimeSheetView({
   title,
-  month,
   emptyState,
   info,
   error,
@@ -76,10 +77,10 @@ export function TimeSheetView({
   timeSheetDocument,
   canPreviewDocument,
   documentBlockedReason,
+  extraActions,
   shiftOptions,
   summary,
   rows,
-  onMonthChange,
   onResetMonth,
   onToggleDocumentPreview,
   onPrintDocument,
@@ -95,7 +96,6 @@ export function TimeSheetView({
       <div className="mb-1 flex items-center gap-3">
         <span className="text-sm font-bold">Evidence docházky</span>
         <span className="text-slate-600">{title}</span>
-        <input type="month" value={month} onChange={e => onMonthChange(e.target.value)} className="border-b border-gray-300 bg-transparent text-xs outline-none" />
         <button className="border border-slate-300 px-2 py-1 text-[11px] text-slate-700" onClick={onResetMonth}>Reset</button>
         <button className="border border-slate-300 px-2 py-1 text-[11px] text-slate-700 disabled:border-slate-200 disabled:text-slate-400" onClick={onToggleDocumentPreview} disabled={!canPreviewDocument}>
           {showDocumentPreview ? 'Skrýt výpis evidence' : 'Náhled výpisu evidence'}
@@ -103,6 +103,7 @@ export function TimeSheetView({
         <button className="border border-slate-300 px-2 py-1 text-[11px] text-slate-700 disabled:border-slate-200 disabled:text-slate-400" onClick={onPrintDocument} disabled={!canPreviewDocument}>
           Tisk / PDF
         </button>
+        {extraActions}
       </div>
       <div className="mb-2 flex gap-6 text-xs text-gray-700">
         <span>Pracovní dny: <strong>{summary.calendarWorkDays}</strong></span>

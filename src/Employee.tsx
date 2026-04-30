@@ -10,7 +10,6 @@ export default function Employee() {
       employee={screen.employee}
       dailyFundLabel={screen.dailyFundLabel}
       employmentTypeOptions={screen.employmentTypeOptions}
-      remunerationTypeOptions={screen.remunerationTypeOptions}
       holidayCompensationOptions={screen.holidayCompensationOptions}
       overtimeCompensationOptions={screen.overtimeCompensationOptions}
       onEmployerChange={screen.onEmployerChange}

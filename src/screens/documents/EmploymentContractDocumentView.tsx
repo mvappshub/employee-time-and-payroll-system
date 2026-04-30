@@ -43,7 +43,7 @@ export function EmploymentContractDocumentView({ document }: { document: Employm
             { label: 'Druh práce', value: employee.contractJobTitle },
             { label: 'Místo výkonu práce', value: employee.contractWorkplace },
             { label: 'Pracovní doba / úvazek', value: employee.contractWorkSchedule },
-            { label: 'Mzdový režim', value: `${employee.remunerationType === 'mzda' ? 'Mzda' : 'Plat'} ${employee.baseSalary.toLocaleString('cs-CZ')} Kč` },
+            { label: 'Mzdový režim', value: `Mzda ${employee.baseSalary.toLocaleString('cs-CZ')} Kč` },
             { label: 'Týdenní rozsah', value: `${employee.weeklyHours} hodin` },
             { label: 'Zkušební doba', value: employee.probationMonths ? `${employee.probationMonths} měsíce` : 'nesjednána' },
             { label: 'Doba určitá do', value: employee.fixedTermEndDate || 'na dobu neurčitou' },

@@ -3,9 +3,10 @@ import { calculateMonthDays, calcMonthlySummary, calcPaySlip } from '../domain/p
 import { fetchQuarterlyPhv, type QuarterlyPhvResponse } from '../infrastructure/api/monthStorage'
 import { AUTOMATIC_PHV_ERROR_MESSAGE, assertAvailableAverageEarnings } from '../domain/payroll/phv'
 import { useStore } from '../infrastructure/state/store'
+import { autosaveEmployeeMonthDraft } from './autosaveMonth'
 import { defaultPaySlipInputs } from './defaults'
 import { formatCzk, formatDays, formatHours, formatMonthLabel } from './formatters'
-import type { IssuedPayslipDocument } from '../domain/shared/types'
+import type { HolidayCompensationMode, IssuedPayslipDocument } from '../domain/shared/types'
 import { EmploymentTypeLabels } from '../domain/shared/types'
 
 type PayslipRowViewModel = {
@@ -70,6 +71,7 @@ function getAverageLabels(averageEarnings: QuarterlyPhvResponse | null) {
 }
 
 export function usePaySlipScreen() {
+  const employer = useStore(s => s.employer)
   const employees = useStore(s => s.employees)
   const selectedEmployeeId = useStore(s => s.selectedEmployeeId)
   const recordsByEmployee = useStore(s => s.recordsByEmployee)
@@ -100,6 +102,19 @@ export function usePaySlipScreen() {
 
   const calcs = useMemo(() => employee ? calculateMonthDays(monthRecords, employee, holidays, inputs.sickCarryoverDays) : [], [monthRecords, employee, holidays, inputs.sickCarryoverDays])
   const summary = useMemo(() => calcMonthlySummary(calcs), [calcs])
+  const effectiveEmployee = useMemo(
+    () => employee ? { ...employee, holidayCompensationMode: inputs.holidayCompensationMode } : null,
+    [employee, inputs.holidayCompensationMode],
+  )
+  const showHolidayCompensationMode = summary.totalHolidayWorked > 0
+  const timeSummary = useMemo(() => ({
+    monthlyFundHours: summary.monthlyFundHours,
+    workedHours: summary.workedHours,
+    workedDays: summary.workedDays,
+    vacationHours: summary.totalVacation,
+    sickHours: summary.totalSick,
+    totalSaldo: summary.totalSaldo,
+  }), [summary])
   const requiresInvalidationConfirmation =
     currentMonthStatus === 'time_closed' ||
     currentMonthStatus === 'payroll_calculated' ||
@@ -116,7 +131,7 @@ export function usePaySlipScreen() {
     const confirmed = window.confirm('Změna mzdových vstupů zneplatní schválenou mzdu i vystavenou výplatní pásku. Pokračovat?')
     if (!confirmed) return
     apply()
-    setInfo('Změna mzdových vstupů zneplatnila schválení mzdy a vystavenou výplatní pásku. Před dalším tiskem je nutný nový výpočet a schválení.')
+    setInfo('Změna mzdových vstupů zneplatnila výpočet mzdy. Pro pokračování mzdu znovu spočítejte.')
   }
 
   useEffect(() => {
@@ -150,6 +165,29 @@ export function usePaySlipScreen() {
     }
   }, [employee, isDataClosed, month, monthExists, selectedEmployeeId])
 
+  useEffect(() => {
+    if (!employee || !selectedEmployeeId || !monthExists || monthRecords.length === 0) return
+    if (currentMonthStatus !== 'draft' && currentMonthStatus !== 'time_saved' && currentMonthStatus !== 'time_closed') return
+
+    const timeout = window.setTimeout(() => {
+      autosaveEmployeeMonthDraft({
+        employer,
+        employee,
+        employeeId: selectedEmployeeId,
+        month,
+        status: currentMonthStatus,
+        records: monthRecords,
+        paySlipInputs: inputs,
+        timeSummary,
+        payrollState,
+      }).catch(() => {
+        setInfo('Automatické uložení mzdových vstupů se nepodařilo.')
+      })
+    }, 500)
+
+    return () => window.clearTimeout(timeout)
+  }, [currentMonthStatus, employee, employer, inputs, month, monthExists, monthRecords, payrollState, selectedEmployeeId, timeSummary])
+
   const calculation = useMemo(() => {
     if (!employee || !selectedEmployeeId) {
       return { payslip: null, error: '', loading: false }
@@ -172,7 +210,7 @@ export function usePaySlipScreen() {
     }
     try {
       return {
-        payslip: calcPaySlip(employee, summary, inputs.manualReward, inputs.unworked, averageHourlyEarnings, month),
+        payslip: calcPaySlip(effectiveEmployee || employee, summary, inputs.manualReward, 0, averageHourlyEarnings, month),
         error: '',
         loading: false,
       }
@@ -183,7 +221,7 @@ export function usePaySlipScreen() {
         loading: false,
       }
     }
-  }, [averageHourlyEarnings, employee, inputs.manualReward, inputs.unworked, isDataClosed, loadedPhvMonth, month, payrollState?.payrollResult, phvError, phvLoading, selectedEmployeeId, summary])
+  }, [averageHourlyEarnings, effectiveEmployee, employee, inputs.manualReward, isDataClosed, loadedPhvMonth, month, payrollState?.payrollResult, phvError, phvLoading, selectedEmployeeId, summary])
 
   const { averageEarningsLabel, averageEarningsSourceLabel } = getAverageLabels(averageEarnings)
   const issuedAverageEarningsLabel = issuedPayslipDocument?.snapshot.calculationSnapshot?.averageEarningsSource === 'actual'
@@ -192,6 +230,93 @@ export function usePaySlipScreen() {
       ? 'Pravděpodobný hodinový výdělek'
       : averageEarningsLabel
   const issuedPayslipCalculation = issuedPayslipDocument?.snapshot.payrollResult as unknown as ReturnType<typeof calcPaySlip> | undefined
+  const currentCalculationRows = calculation.payslip ? {
+    sections: [
+      {
+        title: 'Smlouva',
+        rows: [
+          { label: 'Základní mzda ze smlouvy', value: formatCzk(employee?.baseSalary || 0), formula: 'měsíční základ z karty zaměstnance' },
+          { label: 'Úvazek', value: `${employee?.workload || 0}`, formula: 'koeficient úvazku zaměstnance' },
+          { label: 'Týdenní hodiny', value: formatHours(employee?.weeklyHours || 0), formula: 'nastavení zaměstnance' },
+          { label: 'Denní fond', value: formatHours(calculation.payslip.dailyFund), formula: 'týdenní hodiny / pracovní dny týdně' },
+          { label: 'Osobní ohodnocení', value: `${((employee?.personalBonus || 0) * 100).toFixed(2)} %`, formula: 'sazba z karty zaměstnance' },
+          { label: 'Sazba nemoc', value: `${((employee?.sickCompensation || 0) * 100).toFixed(2)} %`, formula: 'náhrada DPN zaměstnavatelem' },
+        ],
+      },
+      {
+        title: 'Docházka',
+        rows: [
+          { label: 'Měsíční fond', value: formatHours(summary.monthlyFundHours), formula: 'součet plánovaných hodin v měsíci' },
+          { label: 'Odpracované hodiny', value: formatHours(summary.workedHours), formula: 'docházka: příchod - odchod - přestávka' },
+          { label: 'Uznané hodiny', value: formatHours(summary.totalRecognized), formula: 'odpracováno + svátky + dovolená + nemoc' },
+          { label: 'Dovolená', value: formatHours(summary.totalVacation), formula: 'dny dovolené * denní fond' },
+          { label: 'Nemoc hrazená zaměstnavatelem', value: formatHours(summary.totalSick), formula: 'kompenzované hodiny DPN do limitu' },
+          { label: 'Noční hodiny', value: formatHours(summary.totalNight), formula: 'průnik směn s nočním intervalem' },
+          { label: 'Víkendové hodiny', value: formatHours(summary.totalWeekend), formula: 'odpracováno v sobotu/neděli' },
+          { label: 'Svátek celkem', value: formatHours(summary.totalHolidayTotal), formula: 'sváteční kredit nebo práce ve svátek' },
+          { label: 'Přesčas', value: formatHours(summary.totalOvertime), formula: 'přesčasová směna nebo práce nad plán' },
+          { label: 'Saldo měsíce', value: formatHours(calculation.payslip.saldoMesic), formula: 'odpracováno + absence - plán' },
+        ],
+      },
+      {
+        title: 'PHV a vstupy',
+        rows: [
+          { label: 'Ruční odměna', value: formatCzk(inputs.manualReward), formula: 'interní mzdový vstup' },
+          { label: 'PHV', value: formatCzk(calculation.payslip.averageHourlyEarnings), formula: `${averageEarningsSourceLabel}; rozhodné období ${averageEarnings ? `${averageEarnings.periodStart} až ${averageEarnings.periodEnd}` : 'není k dispozici'}` },
+          { label: 'Hodinová sazba základní mzdy', value: formatCzk((employee?.baseSalary || 0) / Math.max(summary.workHoursWH, 1)), formula: 'základní mzda / měsíční fond' },
+          { label: 'Redukovaný PHV DPN', value: formatCzk(calculation.payslip.sickHourlyBasis), formula: 'redukční hranice pro náhradu DPN' },
+          { label: 'Práce ve svátek', value: inputs.holidayCompensationMode === 'premium' ? 'proplatit' : 'náhradní volno', formula: 'měsíční volba pro odpracovaný svátek' },
+        ],
+      },
+      {
+        title: 'Složky hrubé mzdy',
+        rows: [
+          { label: 'Poměr pro měsíční mzdu', value: `${summary.workHoursWH > 0 ? ((summary.workedHours + summary.totalHolidayCredit) / summary.workHoursWH * 100).toFixed(2) : '0.00'} %`, formula: '(odpracováno + sváteční kredit) / měsíční fond' },
+          { label: 'Základní mzda', value: formatCzk(calculation.payslip.baseSalaryCalc), formula: 'poměr * základní mzda' },
+          { label: 'Osobní ohodnocení', value: formatCzk(calculation.payslip.personalBonusCalc), formula: `poměr * základní mzda * ${(employee?.personalBonus || 0) * 100} %` },
+          { label: 'Příplatek noční', value: formatCzk(calculation.payslip.nightSurchargeCalc), formula: `PHV * noční hodiny * ${(calculation.payslip.nightSurchargeRate * 100).toFixed(2)} %` },
+          { label: 'Příplatek víkend', value: formatCzk(calculation.payslip.weekendSurchargeCalc), formula: `PHV * víkendové hodiny * ${(calculation.payslip.weekendSurchargeRate * 100).toFixed(2)} %` },
+          { label: 'Příplatek svátek', value: formatCzk(calculation.payslip.holidaySurchargeCalc), formula: `PHV * hodiny ve svátek * ${(calculation.payslip.holidaySurchargeRate * 100).toFixed(2)} %` },
+          { label: 'Náhradní volno za svátek', value: formatHours(calculation.payslip.holidayCompLeaveHours), formula: 'hodiny svátku při režimu náhradního volna' },
+          { label: 'Příplatek přesčas', value: formatCzk(calculation.payslip.overtimeSurchargeCalc), formula: `PHV * přesčas * ${((employee?.overtimeSurcharge || 0) * 100).toFixed(2)} %` },
+          { label: 'Náhradní volno za přesčas', value: formatHours(calculation.payslip.overtimeCompLeaveHours), formula: 'hodiny přesčasu při režimu náhradního volna' },
+          { label: 'Dovolená', value: formatCzk(calculation.payslip.vacationCalc), formula: 'PHV * hodiny dovolené' },
+          { label: 'DPN náhrada', value: formatCzk(calculation.payslip.sickCalc), formula: `redukovaný PHV ${formatCzk(calculation.payslip.sickHourlyBasis)} * hodiny DPN * ${((employee?.sickCompensation || 0) * 100).toFixed(2)} %` },
+          { label: 'Ruční odměna', value: formatCzk(inputs.manualReward), formula: 'přičteno přímo do hrubé mzdy' },
+          { label: 'Hrubá mzda', value: formatCzk(calculation.payslip.hrubaMzda), formula: 'součet složek hrubé mzdy - absence; minimálně 0' },
+        ],
+      },
+      {
+        title: 'Odvody a daň',
+        rows: [
+          { label: 'Vyměřovací základ SP', value: formatCzk(calculation.payslip.contributionBase), formula: 'hrubá mzda' },
+          { label: 'Vyměřovací základ ZP', value: formatCzk(calculation.payslip.healthContributionBase), formula: calculation.payslip.healthMinimumBaseApplied ? 'navýšeno na minimální zdravotní základ' : 'hrubá mzda' },
+          { label: 'ZP zaměstnanec', value: formatCzk(calculation.payslip.healthEmployee), formula: 'vyměřovací základ ZP * sazba zaměstnance' },
+          { label: 'SP zaměstnanec', value: formatCzk(calculation.payslip.socialEmployee), formula: 'vyměřovací základ SP * sazba zaměstnance' },
+          { label: 'ZP zaměstnavatel', value: formatCzk(calculation.payslip.healthEmployer), formula: 'vyměřovací základ ZP * sazba zaměstnavatele' },
+          { label: 'SP zaměstnavatel', value: formatCzk(calculation.payslip.socialEmployer), formula: 'vyměřovací základ SP * sazba zaměstnavatele' },
+          { label: 'Základ daně', value: formatCzk(calculation.payslip.taxBase), formula: 'hrubá mzda zaokrouhlená podle pravidel zálohy' },
+          { label: 'Daň před slevou', value: formatCzk(calculation.payslip.taxBeforeCredits), formula: '15 % / 23 % podle měsíční hranice' },
+          { label: 'Sleva na poplatníka', value: formatCzk(calculation.payslip.slevaPoplatnika), formula: employee?.taxDeclarationSigned && employee.taxpayerCreditApplied ? 'uplatněno podepsané prohlášení' : 'neuplatněno' },
+          { label: 'Daň po slevě', value: formatCzk(calculation.payslip.taxAfterCredits), formula: 'daň před slevou - sleva; minimálně 0' },
+        ],
+      },
+      {
+        title: 'Výsledek',
+        rows: [
+          { label: 'Hrubá mzda', value: formatCzk(calculation.payslip.hrubaMzda), formula: 'základ pro výpočet čisté mzdy' },
+          { label: 'Mínus ZP zaměstnanec', value: `-${formatCzk(calculation.payslip.healthEmployee)}`, formula: 'srážka zaměstnance' },
+          { label: 'Mínus SP zaměstnanec', value: `-${formatCzk(calculation.payslip.socialEmployee)}`, formula: 'srážka zaměstnance' },
+          { label: 'Mínus daň po slevě', value: `-${formatCzk(calculation.payslip.taxAfterCredits)}`, formula: 'záloha na daň po slevách' },
+          { label: 'Plus DPN náhrada', value: formatCzk(calculation.payslip.sickCalc), formula: 'náhrada DPN se přičítá k čisté mzdě' },
+          { label: 'Čistá mzda', value: formatCzk(calculation.payslip.cistaMzda), formula: 'hrubá mzda - ZP - SP - daň + DPN náhrada' },
+          { label: 'Saldo měsíce', value: formatHours(calculation.payslip.saldoMesic), formula: 'odpracováno + absence - plán' },
+        ],
+      },
+    ],
+    grossWage: formatCzk(Number(calculation.payslip.hrubaMzda || 0)),
+    netWage: formatCzk(Number(calculation.payslip.cistaMzda || 0)),
+  } : null
 
   return {
     month,
@@ -220,13 +345,10 @@ export function usePaySlipScreen() {
     onMonthChange: setMonth,
     internalInputs: {
       manualReward: inputs.manualReward,
-      includeManualRewardInAverage: inputs.includeManualRewardInAverage,
-      unworked: inputs.unworked,
-      sickCarryoverDays: inputs.sickCarryoverDays,
+      holidayCompensationMode: inputs.holidayCompensationMode,
+      showHolidayCompensationMode,
       onManualRewardChange: (value: number) => selectedEmployeeId && confirmPayrollInputChange(() => setPaySlipInput(selectedEmployeeId, month, { manualReward: value })),
-      onIncludeManualRewardInAverageChange: (value: boolean) => selectedEmployeeId && confirmPayrollInputChange(() => setPaySlipInput(selectedEmployeeId, month, { includeManualRewardInAverage: value })),
-      onUnworkedChange: (value: number) => selectedEmployeeId && confirmPayrollInputChange(() => setPaySlipInput(selectedEmployeeId, month, { unworked: value })),
-      onSickCarryoverDaysChange: (value: number) => selectedEmployeeId && confirmPayrollInputChange(() => setPaySlipInput(selectedEmployeeId, month, { sickCarryoverDays: value })),
+      onHolidayCompensationModeChange: (value: HolidayCompensationMode) => selectedEmployeeId && confirmPayrollInputChange(() => setPaySlipInput(selectedEmployeeId, month, { holidayCompensationMode: value })),
     },
     auditRows: calculation.payslip ? [
       { label: 'Typ podkladu pro náhrady', value: averageEarningsSourceLabel },
@@ -238,6 +360,7 @@ export function usePaySlipScreen() {
       { label: 'Odpracované hodiny pro průměr', value: formatHours(averageEarnings?.workedHoursForAverage || 0) },
       { label: 'Odpracované dny pro průměr', value: formatDays(averageEarnings?.workedDaysForAverage || 0) },
     ] : [],
+    currentCalculationRows,
     issuedPayslipDocument,
     issuedDocumentRows: issuedPayslipCalculation && issuedPayslipDocument ? {
       earningsRows: buildIssuedEarningRows(

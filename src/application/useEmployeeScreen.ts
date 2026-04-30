@@ -19,10 +19,6 @@ export function useEmployeeScreen() {
     employmentTypeOptions: [
       { value: 'pracovni_pomer', label: EmploymentTypeLabels.pracovni_pomer },
     ],
-    remunerationTypeOptions: [
-      { value: 'mzda', label: 'mzda' },
-      { value: 'plat', label: 'plat' },
-    ],
     holidayCompensationOptions: [
       { value: 'time-off', label: 'náhr. volno' },
       { value: 'premium', label: 'příplatek' },

@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { calculateMonthDays, calcMonthlySummary, formatDateCZ, isWeekend } from '../domain/payroll/calc'
 import { buildTimeSheetStatementDocument, getTimeSheetStatementBlockingReason } from '../domain/documents/builders'
 import { saveEmployeeMonth as saveEmployeeMonthApi } from '../infrastructure/api/monthStorage'
 import { printDocumentById } from '../screens/documents/print'
+import { autosaveEmployeeMonthDraft } from './autosaveMonth'
 import { defaultPaySlipInputs } from './defaults'
 import { formatCompactNumber, formatMonthLabel } from './formatters'
 import { useStore } from '../infrastructure/state/store'
@@ -22,6 +23,7 @@ export function useTimeSheetScreen() {
   const setMonth = useStore(s => s.setCurrentMonth)
   const updateRecord = useStore(s => s.updateRecord)
   const resetEmployeeMonth = useStore(s => s.resetEmployeeMonth)
+  const prefillEmployeeMonth = useStore(s => s.prefillEmployeeMonth)
   const paySlipInputsByEmployee = useStore(s => s.paySlipInputsByEmployee)
   const setPayrollMonthState = useStore(s => s.setPayrollMonthState)
 
@@ -32,6 +34,7 @@ export function useTimeSheetScreen() {
   const employee = employees.find(item => item.id === selectedEmployeeId) || null
   const monthExists = selectedEmployeeId ? typeof monthStatusByEmployee[selectedEmployeeId]?.[month] !== 'undefined' : false
   const monthRecords = selectedEmployeeId && monthExists ? recordsByEmployee[selectedEmployeeId]?.[month] || [] : []
+  const hasNoRows = monthExists && monthRecords.length === 0
   const inputs = selectedEmployeeId ? paySlipInputsByEmployee[selectedEmployeeId]?.[month] || defaultPaySlipInputs : defaultPaySlipInputs
   const monthStatus = selectedEmployeeId ? monthStatusByEmployee[selectedEmployeeId]?.[month] || 'empty' : 'empty'
   const payrollState = selectedEmployeeId ? payrollByEmployee[selectedEmployeeId]?.[month] : undefined
@@ -41,9 +44,19 @@ export function useTimeSheetScreen() {
     [employee, monthRecords, holidays, inputs.sickCarryoverDays],
   )
   const summary = useMemo(() => calcMonthlySummary(calcs), [calcs])
+  const timeSummary = useMemo(() => ({
+    monthlyFundHours: summary.monthlyFundHours,
+    workedHours: summary.workedHours,
+    workedDays: summary.workedDays,
+    vacationHours: summary.totalVacation,
+    sickHours: summary.totalSick,
+    totalSaldo: summary.totalSaldo,
+  }), [summary])
   const timeSheetDocument = payrollState?.timeSheetDocument || null
-  const documentBlockedReason = !employee || !selectedEmployeeId || !monthExists || !['time_saved', 'time_closed', 'payroll_calculated', 'payroll_approved', 'payslip_issued'].includes(monthStatus)
-    ? 'Výpis evidence lze otevřít až z uloženého měsíce ve stavu time_saved a vyšším.'
+  const documentBlockedReason = hasNoRows
+    ? ''
+    : !employee || !selectedEmployeeId || !monthExists || !['time_saved', 'time_closed', 'payroll_calculated', 'payroll_approved', 'payslip_issued'].includes(monthStatus)
+    ? 'Výpis evidence lze otevřít až z uloženého měsíce ve stavu Evidence uložena nebo vyšším.'
     : getTimeSheetStatementBlockingReason({
         employeeId: selectedEmployeeId,
         month,
@@ -71,6 +84,36 @@ export function useTimeSheetScreen() {
     })
   }
 
+  useEffect(() => {
+    if (!employee || !selectedEmployeeId || !monthExists || !hasNoRows) return
+    if (monthStatus !== 'draft' && monthStatus !== 'time_saved') return
+
+    prefillEmployeeMonth(selectedEmployeeId, month)
+  }, [employee, hasNoRows, month, monthExists, monthStatus, prefillEmployeeMonth, selectedEmployeeId])
+
+  useEffect(() => {
+    if (!employee || !selectedEmployeeId || !monthExists || hasNoRows) return
+    if (monthStatus !== 'draft' && monthStatus !== 'time_saved') return
+
+    const timeout = window.setTimeout(() => {
+      autosaveEmployeeMonthDraft({
+        employer,
+        employee,
+        employeeId: selectedEmployeeId,
+        month,
+        status: monthStatus,
+        records: monthRecords,
+        paySlipInputs: inputs,
+        timeSummary,
+        payrollState,
+      }).catch((caughtError) => {
+        setError(caughtError instanceof Error ? caughtError.message : 'Automatické uložení evidence se nepodařilo.')
+      })
+    }, 500)
+
+    return () => window.clearTimeout(timeout)
+  }, [employee, employer, hasNoRows, inputs, month, monthExists, monthRecords, monthStatus, payrollState, selectedEmployeeId, timeSummary])
+
   const onShiftChange = (index: number, shift: string) => {
     if (!employee || !selectedEmployeeId) return
     if ((monthStatus === 'time_closed' || monthStatus === 'payroll_calculated' || monthStatus === 'payroll_approved' || monthStatus === 'payslip_issued') && !window.confirm('Změna evidence zneplatní spočítanou mzdu a vystavenou pásku. Pokračovat?')) {
@@ -91,7 +134,13 @@ export function useTimeSheetScreen() {
     title: employee ? `Evidence docházky · ${employee.name}` : 'Evidence docházky',
     month,
     monthLabel: formatMonthLabel(month),
-    emptyState: !employee ? 'Vyberte zaměstnance.' : !monthExists ? 'Nejprve založte měsíc.' : '',
+    emptyState: !employee
+      ? 'Vyberte zaměstnance.'
+      : !monthExists
+        ? 'Nejprve založte měsíc.'
+        : hasNoRows
+          ? 'Evidence se automaticky předvyplňuje.'
+          : '',
     info,
     error,
     showDocumentPreview,
@@ -172,14 +221,7 @@ export function useTimeSheetScreen() {
         status: monthStatus,
         records: monthRecords,
         paySlipInputs: inputs,
-        timeSummary: payrollState?.timeSummary || {
-          monthlyFundHours: summary.monthlyFundHours,
-          workedHours: summary.workedHours,
-          workedDays: summary.workedDays,
-          vacationHours: summary.totalVacation,
-          sickHours: summary.totalSick,
-          totalSaldo: summary.totalSaldo,
-        },
+        timeSummary: payrollState?.timeSummary || timeSummary,
         createdAt: payrollState?.createdAt || new Date().toISOString(),
         updatedAt: payrollState?.updatedAt || new Date().toISOString(),
         timeSheetDocument,

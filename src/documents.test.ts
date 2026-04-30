@@ -24,7 +24,6 @@ const employee: EmployeeSettings = {
   permanentAddress: 'Praha 10',
   status: 'active',
   employmentType: 'pracovni_pomer',
-  remunerationType: 'mzda',
   employmentStartDate: '2026-01-01',
   employmentEndDate: '',
   contractJobTitle: 'Operátor výroby',

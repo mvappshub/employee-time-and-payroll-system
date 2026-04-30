@@ -64,14 +64,15 @@ describe('store workflow cache', () => {
     expect(useStore.getState().monthStatusByEmployee[employeeId]?.['2030-02']).toBeUndefined()
   })
 
-  it('month is created only by explicit initEmployeeMonth', () => {
+  it('month is created only by explicit initEmployeeMonth with prefilled work schedule', () => {
     const employeeId = createPersistedEmployee()
 
     useStore.getState().initEmployeeMonth(employeeId, '2030-01')
 
     const records = useStore.getState().recordsByEmployee[employeeId]['2030-01']
     expect(records).toHaveLength(31)
-    expect(records.every(record => record.shift === '' && record.arrival === '' && record.departure === '')).toBe(true)
+    expect(records[0]).toMatchObject({ date: '2030-01-01', shift: 'ranní', arrival: '06:00', departure: '14:30' })
+    expect(records[5]).toMatchObject({ date: '2030-01-06', shift: 'volno', arrival: '', departure: '' })
     expect(useStore.getState().monthStatusByEmployee[employeeId]['2030-01']).toBe('draft')
   })
 
@@ -97,7 +98,6 @@ describe('store workflow cache', () => {
             name: 'Jan Novák',
             employeeNumber: '001',
             employmentType: 'pracovni_pomer',
-            remunerationType: 'mzda',
             baseSalary: 32000,
             personalBonus: 0.25,
             nightSurcharge: 0.1,
@@ -115,6 +115,7 @@ describe('store workflow cache', () => {
             includeManualRewardInAverage: false,
             unworked: 0,
             sickCarryoverDays: 0,
+            holidayCompensationMode: 'time-off',
           },
           documentSummary: {
             workHoursWH: 160,
@@ -136,6 +137,25 @@ describe('store workflow cache', () => {
     expect(useStore.getState().payrollByEmployee[employeeId]['2030-06'].payrollResult).toBeUndefined()
   })
 
+  it('returns month status from payroll phase to time_closed after editing payroll inputs', () => {
+    const employeeId = createPersistedEmployee()
+    useStore.getState().initEmployeeMonth(employeeId, '2030-07')
+    useStore.getState().closeEmployeeTime(employeeId, '2030-07')
+    useStore.getState().calculateEmployeePayroll(employeeId, '2030-07', {
+      payrollResult: { hrubaMzda: 40000 },
+      approvedAt: '2030-07-10T10:00:00.000Z',
+      issuedAt: '2030-07-10T10:00:00.000Z',
+    })
+
+    useStore.getState().setPaySlipInput(employeeId, '2030-07', { manualReward: 1000 })
+
+    expect(useStore.getState().monthStatusByEmployee[employeeId]['2030-07']).toBe('time_closed')
+    expect(useStore.getState().paySlipInputsByEmployee[employeeId]['2030-07'].manualReward).toBe(1000)
+    expect(useStore.getState().payrollByEmployee[employeeId]['2030-07'].payrollResult).toBeUndefined()
+    expect(useStore.getState().payrollByEmployee[employeeId]['2030-07'].approvedAt).toBeUndefined()
+    expect(useStore.getState().payrollByEmployee[employeeId]['2030-07'].issuedAt).toBeUndefined()
+  })
+
   it('hydrates persisted workflow status and month data for an employee month', () => {
     const employeeId = createPersistedEmployee()
     const monthData: EmployeeMonth = {
@@ -148,6 +168,7 @@ describe('store workflow cache', () => {
         includeManualRewardInAverage: false,
         unworked: 0,
         sickCarryoverDays: 0,
+        holidayCompensationMode: 'time-off',
       },
       createdAt: '2030-05-01T10:00:00.000Z',
       updatedAt: '2030-05-02T10:00:00.000Z',

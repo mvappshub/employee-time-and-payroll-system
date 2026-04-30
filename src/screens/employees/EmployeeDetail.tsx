@@ -187,7 +187,7 @@ export function EmployeeDetail({
           <button className="border border-slate-200 bg-white px-3 py-2 text-[12px] font-medium text-slate-700 disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400" onClick={onRefreshContractDraft} disabled={!contractDocument}>
             Aktualizovat draft
           </button>
-          <button className="border border-blue-600 bg-blue-600 px-3 py-2 text-[12px] font-semibold text-white disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400" onClick={onPrintContract} disabled={!contractDocument || !canPrintContract}>
+          <button className="border border-blue-600 bg-blue-600 px-3 py-2 text-[12px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50" onClick={onPrintContract} disabled={!contractDocument || !canPrintContract}>
             Tisk / PDF
           </button>
         </div>

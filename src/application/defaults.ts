@@ -5,4 +5,5 @@ export const defaultPaySlipInputs: PaySlipInputs = {
   includeManualRewardInAverage: false,
   unworked: 0,
   sickCarryoverDays: 0,
+  holidayCompensationMode: 'time-off',
 }

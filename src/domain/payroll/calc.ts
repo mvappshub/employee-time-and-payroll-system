@@ -393,14 +393,14 @@ export function calcReducedAverageHourlyBasis(averageHourlyEarnings: number, mon
   return firstBand + secondBand + thirdBand
 }
 
-function getMinimumNightSurcharge(emp: EmployeeSettings): number {
-  // MPSV/TREXIMA: § 116 mzda >= 10 %, § 125 plat = 20 %.
-  return emp.remunerationType === 'plat' ? 0.2 : 0.1
+function getMinimumNightSurcharge(): number {
+  // MPSV/TREXIMA: § 116 mzda >= 10 %.
+  return 0.1
 }
 
-function getMinimumWeekendSurcharge(emp: EmployeeSettings): number {
-  // MPSV/TREXIMA: § 118 mzda >= 10 %, § 126 plat = 25 %.
-  return emp.remunerationType === 'plat' ? 0.25 : 0.1
+function getMinimumWeekendSurcharge(): number {
+  // MPSV/TREXIMA: § 118 mzda >= 10 %.
+  return 0.1
 }
 
 function getMinimumHolidaySurcharge(): number {
@@ -420,8 +420,8 @@ export function calcAverageSourceSnapshot(
   const workedRatio = sum.workHoursWH > 0 ? sum.workedHours / sum.workHoursWH : 0
   const baseSalaryForAverage = hourlyRate * sum.workedHours
   const personalBonusForAverage = workedRatio * emp.baseSalary * emp.personalBonus
-  const nightSurchargeRate = Math.max(emp.nightSurcharge, getMinimumNightSurcharge(emp))
-  const weekendSurchargeRate = Math.max(emp.weekendSurcharge, getMinimumWeekendSurcharge(emp))
+  const nightSurchargeRate = Math.max(emp.nightSurcharge, getMinimumNightSurcharge())
+  const weekendSurchargeRate = Math.max(emp.weekendSurcharge, getMinimumWeekendSurcharge())
   const holidaySurchargeRate = Math.max(emp.holidaySurcharge, getMinimumHolidaySurcharge())
   const holidaySurchargeForAverage = emp.holidayCompensationMode === 'premium'
     ? averageHourlyEarnings * sum.totalHolidayWorked * holidaySurchargeRate
@@ -453,8 +453,8 @@ export function calcPaySlip(emp: EmployeeSettings, sum: MonthlySummary, manualRe
   const whwh = sum.workHoursWH
   const hr = calcHourlyRate(emp.baseSalary, whwh)
   const holidaySurchargeRate = Math.max(emp.holidaySurcharge, getMinimumHolidaySurcharge())
-  const nightSurchargeRate = Math.max(emp.nightSurcharge, getMinimumNightSurcharge(emp))
-  const weekendSurchargeRate = Math.max(emp.weekendSurcharge, getMinimumWeekendSurcharge(emp))
+  const nightSurchargeRate = Math.max(emp.nightSurcharge, getMinimumNightSurcharge())
+  const weekendSurchargeRate = Math.max(emp.weekendSurcharge, getMinimumWeekendSurcharge())
   const ratio = whwh > 0 ? (sum.workedHours + sum.totalHolidayCredit) / whwh : 0
 
   const baseSalaryCalc = ratio * emp.baseSalary

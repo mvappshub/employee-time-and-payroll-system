@@ -169,6 +169,39 @@ describe('document builders', () => {
     expect(document.snapshot.text).toContain('Smluvní strany sjednávají zkušební dobu v délce 3 měsíců ode dne vzniku pracovního poměru.')
   })
 
+  it('builds full 2026 employment contract with app-backed fields', () => {
+    const document = buildEmploymentContractDocument({ ...employee, employmentContractTemplate: 'full_2026' }, employer)
+    const text = document.snapshot.text
+
+    expect(document.snapshot.template).toBe('full_2026')
+    expect(document.templateVersion).toBe('employment-contract-cz-full-2026')
+    expect(text).toContain('Zaměstnavatel: ACME s.r.o.')
+    expect(text).toContain('Zaměstnanec: Jan Novák')
+    expect(text).toContain('Dnem nástupu do práce je: 1. 1. 2026.')
+    expect(text).toContain('Zaměstnanci náleží hrubá měsíční mzda ve výši 30 000 Kč.')
+    expect(text).toContain('Dovolená')
+    expect(text).toContain('Za zaměstnavatele')
+    expect(text).not.toContain('Firma s.r.o.')
+    expect(text).not.toContain('Softwarový vývojář')
+    expect(text).not.toContain('Doklad totožnosti')
+    expect(text).not.toContain('Státní příslušnost')
+  })
+
+  it('builds minimum 2026 employment contract with the three mandatory elements', () => {
+    const document = buildEmploymentContractDocument({ ...employee, employmentContractTemplate: 'minimum_2026' }, employer)
+    const text = document.snapshot.text
+
+    expect(document.snapshot.template).toBe('minimum_2026')
+    expect(document.templateVersion).toBe('employment-contract-cz-minimum-2026')
+    expect(text).toContain('§ 34 odst. 1 písm. a) — Druh práce')
+    expect(text).toContain('§ 34 odst. 1 písm. b) — Místo výkonu práce')
+    expect(text).toContain('§ 34 odst. 1 písm. c) — Den nástupu do práce')
+    expect(text).toContain('Pracovní poměr se sjednává na dobu neurčitou.')
+    expect(text).not.toMatch(isoDateRegex)
+    expect(text).not.toContain('Firma s.r.o.')
+    expect(text).not.toContain('Softwarový vývojář')
+  })
+
   it('returns validation error when probation is agreed after start date', () => {
     const result = validateEmploymentContractFields({
       employerLegalName: employer.legalName || employer.name,
@@ -314,8 +347,17 @@ describe('document builders', () => {
     const document = buildEmploymentContractDocument(employee, employer)
 
     expect(document.hash).toBe(hashDocumentSnapshot(document.snapshot))
-    expect(document.templateVersion).toBe('employment-contract-cz-v2')
+    expect(document.templateVersion).toBe('employment-contract-cz-full-2026')
     expect(document.documentId).toBe('employment-contract-emp-1')
+  })
+
+  it('changes the employment contract hash when template choice changes', () => {
+    const full = buildEmploymentContractDocument({ ...employee, employmentContractTemplate: 'full_2026' }, employer)
+    const minimum = buildEmploymentContractDocument({ ...employee, employmentContractTemplate: 'minimum_2026' }, employer, full)
+
+    expect(minimum.hash).not.toBe(full.hash)
+    expect(minimum.snapshot.template).toBe('minimum_2026')
+    expect(minimum.templateVersion).toBe('employment-contract-cz-minimum-2026')
   })
 
   it('downgrades previously issued contract to refreshable draft when source data changes', () => {

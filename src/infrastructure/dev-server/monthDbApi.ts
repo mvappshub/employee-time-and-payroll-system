@@ -100,6 +100,7 @@ function repairEmployeeSettings(employee?: Partial<EmployeeSettings>): EmployeeS
     probationEnabled: Boolean(employee?.probationEnabled),
     probationMonths: employee?.probationEnabled ? employee?.probationMonths || 3 : null,
     fixedTermEndDate: durationType === 'fixed_term' ? employee?.fixedTermEndDate || null : null,
+    employmentContractTemplate: employee?.employmentContractTemplate === 'minimum_2026' ? 'minimum_2026' : 'full_2026',
     grossMonthlyWage: typeof employee?.grossMonthlyWage === 'number' ? employee.grossMonthlyWage : baseSalary,
     annualVacationWeeks: typeof employee?.annualVacationWeeks === 'number'
       ? employee.annualVacationWeeks
@@ -492,7 +493,13 @@ async function handleEmployeeDocument(req: IncomingMessage, res: ServerResponse,
     return
   }
 
-  const updated = employees.map(item => item.id === employeeId ? { ...item, employmentContractDocument: body } : item)
+  const updated = employees.map(item => item.id === employeeId
+    ? {
+      ...item,
+      employmentContractTemplate: body?.snapshot.template || item.employmentContractTemplate || 'full_2026',
+      employmentContractDocument: body,
+    }
+    : item)
   await saveEmployees(updated)
   sendJson(res, 200, { ok: true })
 }

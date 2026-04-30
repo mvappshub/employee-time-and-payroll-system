@@ -125,7 +125,9 @@ function contractValidationData(employee: EmployeeSettings, employer: EmployerPr
 function buildEmploymentContractSnapshot(employee: EmployeeSettings, employer: EmployerProfile): EmploymentContractDocument['snapshot'] {
   const normalizedIco = normalizeIco(employer.ico)
   const durationType = employee.durationType || (employee.fixedTermEndDate ? 'fixed_term' : 'indefinite')
+  const templateType = employee.employmentContractTemplate === 'minimum_2026' ? 'minimum_2026' : 'full_2026'
   const snapshotWithoutText = {
+    template: templateType,
     employer: {
       legalName: legalName(employer),
       ico: normalizedIco,
@@ -159,8 +161,14 @@ function buildEmploymentContractSnapshot(employee: EmployeeSettings, employer: E
       employeeReceivedCopyAt: employee.employeeReceivedCopyAt,
     },
   }
-  const template = buildEmploymentContractTemplate(snapshotWithoutText)
-  return { ...snapshotWithoutText, ...template }
+  const textTemplate = buildEmploymentContractTemplate(snapshotWithoutText)
+  return { ...snapshotWithoutText, ...textTemplate }
+}
+
+function employmentContractTemplateVersion(template: EmploymentContractDocument['snapshot']['template']): string {
+  return template === 'minimum_2026'
+    ? 'employment-contract-cz-minimum-2026'
+    : 'employment-contract-cz-full-2026'
 }
 
 export function hasContractRelevantChange(
@@ -215,7 +223,7 @@ export function buildEmploymentContractDocument(
     documentId,
     generatedAt: updatedAt,
     hash,
-    templateVersion: 'employment-contract-cz-v2',
+    templateVersion: employmentContractTemplateVersion(snapshot.template),
     invalidatedAt: previous?.lifecycleStatus === 'issued' ? updatedAt : previous?.invalidatedAt,
     invalidationReason: previous?.lifecycleStatus === 'issued'
       ? 'Změna zaměstnance nebo firemního profilu vyžaduje obnovu pracovní smlouvy.'
@@ -234,7 +242,7 @@ export function issueEmploymentContractDocument(document: EmploymentContractDocu
     updatedAt: nowIso,
     generatedAt: document.generatedAt || nowIso,
     hash,
-    templateVersion: document.templateVersion || 'employment-contract-cz-v2',
+    templateVersion: employmentContractTemplateVersion(document.snapshot.template),
     invalidatedAt: undefined,
     invalidationReason: undefined,
   }
@@ -416,12 +424,18 @@ export function buildIssuedPayslipDocument(
         name: employee.name,
         employeeNumber: employee.employeeNumber,
         employmentType: employee.employmentType,
+        employmentStartDate: employee.employmentStartDate,
+        contractWorkplace: employee.contractWorkplace,
+        weeklyHours: employee.weeklyHours,
+        workload: employee.workload,
         baseSalary: employee.baseSalary,
         personalBonus: employee.personalBonus,
         nightSurcharge: employee.nightSurcharge,
         weekendSurcharge: employee.weekendSurcharge,
         sickCompensation: employee.sickCompensation,
         overtimeSurcharge: employee.overtimeSurcharge,
+        taxDeclarationSigned: employee.taxDeclarationSigned,
+        taxpayerCreditApplied: employee.taxpayerCreditApplied,
         vacationEntitlementHours: employee.vacationEntitlementHours,
         vacationUsedHours: employee.vacationUsedHours,
         vacationRemainingHours: employee.vacationRemainingHours,

@@ -380,7 +380,10 @@ export function useEmployeesScreen() {
         setError(saveError instanceof Error ? saveError.message : 'Draft pracovní smlouvy se nepodařilo obnovit.')
         return
       }
-      updateEmployee(activeEmployee.id, { employmentContractDocument: nextDocument })
+      updateEmployee(activeEmployee.id, {
+        employmentContractDocument: nextDocument,
+        employmentContractTemplate: activeEmployee.employmentContractTemplate,
+      })
       setInfo('Draft pracovní smlouvy byl aktualizován.')
     },
     onPrintContract: async () => {
@@ -392,7 +395,10 @@ export function useEmployeesScreen() {
         setError(saveError instanceof Error ? saveError.message : 'Pracovní smlouvu se nepodařilo vystavit.')
         return
       }
-      updateEmployee(activeEmployee.id, { employmentContractDocument: issuedDocument })
+      updateEmployee(activeEmployee.id, {
+        employmentContractDocument: issuedDocument,
+        employmentContractTemplate: activeEmployee.employmentContractTemplate,
+      })
       setDraftEmployee(current => current ? { ...current, employmentContractDocument: issuedDocument } : current)
       setInfo('Pracovní smlouva byla vystavena.')
       printWithRetry('employment-contract-document', setError)

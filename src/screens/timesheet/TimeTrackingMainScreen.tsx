@@ -89,6 +89,12 @@ export function TimeTrackingMainScreen({
     onActiveTabChange('detail')
   }
 
+  const handleOpenTimeSheetDocument = (month: string) => {
+    setCurrentMonth(month)
+    timeSheet.onShowDocumentPreview()
+    onActiveTabChange('detail')
+  }
+
   const handleInitMonth = async (month: string) => {
     await overview.onInitMonth(month)
     onActiveTabChange('detail')
@@ -132,7 +138,7 @@ export function TimeTrackingMainScreen({
           rows={overview.monthRows}
           onInitMonth={handleInitMonth}
           onOpenMonth={handleOpenMonth}
-          onOpenTimeSheetDocument={handleOpenMonth}
+          onOpenTimeSheetDocument={handleOpenTimeSheetDocument}
         />
       </div>
       <div className={activeTab === 'detail' ? 'block' : 'hidden'}>

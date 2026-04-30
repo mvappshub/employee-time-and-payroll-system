@@ -57,10 +57,15 @@ describe('UI architecture boundaries', () => {
 
   it('document views use print-oriented document tables', () => {
     const payslipDocumentView = readFileSync(new URL('./screens/documents/IssuedPayslipDocumentView.tsx', import.meta.url), 'utf8')
+    const minimalPayslipDocumentView = readFileSync(new URL('./screens/documents/IssuedPayslipMinimalDocumentView.tsx', import.meta.url), 'utf8')
     const timeSheetDocumentView = readFileSync(new URL('./screens/documents/TimeSheetStatementDocumentView.tsx', import.meta.url), 'utf8')
 
-    expect(payslipDocumentView).toContain('document-table document-table--financial')
-    expect(payslipDocumentView).toContain('DocumentTotalLine')
+    expect(payslipDocumentView).toContain('data-print-document="issued-payslip-document"')
+    expect(payslipDocumentView).toContain('payslip-table')
+    expect(payslipDocumentView).toContain('payslip-recap')
+    expect(minimalPayslipDocumentView).toContain('data-print-document="issued-payslip-minimal-document"')
+    expect(minimalPayslipDocumentView).toContain('payslip-min-table')
+    expect(minimalPayslipDocumentView).toContain('payslip-min-recap')
     expect(timeSheetDocumentView).toContain('document-table document-table--compact')
   })
 

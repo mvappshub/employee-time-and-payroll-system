@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 
 const employeeView = readFileSync(new URL('./screens/employee/EmployeeView.tsx', import.meta.url), 'utf8')
 const paySlipView = readFileSync(new URL('./screens/payslip/PaySlipView.tsx', import.meta.url), 'utf8')
+const minimalPayslipDocumentView = readFileSync(new URL('./screens/documents/IssuedPayslipMinimalDocumentView.tsx', import.meta.url), 'utf8')
 const timeSheetView = readFileSync(new URL('./screens/timesheet/TimeSheetView.tsx', import.meta.url), 'utf8')
 const holidaysView = readFileSync(new URL('./screens/holidays/HolidaysView.tsx', import.meta.url), 'utf8')
 const appShellView = readFileSync(new URL('./screens/app/AppShellView.tsx', import.meta.url), 'utf8')
@@ -48,6 +49,12 @@ describe('UI regressions', () => {
     expect(paySlipView).toContain('Výpočet mzdy')
     expect(paySlipView).toContain('2xl:grid-cols-3')
     expect(paySlipView).toContain('Výplatní páska pro zaměstnance')
+    expect(paySlipView).toContain('Typ výplatní pásky')
+    expect(paySlipView).toContain('Plná')
+    expect(paySlipView).toContain('Minimální')
+    expect(paySlipView).toContain('Náhled')
+    expect(paySlipView).toContain('Skrýt náhled')
+    expect(paySlipView).toContain('issued-payslip-minimal-document')
     expect(paySlipView).toContain('Hrubá mzda')
     expect(paySlipView).toContain('Čistá mzda')
     expect(paySlipHook).toContain('currentCalculationRows')
@@ -86,6 +93,16 @@ describe('UI regressions', () => {
   it('month controls wire print button to a concrete action', () => {
     expect(monthControlsView).toContain('onClick={onPrintPayslip}')
     expect(monthControlsView).toContain('Tisk / PDF')
+    expect(paySlipView).toContain('onPrintDocument(selectedDocumentId)')
+    expect(paySlipView).toContain("full: 'issued-payslip-document'")
+    expect(paySlipView).toContain("minimal: 'issued-payslip-minimal-document'")
+  })
+
+  it('minimal payslip document keeps required employee-facing sections', () => {
+    expect(minimalPayslipDocumentView).toContain('data-print-document="issued-payslip-minimal-document"')
+    expect(minimalPayslipDocumentView).toContain('Mzdové složky')
+    expect(minimalPayslipDocumentView).toContain('Odvody a záloha na daň')
+    expect(minimalPayslipDocumentView).toContain('Částka k výplatě')
   })
 
   it('time sheet view still renders the expected work evidence columns', () => {

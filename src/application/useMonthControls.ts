@@ -226,10 +226,10 @@ export function useMonthControls() {
       setError('')
       setInfo('')
     },
-    onPrintPayslip: () => {
+    onPrintPayslip: (documentId = 'issued-payslip-document') => {
       if (!buttonState.canPrint) return
       setSection('payroll')
-      printWithRetry('issued-payslip-document', () => {
+      printWithRetry(documentId, () => {
         setError('Tisk výplatní pásky se nepodařilo spustit. Zkuste akci zopakovat.')
       })
     },

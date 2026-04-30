@@ -239,6 +239,9 @@ export function useTimeSheetScreen() {
     onToggleDocumentPreview: () => {
       setShowDocumentPreview(value => !value)
     },
+    onShowDocumentPreview: () => {
+      setShowDocumentPreview(true)
+    },
     onPrintDocument: async () => {
       if (!employee || !selectedEmployeeId || documentBlockedReason) {
         setError(documentBlockedReason || 'Výpis evidence nelze tisknout.')

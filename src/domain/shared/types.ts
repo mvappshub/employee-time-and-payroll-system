@@ -3,6 +3,8 @@ export const EmploymentTypeLabels: Record<EmploymentType, string> = {
   pracovni_pomer: 'Pracovní poměr',
 }
 
+export type EmploymentContractTemplate = 'full_2026' | 'minimum_2026'
+
 export type ShiftOperationType = 'single' | 'double' | 'triple'
 export const ShiftOperationTypeLabels: Record<ShiftOperationType, string> = {
   single: 'Jednosměnný provoz',
@@ -83,6 +85,7 @@ export interface DocumentMetadata {
 }
 
 export interface EmploymentContractSnapshot {
+  template: EmploymentContractTemplate
   employer: {
     legalName: string
     ico: string
@@ -189,12 +192,19 @@ export interface IssuedPayslipSnapshot {
     name: string
     employeeNumber: string
     employmentType: EmploymentType
+    employmentStartDate?: string
+    contractWorkplace?: string
+    weeklyHours?: number
+    workload?: number
     baseSalary: number
     personalBonus: number
     nightSurcharge: number
     weekendSurcharge: number
     sickCompensation: number
     overtimeSurcharge: number
+    taxDeclarationSigned?: boolean
+    taxpayerCreditApplied?: boolean
+    healthInsuranceCompany?: string
     vacationEntitlementHours: number
     vacationUsedHours: number
     vacationRemainingHours: number
@@ -265,6 +275,7 @@ export interface EmployeeSettings {
   probationEnabled?: boolean
   probationMonths?: number | null
   fixedTermEndDate?: string | null
+  employmentContractTemplate?: EmploymentContractTemplate
   grossMonthlyWage?: number
   annualVacationWeeks?: number
   employeeReceivedCopyAt?: string

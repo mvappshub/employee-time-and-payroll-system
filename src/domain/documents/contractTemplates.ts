@@ -21,42 +21,85 @@ export function buildEmploymentContractDocument(snapshot: Omit<EmploymentContrac
   const durationLine = contract.durationType === 'fixed_term'
     ? `Pracovní poměr se sjednává na dobu určitou do ${formatCzechDate(contract.fixedTermEndDate)}.`
     : 'Pracovní poměr se sjednává na dobu neurčitou.'
+  const vacationDays = Math.round(contract.annualVacationWeeks * 5 * 100) / 100
+
+  if (snapshot.template === 'minimum_2026') {
+    const sections: TextDocumentTemplate['sections'] = [
+      {
+        heading: 'Pracovní smlouva',
+        lines: [
+          'uzavřená dle § 34 odst. 1 zákona č. 262/2006 Sb., zákoníku práce',
+          '',
+          `Zaměstnavatel: ${employer.legalName}, IČO ${employer.ico}, se sídlem ${employer.registeredAddress}, zastoupený ${employer.representativeName}, ${employer.representativeRole}`,
+          'a',
+          `Zaměstnanec: ${employee.name}, nar. ${formatCzechDate(employee.birthDate)}, bytem ${employee.address}`,
+          '',
+          'uzavírají tuto pracovní smlouvu:',
+        ],
+      },
+      { heading: '§ 34 odst. 1 písm. a) — Druh práce', lines: [`Zaměstnanec bude pro zaměstnavatele vykonávat práci druhu: ${contract.jobType}.`] },
+      { heading: '§ 34 odst. 1 písm. b) — Místo výkonu práce', lines: [`Místem výkonu práce je: ${contract.workplace}.`] },
+      { heading: '§ 34 odst. 1 písm. c) — Den nástupu do práce', lines: [`Zaměstnanec nastoupí do práce dne: ${formatCzechDate(contract.startDate)}.`] },
+      {
+        heading: 'Závěrečná ustanovení',
+        lines: [
+          durationLine,
+          'Ostatní práva a povinnosti smluvních stran, včetně mzdy, pracovní doby, dovolené a výpovědní doby, se řídí zákonem č. 262/2006 Sb., zákoníkem práce, ve znění pozdějších předpisů, a vnitřními předpisy zaměstnavatele, s nimiž byl zaměstnanec seznámen.',
+          'Smlouva je vyhotovena ve dvou stejnopisech; každá smluvní strana obdrží jeden.',
+          '',
+          `V ${contract.signaturePlace} dne ${formatCzechDate(contract.contractConclusionDate)}`,
+          '',
+          'Zaměstnavatel: ______________________',
+          `${employer.legalName}, ${employer.representativeName}, ${employer.representativeRole}`,
+          '',
+          'Zaměstnanec: ______________________',
+          `${employee.name}, nar. ${formatCzechDate(employee.birthDate)}`,
+        ],
+      },
+    ]
+
+    return { sections, text: joinSections(sections) }
+  }
 
   const sections: TextDocumentTemplate['sections'] = [
     {
       heading: 'Pracovní smlouva',
       lines: [
-        'Zaměstnavatel:',
-        `${employer.legalName}, IČO: ${employer.ico}, se sídlem ${employer.registeredAddress}, zastoupený ${employer.representativeName}, ${employer.representativeRole}`,
+        'uzavřená podle § 34 a násl. zákona č. 262/2006 Sb., zákoníku práce, ve znění pozdějších předpisů',
         '',
-        'Zaměstnanec:',
-        `${employee.name}, datum narození ${formatCzechDate(employee.birthDate)}, bydliště ${employee.address}`,
+        `Zaměstnavatel: ${employer.legalName}, IČO: ${employer.ico}, se sídlem ${employer.registeredAddress}, zastoupený ${employer.representativeName}, ${employer.representativeRole}`,
+        `Zaměstnanec: ${employee.name}, datum narození ${formatCzechDate(employee.birthDate)}, bydliště ${employee.address}`,
         '',
-        'Zaměstnavatel a zaměstnanec uzavírají podle zákona č. 262/2006 Sb., zákoník práce, tuto pracovní smlouvu:',
+        'Zaměstnavatel a zaměstnanec uzavírají níže uvedeného dne tuto pracovní smlouvu za podmínek dále stanovených.',
       ],
     },
     { heading: '1. Druh práce', lines: [`Zaměstnanec bude pro zaměstnavatele vykonávat práci: ${contract.jobType}.`] },
     { heading: '2. Místo výkonu práce', lines: [`Místem výkonu práce je: ${contract.workplace}.`] },
     { heading: '3. Den nástupu do práce', lines: [`Dnem nástupu do práce je: ${formatCzechDate(contract.startDate)}.`] },
-    { heading: '4. Doba trvání pracovního poměru', lines: [durationLine] },
     ...(contract.probationEnabled ? [{
-      heading: '5. Zkušební doba',
+      heading: '4. Zkušební doba',
       lines: [`Smluvní strany sjednávají zkušební dobu v délce ${contract.probationMonths} měsíců ode dne vzniku pracovního poměru.`],
     }] : []),
-    { heading: contract.probationEnabled ? '6. Týdenní pracovní doba' : '5. Týdenní pracovní doba', lines: [`Stanovená týdenní pracovní doba činí ${contract.weeklyHours} hodin týdně.`] },
+    { heading: contract.probationEnabled ? '5. Doba trvání pracovního poměru' : '4. Doba trvání pracovního poměru', lines: [durationLine] },
+    { heading: contract.probationEnabled ? '6. Pracovní doba a rozvržení' : '5. Pracovní doba a rozvržení', lines: [`Stanovená týdenní pracovní doba činí ${contract.weeklyHours} hodin týdně.`] },
     { heading: contract.probationEnabled ? '7. Mzda' : '6. Mzda', lines: [`Zaměstnanci náleží hrubá měsíční mzda ve výši ${formatCurrencyCZK(contract.grossMonthlyWage)}.`] },
+    { heading: contract.probationEnabled ? '8. Dovolená' : '7. Dovolená', lines: [`Zaměstnanci přísluší dovolená v délce ${contract.annualVacationWeeks} týdny za kalendářní rok, orientačně ${vacationDays} pracovních dnů při pětidenním pracovním týdnu.`] },
+    { heading: contract.probationEnabled ? '9. Výpovědní doba' : '8. Výpovědní doba', lines: ['Výpovědní doba a způsoby skončení pracovního poměru se řídí zákoníkem práce, není-li písemně sjednáno nebo zákonem stanoveno jinak.'] },
     {
-      heading: contract.probationEnabled ? '8. Vyhotovení smlouvy' : '7. Vyhotovení smlouvy',
+      heading: contract.probationEnabled ? '10. Závěrečná ustanovení' : '9. Závěrečná ustanovení',
       lines: [
+        'Tato smlouva se řídí právním řádem České republiky, zejména zákonem č. 262/2006 Sb., zákoníkem práce.',
+        'Vztahy touto smlouvou neupravené se řídí příslušnými ustanoveními zákoníku práce a navazujících právních předpisů.',
+        'Smlouva nabývá platnosti a účinnosti dnem podpisu oběma smluvními stranami.',
         'Tato smlouva je vyhotovena ve dvou stejnopisech, z nichž každá smluvní strana obdrží jedno vyhotovení.',
         '',
         `V ${contract.signaturePlace} dne ${formatCzechDate(contract.contractConclusionDate)}`,
         '',
         'Za zaměstnavatele: ______________________',
-        `${employer.representativeName}, ${employer.representativeRole}`,
+        `${employer.legalName}, ${employer.representativeName}, ${employer.representativeRole}`,
         '',
         'Zaměstnanec: ______________________',
-        employee.name,
+        `${employee.name}, nar. ${formatCzechDate(employee.birthDate)}`,
       ],
     },
   ]

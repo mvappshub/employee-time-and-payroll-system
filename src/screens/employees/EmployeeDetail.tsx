@@ -186,9 +186,20 @@ export function EmployeeDetail({
               </Alert>
             )}
             {contractDocument && (
-              <div className="flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-                <FileText className="h-3.5 w-3.5 text-slate-400" />
-                <span>Pracovní smlouva, verze {contractDocument.version}</span>
+              <div className="grid gap-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600 md:grid-cols-[1fr_220px] md:items-center">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-3.5 w-3.5 text-slate-400" />
+                  <span>Pracovní smlouva, verze {contractDocument.version}</span>
+                </div>
+                <Select
+                  label="Tisková šablona"
+                  density="compact"
+                  value={employee.employmentContractTemplate || 'full_2026'}
+                  onChange={event => onEmployeeChange('employmentContractTemplate', event.target.value)}
+                >
+                  <option value="full_2026">Vzor 2026</option>
+                  <option value="minimum_2026">Zákonné minimum 2026</option>
+                </Select>
               </div>
             )}
             {contractDocument && (

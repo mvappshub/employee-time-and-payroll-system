@@ -42,6 +42,7 @@ const defaultEmployeeTemplate: EmployeeSettings = {
   probationEnabled: false,
   probationMonths: null,
   fixedTermEndDate: null,
+  employmentContractTemplate: 'full_2026',
   grossMonthlyWage: 0,
   annualVacationWeeks: 4,
   employeeReceivedCopyAt: '',
@@ -216,6 +217,7 @@ export function normalizeEmployeeSettings(employee?: Partial<EmployeeSettings>):
     contractConclusionDate: employee?.contractConclusionDate || employee?.employmentStartDate || defaultEmployeeTemplate.contractConclusionDate,
     durationType,
     fixedTermEndDate: durationType === 'fixed_term' ? employee?.fixedTermEndDate || null : null,
+    employmentContractTemplate: employee?.employmentContractTemplate === 'minimum_2026' ? 'minimum_2026' : 'full_2026',
     probationEnabled: Boolean(employee?.probationEnabled),
     probationMonths: employee?.probationEnabled ? employee?.probationMonths || 3 : null,
     annualVacationWeeks: typeof employee?.annualVacationWeeks === 'number'

@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react'
-import { Loader2, Lock, Printer } from 'lucide-react'
+import { useState, type ReactNode } from 'react'
+import { Eye, EyeOff, Loader2, Lock, Printer } from 'lucide-react'
 import { Alert } from '../../components/ui/Alert'
 import { Button } from '../../components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card'
@@ -8,6 +8,7 @@ import { Input } from '../../components/ui/Input'
 import { Select } from '../../components/ui/Select'
 import type { HolidayCompensationMode, IssuedPayslipDocument } from '../../domain/shared/types'
 import { IssuedPayslipDocumentView } from '../documents/IssuedPayslipDocumentView'
+import { IssuedPayslipMinimalDocumentView } from '../documents/IssuedPayslipMinimalDocumentView'
 
 type InternalInputProps = {
   manualReward: number
@@ -19,6 +20,12 @@ type InternalInputProps = {
 
 type PayslipRow = { label: string; hrs?: string; days?: string; czk?: string; bold?: boolean; neg?: boolean }
 type CalculationRow = { label: string; value: string; formula: string }
+type PayslipTemplate = 'full' | 'minimal'
+
+const PAYSLIP_DOCUMENT_IDS: Record<PayslipTemplate, string> = {
+  full: 'issued-payslip-document',
+  minimal: 'issued-payslip-minimal-document',
+}
 
 export interface PaySlipViewProps {
   month: string
@@ -55,7 +62,7 @@ export interface PaySlipViewProps {
   employmentTypeLabel: string
   extraActions?: ReactNode
   onMonthChange: (month: string) => void
-  onPrintDocument: () => void
+  onPrintDocument: (documentId?: string) => void
 }
 
 export function PaySlipView({
@@ -77,6 +84,10 @@ export function PaySlipView({
   extraActions,
   onPrintDocument,
 }: PaySlipViewProps) {
+  const [selectedTemplate, setSelectedTemplate] = useState<PayslipTemplate>('full')
+  const [showDocumentPreview, setShowDocumentPreview] = useState(false)
+  const selectedDocumentId = PAYSLIP_DOCUMENT_IDS[selectedTemplate]
+
   return (
     <div className="space-y-3">
       <div className="flex items-start justify-between gap-3">
@@ -91,7 +102,7 @@ export function PaySlipView({
             variant="secondary"
             size="sm"
             disabled={printDisabled || !issuedPayslipDocument}
-            onClick={onPrintDocument}
+            onClick={() => onPrintDocument(selectedDocumentId)}
             leftIcon={<Printer className="h-3.5 w-3.5" />}
           >
             Tisk / PDF
@@ -169,8 +180,45 @@ export function PaySlipView({
               <Alert tone="info" title="Výplatní páska pro zaměstnance">
                 Typ pracovního poměru: {employmentTypeLabel}. Fond / odpracováno: {issuedDocumentTimeRows.map(row => `${row.label} ${row.hrs || ''} ${row.days || ''}`.trim()).join(' · ')}. Hrubá mzda a Čistá mzda jsou součástí vystaveného dokumentu níže.
               </Alert>
-              <div className="document-print-only" aria-hidden="true">
+              <Card className="app-controls">
+                <CardContent>
+                  <div className="flex flex-wrap items-end gap-2">
+                    <div className="w-56">
+                      <Select
+                        density="compact"
+                        label="Typ výplatní pásky"
+                        value={selectedTemplate}
+                        onChange={event => setSelectedTemplate(event.target.value as PayslipTemplate)}
+                      >
+                        <option value="full">Plná</option>
+                        <option value="minimal">Minimální</option>
+                      </Select>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setShowDocumentPreview(value => !value)}
+                      leftIcon={showDocumentPreview ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                    >
+                      {showDocumentPreview ? 'Skrýt náhled' : 'Náhled'}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+              <div className={showDocumentPreview && selectedTemplate === 'full' ? 'payslip-preview-frame' : 'document-print-only'} aria-hidden={showDocumentPreview && selectedTemplate === 'full' ? undefined : 'true'}>
                 <IssuedPayslipDocumentView
+                  document={issuedPayslipDocument}
+                  earningsRows={issuedDocumentRows.earningsRows}
+                  contributionRows={issuedDocumentRows.contributionRows}
+                  taxRows={issuedDocumentRows.taxRows}
+                  recapRows={issuedDocumentRows.recapRows}
+                  grossWage={issuedDocumentRows.grossWage}
+                  netWage={issuedDocumentRows.netWage}
+                />
+              </div>
+              <div className={showDocumentPreview && selectedTemplate === 'minimal' ? 'payslip-preview-frame' : 'document-print-only'} aria-hidden={showDocumentPreview && selectedTemplate === 'minimal' ? undefined : 'true'}>
+                <IssuedPayslipMinimalDocumentView
                   document={issuedPayslipDocument}
                   earningsRows={issuedDocumentRows.earningsRows}
                   contributionRows={issuedDocumentRows.contributionRows}

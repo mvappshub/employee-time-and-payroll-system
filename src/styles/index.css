@@ -136,6 +136,15 @@ input[type="number"]::-webkit-outer-spin-button {
   white-space: nowrap;
 }
 
+.payslip-preview-frame {
+  max-width: 100%;
+  overflow: auto;
+  padding: 12px;
+  background: #e2e8f0;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+}
+
 .document-sheet {
   width: min(100%, 210mm);
   min-height: 297mm;
@@ -412,10 +421,1036 @@ input[type="number"]::-webkit-outer-spin-button {
   margin-top: 4mm;
 }
 
+.contract-sheet {
+  width: min(100%, 210mm);
+  min-height: 297mm;
+  margin: 0 auto;
+  color: #111;
+  background: #fff;
+  border: 1px solid #d6d6d6;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 10.5pt;
+  line-height: 1.55;
+}
+
+.contract-sheet h1,
+.contract-sheet h2,
+.contract-sheet p {
+  margin: 0;
+}
+
+.contract-sheet--full {
+  padding: 16mm 18mm 14mm;
+}
+
+.contract-full-header {
+  padding-bottom: 5mm;
+  margin-bottom: 5mm;
+  text-align: center;
+  border-bottom: 2px solid #111;
+}
+
+.contract-full-label,
+.contract-note,
+.contract-party-box h2,
+.contract-article h2,
+.contract-signatures h2,
+.contract-copy-note,
+.contract-min-header p,
+.contract-min-article h2,
+.contract-min-footer {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.contract-full-label {
+  margin-bottom: 2mm;
+  color: #6b7280;
+  font-size: 7pt;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.contract-full-header h1,
+.contract-min-header h1 {
+  color: #1a3058;
+  font-size: 22pt;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: 0;
+}
+
+.contract-full-header p,
+.contract-min-header p {
+  margin-top: 1.5mm;
+  color: #6b7280;
+  font-size: 9pt;
+}
+
+.contract-note {
+  padding: 2mm 3mm;
+  margin-bottom: 5mm;
+  color: #1a3058;
+  background: #f0f4fa;
+  border-left: 3px solid #3c6ea8;
+  font-size: 7pt;
+}
+
+.contract-parties {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8mm;
+  padding-bottom: 4mm;
+  margin-bottom: 5mm;
+  border-bottom: 1px solid #dde0e8;
+}
+
+.contract-party-box {
+  padding: 3mm 4mm;
+  background: #f5f6f8;
+  border: 1px solid #b0b4be;
+  border-radius: 2px;
+}
+
+.contract-party-box h2 {
+  padding-bottom: 1.5mm;
+  margin-bottom: 2mm;
+  color: #6b7280;
+  border-bottom: 1px solid #dde0e8;
+  font-size: 6.5pt;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+
+.contract-party-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 0.7mm 0;
+  border-bottom: 0.5px solid #dde0e8;
+  font-size: 9pt;
+}
+
+.contract-party-row:last-child {
+  border-bottom: 0;
+}
+
+.contract-party-row span {
+  flex-shrink: 0;
+  color: #6b7280;
+}
+
+.contract-party-row strong {
+  font-weight: 600;
+  text-align: right;
+}
+
+.contract-preamble,
+.contract-min-preamble,
+.contract-min-closing {
+  color: #3a3c42;
+  text-align: justify;
+}
+
+.contract-preamble {
+  margin-bottom: 5mm;
+}
+
+.contract-article {
+  margin-bottom: 4mm;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.contract-article h2 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4mm;
+  padding: 1.5mm 3mm;
+  margin-bottom: 2mm;
+  color: #1a3058;
+  background: #f0f4fa;
+  border-left: 3px solid #1a3058;
+  font-size: 8.5pt;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.contract-article h2 span {
+  padding: 1px 5px;
+  color: #fff;
+  background: #1a3058;
+  border-radius: 2px;
+  font-size: 5.8pt;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.contract-article > div {
+  color: #3a3c42;
+  text-align: justify;
+}
+
+.contract-wage-table {
+  width: 100%;
+  margin-top: 1mm;
+  border-collapse: collapse;
+  font-size: 9.5pt;
+}
+
+.contract-wage-table td {
+  padding: 1.2mm 2mm;
+  border-bottom: 0.5px solid #dde0e8;
+  vertical-align: top;
+}
+
+.contract-wage-table td:first-child {
+  width: 48%;
+  color: #6b7280;
+}
+
+.contract-signatures {
+  padding-top: 4mm;
+  margin-top: 6mm;
+  border-top: 1px solid #b0b4be;
+}
+
+.contract-signatures--compact {
+  margin-top: 12mm;
+  border-top: 0;
+}
+
+.contract-signatures > p {
+  margin-bottom: 6mm;
+  color: #3a3c42;
+  text-align: center;
+}
+
+.contract-signature-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12mm;
+}
+
+.contract-signature-grid h2 {
+  margin-bottom: 8mm;
+  color: #6b7280;
+  font-size: 7pt;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.contract-signature-line {
+  height: 10mm;
+  margin-bottom: 1.5mm;
+  border-bottom: 1px solid #3a3c42;
+}
+
+.contract-signature-grid strong,
+.contract-signature-grid span {
+  display: block;
+  text-align: center;
+}
+
+.contract-signature-grid span {
+  color: #6b7280;
+  font-size: 8pt;
+}
+
+.contract-copy-note {
+  padding-top: 3mm;
+  margin-top: 4mm;
+  color: #6b7280;
+  border-top: 1px dashed #dde0e8;
+  font-size: 7pt;
+  font-style: italic;
+  text-align: center;
+}
+
+.contract-sheet--minimum {
+  position: relative;
+  padding: 20mm 22mm 24mm;
+  font-size: 11pt;
+  line-height: 1.65;
+}
+
+.contract-min-header {
+  margin-bottom: 9mm;
+  text-align: center;
+}
+
+.contract-min-header h1 {
+  color: #111;
+  font-size: 20pt;
+}
+
+.contract-min-header::after {
+  display: block;
+  margin-top: 4mm;
+  border-top: 2px solid #111;
+  content: "";
+}
+
+.contract-min-preamble p + p,
+.contract-min-closing p + p {
+  margin-top: 2mm;
+}
+
+.contract-rule {
+  margin: 5mm 0;
+  border-top: 1px solid #ddd;
+}
+
+.contract-min-article {
+  margin-bottom: 6mm;
+}
+
+.contract-min-article h2 {
+  margin-bottom: 1mm;
+  color: #888;
+  font-size: 7.5pt;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+
+.contract-min-footer {
+  position: absolute;
+  right: 22mm;
+  bottom: 12mm;
+  left: 22mm;
+  display: flex;
+  justify-content: space-between;
+  padding-top: 2mm;
+  color: #aaa;
+  border-top: 0.5px solid #ddd;
+  font-size: 6.5pt;
+}
+
+.payslip-sheet {
+  --payslip-ink: #0f1117;
+  --payslip-ink-mid: #3a3f4b;
+  --payslip-ink-soft: #7a8090;
+  --payslip-accent: #1a3c6e;
+  --payslip-accent-light: #e8eef7;
+  --payslip-rule: #c8cdd8;
+  --payslip-rule-light: #e8eaee;
+  --payslip-highlight: #f0f4fa;
+  --payslip-positive: #0d5c2e;
+  --payslip-negative: #7a1a1a;
+
+  width: min(100%, 210mm);
+  min-height: 297mm;
+  margin: 0 auto;
+  padding: 9mm 11mm;
+  color: var(--payslip-ink);
+  background: #fff;
+  border: 1px solid #d6d6d6;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 8pt;
+  line-height: 1.35;
+}
+
+.payslip-sheet h1,
+.payslip-sheet h2,
+.payslip-sheet h3,
+.payslip-sheet p,
+.payslip-sheet dl {
+  margin: 0;
+}
+
+.payslip-header {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8mm;
+  align-items: start;
+  padding-bottom: 5mm;
+  margin-bottom: 4mm;
+  border-bottom: 2.5px solid var(--payslip-accent);
+}
+
+.payslip-header h1 {
+  color: var(--payslip-accent);
+  font-size: 17pt;
+  font-weight: 750;
+  line-height: 1.08;
+  letter-spacing: 0;
+}
+
+.payslip-header p {
+  margin-top: 1mm;
+  color: var(--payslip-ink-soft);
+  font-size: 7.5pt;
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+}
+
+.payslip-status {
+  display: inline-block;
+  margin-top: 2mm;
+  padding: 1px 7px;
+  color: #fff;
+  background: var(--payslip-accent);
+  border-radius: 2px;
+  font-size: 6.5pt;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.payslip-header-meta {
+  color: var(--payslip-ink-mid);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 7.5pt;
+  line-height: 1.7;
+  text-align: right;
+}
+
+.payslip-header-meta div:not(.payslip-period) {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.payslip-header-meta dt {
+  color: var(--payslip-ink-soft);
+  font-weight: 400;
+}
+
+.payslip-header-meta dd {
+  margin: 0;
+}
+
+.payslip-period {
+  color: var(--payslip-ink);
+  font-size: 13pt;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.payslip-identity-grid,
+.payslip-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 6mm;
+}
+
+.payslip-identity-grid {
+  padding-bottom: 3.5mm;
+  margin-bottom: 3.5mm;
+  border-bottom: 1px solid var(--payslip-rule);
+}
+
+.payslip-identity-grid h2 {
+  padding-bottom: 1mm;
+  margin-bottom: 1.5mm;
+  color: var(--payslip-ink-soft);
+  border-bottom: 1px solid var(--payslip-rule-light);
+  font-size: 6pt;
+  font-weight: 750;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.payslip-id-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 0.5mm 0;
+  border-bottom: 0.5px solid var(--payslip-rule-light);
+}
+
+.payslip-id-row:last-child {
+  border-bottom: 0;
+}
+
+.payslip-id-row span {
+  flex-shrink: 0;
+  color: var(--payslip-ink-soft);
+}
+
+.payslip-id-row strong {
+  font-weight: 600;
+  text-align: right;
+}
+
+.payslip-section {
+  margin-bottom: 3mm;
+}
+
+.payslip-section > h2,
+.payslip-subtitle {
+  padding: 1mm 2mm;
+  margin-bottom: 0;
+  color: var(--payslip-accent);
+  background: var(--payslip-accent-light);
+  border-left: 2.5px solid var(--payslip-accent);
+  font-size: 6pt;
+  font-weight: 750;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+}
+
+.payslip-subtitle {
+  margin-top: 2mm;
+  color: var(--payslip-ink-soft);
+  background: #f7f8fa;
+  border-left-color: var(--payslip-ink-soft);
+  font-size: 5.5pt;
+}
+
+.payslip-table,
+.payslip-kv-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.payslip-table {
+  font-size: 8pt;
+}
+
+.payslip-table th {
+  padding: 1.2mm 2mm;
+  color: var(--payslip-ink-soft);
+  background: #f7f8fa;
+  border-bottom: 1px solid var(--payslip-rule);
+  font-size: 6.5pt;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.payslip-table td {
+  padding: 1.1mm 2mm;
+  border-bottom: 0.5px solid var(--payslip-rule-light);
+  vertical-align: middle;
+}
+
+.payslip-table .r,
+.payslip-kv-table td:last-child,
+.payslip-recap-row strong,
+.payslip-final-grid strong {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.payslip-table .c {
+  text-align: center;
+}
+
+.payslip-table .code {
+  color: var(--payslip-ink-soft);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 7pt;
+}
+
+.payslip-table .muted,
+.payslip-kv-table.muted,
+.payslip-vacation-caption {
+  color: var(--payslip-ink-soft);
+  font-size: 7.5pt;
+}
+
+.payslip-row-strong td {
+  font-weight: 750;
+}
+
+.payslip-badge {
+  display: inline-block;
+  min-width: 7mm;
+  padding: 0 4px;
+  border-radius: 2px;
+  font-size: 6pt;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.payslip-badge.yes {
+  color: var(--payslip-positive);
+  background: #d4edda;
+}
+
+.payslip-badge.no {
+  color: #777;
+  background: #f0f0f0;
+}
+
+.payslip-base-heading td {
+  padding-top: 1.5mm;
+  color: var(--payslip-ink-mid);
+  border-top: 1.5px solid var(--payslip-rule);
+  font-size: 7.5pt;
+}
+
+.payslip-base-row td {
+  color: var(--payslip-ink-soft);
+  font-size: 7.5pt;
+}
+
+.payslip-base-row.strong td {
+  color: var(--payslip-ink);
+  background: var(--payslip-highlight);
+  font-weight: 750;
+}
+
+.payslip-phv-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2mm 6mm;
+  margin-top: 2mm;
+  padding: 1.5mm 2mm;
+  color: var(--payslip-ink-mid);
+  background: #f7f8fa;
+  border-radius: 2px;
+  font-size: 7.5pt;
+}
+
+.payslip-kv-table {
+  font-size: 8pt;
+}
+
+.payslip-kv-table td {
+  padding: 1mm 1.5mm;
+  border-bottom: 0.5px solid var(--payslip-rule-light);
+}
+
+.payslip-kv-table td:first-child {
+  width: 60%;
+  color: var(--payslip-ink-soft);
+}
+
+.payslip-kv-table .sum td {
+  padding-top: 1.5mm;
+  border-top: 1.5px solid var(--payslip-rule);
+  font-weight: 750;
+}
+
+.payslip-vacation-caption {
+  margin-top: 1.5mm;
+}
+
+.payslip-vacation-bar {
+  display: flex;
+  height: 4mm;
+  margin: 1mm 0 0;
+  overflow: hidden;
+  background: var(--payslip-rule-light);
+  border-radius: 2px;
+}
+
+.payslip-vacation-bar span:first-child {
+  background: var(--payslip-accent);
+}
+
+.payslip-vacation-bar span:last-child {
+  background: #b8cce4;
+}
+
+.payslip-recap {
+  padding: 3mm 4mm;
+  margin-top: 3mm;
+  background: var(--payslip-highlight);
+  border: 1.5px solid var(--payslip-rule);
+  border-radius: 2px;
+}
+
+.payslip-recap h2 {
+  margin-bottom: 2mm;
+  color: var(--payslip-ink-soft);
+  font-size: 6.5pt;
+  font-weight: 750;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.payslip-recap-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8mm;
+  padding: 0.7mm 0;
+  border-bottom: 0.5px solid var(--payslip-rule-light);
+  font-size: 8.5pt;
+}
+
+.payslip-recap-row span {
+  color: var(--payslip-ink-mid);
+}
+
+.payslip-recap-row strong {
+  min-width: 30mm;
+  font-weight: 600;
+}
+
+.payslip-recap-row .neg,
+.payslip-table .neg {
+  color: var(--payslip-negative);
+}
+
+.payslip-recap-row .pos {
+  color: var(--payslip-positive);
+}
+
+.payslip-final-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3mm;
+  padding-top: 3mm;
+  margin-top: 3mm;
+  border-top: 2px solid var(--payslip-ink);
+}
+
+.payslip-final-grid div {
+  padding: 2.5mm 3mm;
+  text-align: center;
+  background: #fff;
+  border: 1.5px solid var(--payslip-rule);
+  border-radius: 2px;
+}
+
+.payslip-final-grid .primary {
+  color: #fff;
+  background: var(--payslip-accent);
+  border-color: var(--payslip-accent);
+}
+
+.payslip-final-grid span {
+  display: block;
+  margin-bottom: 1mm;
+  font-size: 6.5pt;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  opacity: 0.75;
+  text-transform: uppercase;
+}
+
+.payslip-final-grid strong {
+  display: block;
+  font-size: 14pt;
+  font-weight: 750;
+  line-height: 1;
+}
+
+.payslip-warning {
+  padding: 2mm 3mm;
+  margin-top: 2mm;
+  color: #6b4c00;
+  background: #fffbeb;
+  border: 1px solid #d4a017;
+  border-radius: 2px;
+  font-size: 7.5pt;
+}
+
+.payslip-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 8mm;
+  align-items: flex-end;
+  padding-top: 3mm;
+  margin-top: 5mm;
+  color: var(--payslip-ink-soft);
+  border-top: 1px solid var(--payslip-rule);
+  font-size: 6.5pt;
+}
+
+.payslip-footer span {
+  color: #aaa;
+}
+
+.payslip-signature {
+  width: 45mm;
+  padding-top: 1mm;
+  border-top: 1px solid var(--payslip-ink-mid);
+  color: var(--payslip-ink-soft);
+  font-size: 6pt;
+  text-align: center;
+}
+
+.payslip-min-sheet {
+  width: min(100%, 210mm);
+  min-height: 297mm;
+  margin: 0 auto;
+  padding: 12mm 14mm 30mm;
+  position: relative;
+  color: #111;
+  background: #fff;
+  border: 1px solid #d6d6d6;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 9pt;
+  line-height: 1.45;
+}
+
+.payslip-min-sheet h1,
+.payslip-min-sheet h2,
+.payslip-min-sheet p {
+  margin: 0;
+}
+
+.payslip-min-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10mm;
+  padding-bottom: 4mm;
+  margin-bottom: 5mm;
+  border-bottom: 2px solid #111;
+}
+
+.payslip-min-header h1 {
+  color: #111;
+  font-size: 18pt;
+  font-weight: 750;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.payslip-min-header p {
+  margin-top: 1mm;
+  color: #666;
+  font-size: 7.5pt;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.payslip-min-header-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8mm;
+  color: #444;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 8pt;
+  line-height: 1.4;
+  text-align: right;
+}
+
+.payslip-min-header-meta strong {
+  color: #111;
+  font-size: 16pt;
+  line-height: 1;
+}
+
+.payslip-min-identity {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 10mm;
+  padding-bottom: 4mm;
+  margin-bottom: 5mm;
+  border-bottom: 1px solid #ccc;
+}
+
+.payslip-min-identity h2,
+.payslip-min-section-label {
+  color: #888;
+  font-size: 6pt;
+  font-weight: 750;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+}
+
+.payslip-min-identity h2 {
+  margin-bottom: 2mm;
+}
+
+.payslip-min-id-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 0.8mm 0;
+  border-bottom: 0.5px solid #eee;
+  font-size: 8.5pt;
+}
+
+.payslip-min-id-row:last-child {
+  border-bottom: 0;
+}
+
+.payslip-min-id-row span {
+  flex-shrink: 0;
+  color: #666;
+}
+
+.payslip-min-id-row strong {
+  font-weight: 600;
+  text-align: right;
+}
+
+.payslip-min-section-label {
+  padding-bottom: 1mm;
+  border-bottom: 1px solid #ccc;
+}
+
+.payslip-min-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.payslip-min-table th {
+  padding: 1.5mm 2mm;
+  color: #888;
+  background: #f9f9f9;
+  border-bottom: 1px solid #ccc;
+  font-size: 6.5pt;
+  font-weight: 650;
+  letter-spacing: 0.4px;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.payslip-min-table td {
+  padding: 1.3mm 2mm;
+  border-bottom: 0.5px solid #eee;
+  font-size: 8.5pt;
+  vertical-align: middle;
+}
+
+.payslip-min-table td span {
+  display: block;
+  margin-top: 0.4mm;
+  color: #888;
+  font-size: 7.5pt;
+}
+
+.payslip-min-table .r,
+.payslip-min-recap-row strong,
+.payslip-min-final strong {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.payslip-min-table .soft {
+  color: #888;
+  font-size: 8pt;
+}
+
+.payslip-min-table .neg,
+.payslip-min-recap-row .neg {
+  color: #8b1a1a;
+}
+
+.payslip-min-table .subtotal td {
+  padding-top: 2mm;
+  border-top: 1px solid #ccc;
+  border-bottom: 0;
+  background: #f9f9f9;
+  font-size: 9pt;
+  font-weight: 700;
+}
+
+.payslip-min-gap {
+  margin-top: 4mm;
+}
+
+.payslip-min-recap {
+  margin-top: 5mm;
+  border: 1px solid #ccc;
+}
+
+.payslip-min-recap-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8mm;
+  padding: 1.5mm 3mm;
+  border-bottom: 0.5px solid #eee;
+  font-size: 8.5pt;
+}
+
+.payslip-min-recap-row span {
+  color: #444;
+}
+
+.payslip-min-recap-row strong {
+  min-width: 28mm;
+  font-weight: 600;
+}
+
+.payslip-min-final {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-top: 2px solid #111;
+}
+
+.payslip-min-final div {
+  padding: 3mm;
+  text-align: center;
+}
+
+.payslip-min-final div + div {
+  color: #fff;
+  background: #111;
+  border-left: 2px solid #111;
+}
+
+.payslip-min-final span {
+  display: block;
+  margin-bottom: 1mm;
+  color: #888;
+  font-size: 6pt;
+  font-weight: 750;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.payslip-min-final div + div span {
+  color: #aaa;
+}
+
+.payslip-min-final strong {
+  display: block;
+  font-size: 15pt;
+  font-weight: 750;
+  line-height: 1;
+}
+
+.payslip-min-note {
+  margin-top: 3mm;
+  color: #888;
+  font-size: 7pt;
+  line-height: 1.5;
+}
+
+.payslip-min-note strong {
+  color: #555;
+}
+
+.payslip-min-footer {
+  position: absolute;
+  right: 14mm;
+  bottom: 12mm;
+  left: 14mm;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8mm;
+  padding-top: 2.5mm;
+  color: #aaa;
+  border-top: 0.5px solid #ccc;
+  font-size: 6.5pt;
+}
+
+.payslip-min-footer div:last-child {
+  width: 42mm;
+  padding-top: 1mm;
+  border-top: 0.5px solid #999;
+  color: #aaa;
+  font-size: 6pt;
+  text-align: center;
+}
+
 @media print {
   @page {
-    size: A4;
-    margin: 14mm 12mm;
+    size: A4 portrait;
+    margin: 10mm 12mm;
   }
 
   html, body {
@@ -466,6 +1501,14 @@ input[type="number"]::-webkit-outer-spin-button {
     white-space: normal !important;
   }
 
+  .payslip-preview-frame {
+    display: contents !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: transparent !important;
+    border: 0 !important;
+  }
+
   .document-sheet {
     width: auto !important;
     min-height: auto !important;
@@ -475,6 +1518,297 @@ input[type="number"]::-webkit-outer-spin-button {
     border: 0 !important;
     border-radius: 0 !important;
     box-shadow: none !important;
+  }
+
+  .contract-sheet {
+    width: auto !important;
+    min-height: auto !important;
+    padding: 0 !important;
+    color: #000 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .contract-sheet--minimum {
+    padding-bottom: 18mm !important;
+  }
+
+  .contract-full-header,
+  .contract-min-header {
+    margin-bottom: 5mm;
+  }
+
+  .contract-note,
+  .contract-party-box,
+  .contract-article h2 {
+    background: #f2f2f2 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .contract-min-footer {
+    right: 0;
+    bottom: 0;
+    left: 0;
+  }
+
+  .payslip-sheet {
+    width: auto !important;
+    min-height: auto !important;
+    padding: 0 !important;
+    color: #000 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    font-size: 6.9pt;
+    line-height: 1.2;
+  }
+
+  .payslip-min-sheet {
+    width: auto !important;
+    min-height: auto !important;
+    padding: 0 0 18mm !important;
+    color: #000 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    font-size: 8.5pt;
+    line-height: 1.32;
+  }
+
+  .payslip-min-header {
+    padding-bottom: 3mm;
+    margin-bottom: 3.5mm;
+  }
+
+  .payslip-min-header h1 {
+    font-size: 16pt;
+  }
+
+  .payslip-min-header-meta strong {
+    font-size: 13pt;
+  }
+
+  .payslip-min-identity {
+    gap: 0 7mm;
+    padding-bottom: 3mm;
+    margin-bottom: 3.5mm;
+  }
+
+  .payslip-min-id-row {
+    padding: 0.45mm 0;
+    font-size: 7.5pt;
+  }
+
+  .payslip-min-table th {
+    padding: 0.8mm 1.2mm;
+    font-size: 5.8pt;
+  }
+
+  .payslip-min-table td {
+    padding: 0.75mm 1.2mm;
+    font-size: 7.5pt;
+  }
+
+  .payslip-min-gap {
+    margin-top: 2.5mm;
+  }
+
+  .payslip-min-recap {
+    margin-top: 3mm;
+  }
+
+  .payslip-min-recap-row {
+    padding: 0.8mm 2mm;
+    font-size: 7.6pt;
+  }
+
+  .payslip-min-final div {
+    padding: 2mm;
+  }
+
+  .payslip-min-final strong {
+    font-size: 12pt;
+  }
+
+  .payslip-min-note {
+    margin-top: 2mm;
+    font-size: 6.4pt;
+  }
+
+  .payslip-min-footer {
+    right: 0;
+    bottom: 0;
+    left: 0;
+    font-size: 5.8pt;
+  }
+
+  .payslip-header {
+    gap: 5mm;
+    padding-bottom: 2.4mm;
+    margin-bottom: 2mm;
+  }
+
+  .payslip-header h1 {
+    font-size: 14pt;
+  }
+
+  .payslip-header p,
+  .payslip-header-meta {
+    font-size: 6.5pt;
+  }
+
+  .payslip-status {
+    margin-top: 1mm;
+    font-size: 5.6pt;
+  }
+
+  .payslip-period {
+    font-size: 10.5pt;
+  }
+
+  .payslip-identity-grid {
+    gap: 0 5mm;
+    padding-bottom: 1.8mm;
+    margin-bottom: 1.8mm;
+  }
+
+  .payslip-identity-grid h2 {
+    padding-bottom: 0.5mm;
+    margin-bottom: 0.6mm;
+    font-size: 5.3pt;
+  }
+
+  .payslip-id-row {
+    padding: 0.25mm 0;
+  }
+
+  .payslip-section {
+    margin-bottom: 1.5mm;
+  }
+
+  .payslip-section > h2,
+  .payslip-subtitle {
+    padding: 0.55mm 1.2mm;
+    font-size: 5.3pt;
+  }
+
+  .payslip-subtitle {
+    margin-top: 1mm;
+    font-size: 5pt;
+  }
+
+  .payslip-table,
+  .payslip-kv-table {
+    font-size: 6.8pt;
+  }
+
+  .payslip-table th {
+    padding: 0.55mm 1mm;
+    font-size: 5.5pt;
+  }
+
+  .payslip-table td {
+    padding: 0.48mm 1mm;
+  }
+
+  .payslip-table .code,
+  .payslip-table .muted,
+  .payslip-kv-table.muted,
+  .payslip-vacation-caption {
+    font-size: 6.1pt;
+  }
+
+  .payslip-base-heading td {
+    padding-top: 0.7mm;
+    font-size: 6.1pt;
+  }
+
+  .payslip-base-row td {
+    font-size: 6.1pt;
+  }
+
+  .payslip-badge {
+    min-width: 5.5mm;
+    font-size: 5.1pt;
+  }
+
+  .payslip-phv-strip {
+    gap: 1mm 4mm;
+    margin-top: 1mm;
+    padding: 0.7mm 1mm;
+    font-size: 6.2pt;
+  }
+
+  .payslip-two-col {
+    gap: 0 4mm;
+  }
+
+  .payslip-kv-table td {
+    padding: 0.45mm 1mm;
+  }
+
+  .payslip-kv-table .sum td {
+    padding-top: 0.7mm;
+  }
+
+  .payslip-vacation-caption {
+    margin-top: 0.7mm;
+  }
+
+  .payslip-vacation-bar {
+    height: 2.4mm;
+    margin-top: 0.5mm;
+  }
+
+  .payslip-recap {
+    padding: 1.5mm 2mm;
+    margin-top: 1.4mm;
+  }
+
+  .payslip-recap h2 {
+    margin-bottom: 0.8mm;
+    font-size: 5.6pt;
+  }
+
+  .payslip-recap-row {
+    padding: 0.35mm 0;
+    font-size: 7pt;
+  }
+
+  .payslip-final-grid {
+    gap: 2mm;
+    padding-top: 1.4mm;
+    margin-top: 1.4mm;
+  }
+
+  .payslip-final-grid div {
+    padding: 1.3mm 2mm;
+  }
+
+  .payslip-final-grid span {
+    margin-bottom: 0.5mm;
+    font-size: 5.6pt;
+  }
+
+  .payslip-final-grid strong {
+    font-size: 11pt;
+  }
+
+  .payslip-warning {
+    padding: 1mm 1.5mm;
+    margin-top: 1mm;
+    font-size: 6.2pt;
+  }
+
+  .payslip-footer {
+    gap: 5mm;
+    padding-top: 1.5mm;
+    margin-top: 2mm;
+    font-size: 5.8pt;
+  }
+
+  .payslip-signature {
+    width: 38mm;
+    font-size: 5.4pt;
   }
 
   .document-header,
@@ -496,7 +1830,15 @@ input[type="number"]::-webkit-outer-spin-button {
 
   .document-meta-row dt,
   .document-table th,
-  .document-total-line--primary {
+  .document-total-line--primary,
+  .payslip-table th,
+  .payslip-section > h2,
+  .payslip-subtitle,
+  .payslip-base-row.strong td,
+  .payslip-phv-strip,
+  .payslip-recap,
+  .payslip-final-grid div,
+  .payslip-warning {
     background: #f2f2f2 !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
@@ -515,7 +1857,29 @@ input[type="number"]::-webkit-outer-spin-button {
   .document-sheet th,
   .document-sheet section,
   .document-sheet header,
-  .document-sheet footer {
+  .document-sheet footer,
+  .contract-sheet tr,
+  .contract-sheet td,
+  .contract-sheet th,
+  .contract-sheet section,
+  .contract-sheet header,
+  .contract-sheet footer,
+  .payslip-sheet tr,
+  .payslip-sheet td,
+  .payslip-sheet th,
+  .payslip-sheet section,
+  .payslip-sheet header,
+  .payslip-sheet footer {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .payslip-min-sheet tr,
+  .payslip-min-sheet td,
+  .payslip-min-sheet th,
+  .payslip-min-sheet section,
+  .payslip-min-sheet header,
+  .payslip-min-sheet footer {
     break-inside: avoid;
     page-break-inside: avoid;
   }

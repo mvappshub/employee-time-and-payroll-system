@@ -176,17 +176,17 @@ export function TimeSheetView({
                       />
                     ) : ''}
                   </td>
-                  <td className="px-1.5 text-right tabular text-slate-500">{row.breakHours}</td>
-                  <td className="px-1.5 text-right tabular font-medium text-slate-900">{row.worked}</td>
-                  <td className="px-1.5 text-right tabular text-slate-500">{row.planHours}</td>
-                  <td className="px-1.5 text-right tabular text-slate-500">{row.holidayCredit}</td>
-                  <td className="px-1.5 text-right tabular text-slate-500">{row.vacation}</td>
-                  <td className="px-1.5 text-right tabular text-slate-500">{row.sick}</td>
-                  <td className="px-1.5 text-right tabular text-slate-500">{row.nightHours}</td>
-                  <td className="px-1.5 text-right tabular text-slate-500">{row.weekendHours}</td>
-                  <td className="px-1.5 text-right tabular text-slate-500">{row.holidayTotal}</td>
-                  <td className="px-1.5 text-right tabular text-slate-500">{row.overtime}</td>
-                  <td className={cn('px-1.5 text-right tabular', row.saldo < 0 && 'font-medium text-red-600', row.saldo > 0 && 'font-medium text-emerald-600')}>
+                  <td className="px-1.5 text-center tabular text-slate-500">{row.breakHours}</td>
+                  <td className="px-1.5 text-center tabular font-medium text-slate-900">{row.worked}</td>
+                  <td className="px-1.5 text-center tabular text-slate-500">{row.planHours}</td>
+                  <td className="px-1.5 text-center tabular text-slate-500">{row.holidayCredit}</td>
+                  <td className="px-1.5 text-center tabular text-slate-500">{row.vacation}</td>
+                  <td className="px-1.5 text-center tabular text-slate-500">{row.sick}</td>
+                  <td className="px-1.5 text-center tabular text-slate-500">{row.nightHours}</td>
+                  <td className="px-1.5 text-center tabular text-slate-500">{row.weekendHours}</td>
+                  <td className="px-1.5 text-center tabular text-slate-500">{row.holidayTotal}</td>
+                  <td className="px-1.5 text-center tabular text-slate-500">{row.overtime}</td>
+                  <td className={cn('px-1.5 text-center tabular', row.saldo < 0 && 'font-medium text-red-600', row.saldo > 0 && 'font-medium text-emerald-600')}>
                     {row.saldo !== 0 ? `${row.saldo > 0 ? '+' : ''}${row.saldo.toFixed(1)}` : ''}
                   </td>
                   <td className="max-w-[140px] truncate px-1.5 text-[10px] text-slate-500">{row.holidayName}</td>
@@ -196,17 +196,17 @@ export function TimeSheetView({
             <tfoot>
               <tr className="h-7 border-t-2 border-slate-300 bg-slate-50 font-semibold text-slate-900">
                 <td className="px-1.5" colSpan={5}>Σ celkem</td>
-                <td className="px-1.5 text-right tabular"></td>
-                <td className="px-1.5 text-right tabular">{summary.workedHours}</td>
-                <td className="px-1.5 text-right tabular">{summary.workHoursWH}</td>
-                <td className="px-1.5 text-right tabular">{summary.totalHolidayCredit}</td>
-                <td className="px-1.5 text-right tabular">{summary.totalVacation}</td>
-                <td className="px-1.5 text-right tabular">{summary.totalSick}</td>
-                <td className="px-1.5 text-right tabular">{summary.totalNight}</td>
-                <td className="px-1.5 text-right tabular">{summary.totalWeekend}</td>
-                <td className="px-1.5 text-right tabular">{summary.totalHolidayTotal}</td>
-                <td className="px-1.5 text-right tabular">{summary.totalOvertime}</td>
-                <td className={cn('px-1.5 text-right tabular', summary.totalSaldo < 0 && 'text-red-600', summary.totalSaldo > 0 && 'text-emerald-600')}>
+                <td className="px-1.5 text-center tabular"></td>
+                <td className="px-1.5 text-center tabular">{summary.workedHours}</td>
+                <td className="px-1.5 text-center tabular">{summary.workHoursWH}</td>
+                <td className="px-1.5 text-center tabular">{summary.totalHolidayCredit}</td>
+                <td className="px-1.5 text-center tabular">{summary.totalVacation}</td>
+                <td className="px-1.5 text-center tabular">{summary.totalSick}</td>
+                <td className="px-1.5 text-center tabular">{summary.totalNight}</td>
+                <td className="px-1.5 text-center tabular">{summary.totalWeekend}</td>
+                <td className="px-1.5 text-center tabular">{summary.totalHolidayTotal}</td>
+                <td className="px-1.5 text-center tabular">{summary.totalOvertime}</td>
+                <td className={cn('px-1.5 text-center tabular', summary.totalSaldo < 0 && 'text-red-600', summary.totalSaldo > 0 && 'text-emerald-600')}>
                   {summary.totalSaldo !== 0 ? `${summary.totalSaldo > 0 ? '+' : ''}${summary.totalSaldo.toFixed(1)}` : '0.0'}
                 </td>
                 <td />

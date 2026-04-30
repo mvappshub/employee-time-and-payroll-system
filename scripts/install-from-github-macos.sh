@@ -100,12 +100,13 @@ ensure_macos() {
 ensure_network_available() {
   command -v curl >/dev/null 2>&1 || fail "curl is required to download the project."
 
-  if curl -fsSL --connect-timeout 10 https://github.com/ >/dev/null; then
-    success "Network check passed."
-    return
-  fi
+  curl -fsSL --connect-timeout 10 https://github.com/ >/dev/null \
+    || fail "Cannot reach GitHub. Check internet/VPN/proxy settings, then run this installer again."
 
-  fail "Cannot reach GitHub. Check internet/VPN/proxy settings, then run this installer again."
+  curl -fsSL --connect-timeout 10 https://raw.githubusercontent.com/ >/dev/null \
+    || fail "Cannot reach raw.githubusercontent.com. The one-line installer or Homebrew download may be blocked."
+
+  success "Network check passed."
 }
 
 normalize_target_dir() {

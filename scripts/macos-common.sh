@@ -149,12 +149,16 @@ ensure_command_line_tools() {
 ensure_network_available() {
   command -v curl >/dev/null 2>&1 || fail "curl is required for network checks."
 
-  if curl -fsSL --connect-timeout 10 https://registry.npmjs.org/ >/dev/null; then
-    success "Network check passed."
-    return
-  fi
+  curl -fsSL --connect-timeout 10 https://github.com/ >/dev/null \
+    || fail "Cannot reach GitHub. Check internet/VPN/proxy settings, then run the script again."
 
-  fail "Cannot reach npm registry. Check internet/VPN/proxy settings, then run the script again."
+  curl -fsSL --connect-timeout 10 https://raw.githubusercontent.com/ >/dev/null \
+    || fail "Cannot reach raw.githubusercontent.com. Homebrew/script downloads may be blocked."
+
+  curl -fsSL --connect-timeout 10 https://registry.npmjs.org/ >/dev/null \
+    || fail "Cannot reach npm registry. Check internet/VPN/proxy settings, then run the script again."
+
+  success "Network check passed."
 }
 
 load_homebrew_path() {

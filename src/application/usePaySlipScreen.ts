@@ -72,6 +72,14 @@ function getAverageLabels(averageEarnings: QuarterlyPhvResponse | null) {
   }
 }
 
+function roundHours(value: number): number {
+  return Math.round(value * 100) / 100
+}
+
+function calculationDailyFund(employee: { weeklyHours: number; workDaysPerWeek: number }): number {
+  return employee.workDaysPerWeek > 0 ? employee.weeklyHours / employee.workDaysPerWeek : 0
+}
+
 export function usePaySlipScreen() {
   const employer = useStore(s => s.employer)
   const employees = useStore(s => s.employees)
@@ -104,6 +112,26 @@ export function usePaySlipScreen() {
 
   const calcs = useMemo(() => employee ? calculateMonthDays(monthRecords, employee, holidays, inputs.sickCarryoverDays) : [], [monthRecords, employee, holidays, inputs.sickCarryoverDays])
   const summary = useMemo(() => calcMonthlySummary(calcs), [calcs])
+  const vacationBalance = useMemo(() => {
+    if (!employee || !selectedEmployeeId) return null
+    const year = month.split('-')[0]
+    const employeeRecords = recordsByEmployee[selectedEmployeeId] || {}
+    const employeeInputs = paySlipInputsByEmployee[selectedEmployeeId] || {}
+    const usedHours = Object.entries(employeeRecords)
+      .filter(([recordMonth]) => recordMonth.startsWith(`${year}-`))
+      .reduce((total, [recordMonth, records]) => {
+        const recordInputs = employeeInputs[recordMonth] || defaultPaySlipInputs
+        const recordSummary = calcMonthlySummary(calculateMonthDays(records, employee, holidays, recordInputs.sickCarryoverDays))
+        return total + recordSummary.totalVacation
+      }, 0)
+    const entitlementHours = roundHours((employee.annualVacationWeeks ?? 4) * employee.weeklyHours)
+    const remainingHours = roundHours(entitlementHours - usedHours)
+    const dailyFund = calculationDailyFund(employee)
+    return {
+      remainingHours,
+      remainingDays: dailyFund > 0 ? remainingHours / dailyFund : 0,
+    }
+  }, [employee, holidays, month, paySlipInputsByEmployee, recordsByEmployee, selectedEmployeeId])
   const effectiveEmployee = useMemo(
     () => employee ? { ...employee, holidayCompensationMode: inputs.holidayCompensationMode } : null,
     [employee, inputs.holidayCompensationMode],
@@ -314,6 +342,13 @@ export function usePaySlipScreen() {
       },
     ],
     grossWage: formatCzk(Number(calculation.payslip.hrubaMzda || 0)),
+    employerCost: formatCzk(
+      Number(calculation.payslip.hrubaMzda || 0) +
+      Number(calculation.payslip.healthEmployer || 0) +
+      Number(calculation.payslip.socialEmployer || 0) +
+      Number(calculation.payslip.sickCalc || 0),
+    ),
+    vacationRemainingDays: `${formatDays(vacationBalance?.remainingDays || 0)} dnů`,
     netWage: formatCzk(Number(calculation.payslip.cistaMzda || 0)),
   } : null
 

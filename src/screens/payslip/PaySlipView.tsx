@@ -38,6 +38,8 @@ export interface PaySlipViewProps {
       rows: CalculationRow[]
     }[]
     grossWage: string
+    employerCost: string
+    vacationRemainingDays: string
     netWage: string
   } | null
   issuedPayslipDocument: IssuedPayslipDocument | null
@@ -137,6 +139,8 @@ export function PaySlipView({
                 actions={
                   <div className="flex flex-wrap items-center gap-3 text-xs">
                     <div><span className="text-[10px] uppercase tracking-wide text-slate-500">Hrubá mzda</span> <span className="ml-1.5 text-sm font-semibold tabular">{currentCalculationRows.grossWage}</span></div>
+                    <div><span className="text-[10px] uppercase tracking-wide text-slate-500">Náklady zaměstnavatele</span> <span className="ml-1.5 text-sm font-semibold tabular">{currentCalculationRows.employerCost}</span></div>
+                    <div><span className="text-[10px] uppercase tracking-wide text-slate-500">Zbývá dovolené</span> <span className="ml-1.5 text-sm font-semibold tabular">{currentCalculationRows.vacationRemainingDays}</span></div>
                     <div><span className="text-[10px] uppercase tracking-wide text-slate-500">Čistá mzda</span> <span className="ml-1.5 text-sm font-semibold tabular text-emerald-600">{currentCalculationRows.netWage}</span></div>
                   </div>
                 }

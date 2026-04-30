@@ -30,6 +30,11 @@ export interface EmployeeDetailProps {
     wage: string
     vacation: string
   } | null
+  vacationBalance: {
+    entitlementHours: number
+    usedHours: number
+    remainingHours: number
+  } | null
   contractMissingFields: string[]
   showContractPreview: boolean
   canPrintContract: boolean
@@ -56,6 +61,7 @@ export function EmployeeDetail({
   section37Document,
   handoverProtocolDocument,
   onboardingStatus,
+  vacationBalance,
   contractMissingFields,
   showContractPreview,
   canPrintContract,
@@ -150,9 +156,9 @@ export function EmployeeDetail({
               </label>
               <div className="grid grid-cols-3 gap-3 pt-1">
                 <Input label="Dovolená (týdny)" type="number" value={employee.annualVacationWeeks ?? 4} onChange={e => onEmployeeChange('annualVacationWeeks', parseFloat(e.target.value) || 0)} />
-                <Input label="Dovolená - roční nárok (h)" type="number" value={employee.vacationEntitlementHours} onChange={e => onEmployeeChange('vacationEntitlementHours', parseFloat(e.target.value) || 0)} />
-                <Input label="Dovolená - vyčerpáno (h)" type="number" value={employee.vacationUsedHours} onChange={e => onEmployeeChange('vacationUsedHours', parseFloat(e.target.value) || 0)} />
-                <Input label="Dovolená - zůstatek (h)" type="number" value={employee.vacationRemainingHours} onChange={e => onEmployeeChange('vacationRemainingHours', parseFloat(e.target.value) || 0)} />
+                <Input label="Dovolená - roční nárok (h)" type="number" value={vacationBalance?.entitlementHours ?? employee.vacationEntitlementHours} readOnly />
+                <Input label="Dovolená - vyčerpáno (h)" type="number" value={vacationBalance?.usedHours ?? employee.vacationUsedHours} readOnly />
+                <Input label="Dovolená - zůstatek (h)" type="number" value={vacationBalance?.remainingHours ?? employee.vacationRemainingHours} readOnly />
               </div>
             </div>
           </CardContent>

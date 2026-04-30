@@ -42,6 +42,10 @@ function buildMonthList(currentMonth: string, loadedMonths: string[]): string[] 
   return Array.from(new Set([...generated, ...loadedMonths])).sort()
 }
 
+function roundHours(value: number): number {
+  return Math.round(value * 100) / 100
+}
+
 export function useEmployeesScreen() {
   const employer = useStore(s => s.employer)
   const employees = useStore(s => s.employees)
@@ -75,6 +79,26 @@ export function useEmployeesScreen() {
   const employmentContractDocument = activeEmployee
     ? buildEmploymentContractDocument(activeEmployee, employer, activeEmployee.employmentContractDocument)
     : null
+  const vacationBalance = useMemo(() => {
+    if (!activeEmployee?.id) return null
+    const year = currentMonth.split('-')[0]
+    const employeeRecords = recordsByEmployee[activeEmployee.id] || {}
+    const employeeInputs = paySlipInputsByEmployee[activeEmployee.id] || {}
+    const usedHours = Object.entries(employeeRecords)
+      .filter(([month]) => month.startsWith(`${year}-`))
+      .reduce((total, [month, records]) => {
+        const inputs = employeeInputs[month] || defaultPaySlipInputs
+        const summary = calcMonthlySummary(calculateMonthDays(records, activeEmployee, holidays, inputs.sickCarryoverDays))
+        return total + summary.totalVacation
+      }, 0)
+    const entitlementHours = roundHours((activeEmployee.annualVacationWeeks ?? 4) * activeEmployee.weeklyHours)
+    const used = roundHours(usedHours)
+    return {
+      entitlementHours,
+      usedHours: used,
+      remainingHours: roundHours(entitlementHours - used),
+    }
+  }, [activeEmployee, currentMonth, holidays, paySlipInputsByEmployee, recordsByEmployee])
   const section37Document = activeEmployee?.id && canPrintContract ? buildSection37Document(activeEmployee, employer) : null
   const handoverProtocolDocument = activeEmployee?.id && canPrintContract ? buildHandoverProtocolDocument(activeEmployee, employer) : null
   const minimumWage = activeEmployee ? getMinimumMonthlyWage(Number(activeEmployee.employmentStartDate.slice(0, 4)) || 2026, activeEmployee.weeklyHours) : 0
@@ -294,6 +318,7 @@ export function useEmployeesScreen() {
     section37Document,
     handoverProtocolDocument,
     onboardingStatus,
+    vacationBalance,
     contractMissingFields,
     showContractPreview,
     canPrintContract,
@@ -392,14 +417,20 @@ export function useEmployeesScreen() {
       }
       setError('')
       setInfo('')
-      const nextDocument = !activeEmployee.employmentContractDocument ||
+      const employeeWithVacationBalance = vacationBalance ? {
+        ...activeEmployee,
+        vacationEntitlementHours: vacationBalance.entitlementHours,
+        vacationUsedHours: vacationBalance.usedHours,
+        vacationRemainingHours: vacationBalance.remainingHours,
+      } : activeEmployee
+      const nextDocument = !employeeWithVacationBalance.employmentContractDocument ||
         hasContractRelevantChange(
-          activeEmployee.employmentContractDocument.snapshot,
-          buildEmploymentContractDocument(activeEmployee, employer, null).snapshot,
+          employeeWithVacationBalance.employmentContractDocument.snapshot,
+          buildEmploymentContractDocument(employeeWithVacationBalance, employer, null).snapshot,
         )
-        ? buildEmploymentContractDocument(activeEmployee, employer, activeEmployee.employmentContractDocument)
-        : activeEmployee.employmentContractDocument
-      const employeePayload = { ...activeEmployee, employmentContractDocument: nextDocument }
+        ? buildEmploymentContractDocument(employeeWithVacationBalance, employer, employeeWithVacationBalance.employmentContractDocument)
+        : employeeWithVacationBalance.employmentContractDocument
+      const employeePayload = { ...employeeWithVacationBalance, employmentContractDocument: nextDocument }
       const employeeFields: Partial<EmployeeSettings> = {
         ...employeePayload,
         employmentContractDocument: undefined,

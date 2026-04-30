@@ -116,6 +116,7 @@ export function EmployeesMainScreen({
           section37Document={screen.section37Document}
           handoverProtocolDocument={screen.handoverProtocolDocument}
           onboardingStatus={screen.onboardingStatus}
+          vacationBalance={screen.vacationBalance}
           contractMissingFields={screen.contractMissingFields}
           showContractPreview={screen.showContractPreview}
           canPrintContract={screen.canPrintContract}

@@ -1,8 +1,10 @@
-import type { EmploymentContractDocument } from '../../domain/shared/types'
+import { ShiftOperationTypeLabels, type EmploymentContractDocument } from '../../domain/shared/types'
 import { DocumentLayout, DocumentMetaGrid, DocumentPart } from './DocumentLayout'
 
 export function EmploymentContractDocumentView({ document }: { document: EmploymentContractDocument }) {
   const { employer, employee } = document.snapshot
+  const shiftOperation = employee.shiftOperation || 'single'
+  const dailyFund = typeof employee.dailyFund === 'number' ? employee.dailyFund : 8
 
   return (
     <DocumentLayout
@@ -43,8 +45,10 @@ export function EmploymentContractDocumentView({ document }: { document: Employm
             { label: 'Druh práce', value: employee.contractJobTitle },
             { label: 'Místo výkonu práce', value: employee.contractWorkplace },
             { label: 'Pracovní doba / úvazek', value: employee.contractWorkSchedule },
+            { label: 'Směnný provoz', value: ShiftOperationTypeLabels[shiftOperation] },
             { label: 'Mzdový režim', value: `Mzda ${employee.baseSalary.toLocaleString('cs-CZ')} Kč` },
             { label: 'Týdenní rozsah', value: `${employee.weeklyHours} hodin` },
+            { label: 'Denní fond', value: `${dailyFund.toLocaleString('cs-CZ')} hodin` },
             { label: 'Zkušební doba', value: employee.probationMonths ? `${employee.probationMonths} měsíce` : 'nesjednána' },
             { label: 'Doba určitá do', value: employee.fixedTermEndDate || 'na dobu neurčitou' },
             { label: 'Datum ukončení', value: employee.employmentEndDate || 'není sjednáno' },
@@ -54,7 +58,8 @@ export function EmploymentContractDocumentView({ document }: { document: Employm
       <DocumentPart heading="Ujednání">
         <p>
           Zaměstnanec nastupuje do pracovního poměru dne {employee.employmentStartDate} na pracovní pozici {employee.contractJobTitle}.
-          Místem výkonu práce je {employee.contractWorkplace}. Sjednaná pracovní doba činí {employee.contractWorkSchedule}.
+          Místem výkonu práce je {employee.contractWorkplace}. Sjednaná pracovní doba činí {employee.contractWorkSchedule};
+          zaměstnanec nastupuje do režimu {ShiftOperationTypeLabels[shiftOperation].toLowerCase()} s denním fondem {dailyFund.toLocaleString('cs-CZ')} hodin.
         </p>
         <p>
           Smluvní strany potvrzují, že se seznámily s pracovními podmínkami, mzdovým režimem a dalšími povinnostmi

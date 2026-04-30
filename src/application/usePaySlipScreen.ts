@@ -8,7 +8,7 @@ import { autosaveEmployeeMonthDraft } from './autosaveMonth'
 import { defaultPaySlipInputs } from './defaults'
 import { formatCzk, formatDays, formatHours, formatMonthLabel } from './formatters'
 import type { HolidayCompensationMode, IssuedPayslipDocument } from '../domain/shared/types'
-import { EmploymentTypeLabels } from '../domain/shared/types'
+import { EmploymentTypeLabels, ShiftOperationTypeLabels } from '../domain/shared/types'
 import { isDraftLike, isPayrollPhase, isTimeClosedOrLater } from '../domain/monthWorkflow'
 
 type PayslipRowViewModel = {
@@ -235,8 +235,9 @@ export function usePaySlipScreen() {
         rows: [
           { label: 'Základní mzda ze smlouvy', value: formatCzk(employee?.baseSalary || 0), formula: 'měsíční základ z karty zaměstnance' },
           { label: 'Úvazek', value: `${employee?.workload || 0}`, formula: 'koeficient úvazku zaměstnance' },
+          { label: 'Směnný provoz', value: employee ? ShiftOperationTypeLabels[employee.shiftOperation] : '—', formula: 'nastavení pracovní smlouvy' },
           { label: 'Týdenní hodiny', value: formatHours(employee?.weeklyHours || 0), formula: 'nastavení zaměstnance' },
-          { label: 'Denní fond', value: formatHours(calculation.payslip.dailyFund), formula: 'týdenní hodiny / pracovní dny týdně' },
+          { label: 'Denní fond', value: formatHours(calculation.payslip.dailyFund), formula: 'směnný provoz × úvazek' },
           { label: 'Osobní ohodnocení', value: `${((employee?.personalBonus || 0) * 100).toFixed(2)} %`, formula: 'sazba z karty zaměstnance' },
           { label: 'Sazba nemoc', value: `${((employee?.sickCompensation || 0) * 100).toFixed(2)} %`, formula: 'náhrada DPN zaměstnavatelem' },
         ],

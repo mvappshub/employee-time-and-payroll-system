@@ -1,4 +1,10 @@
-import type { EmployeeSettings, TimeRecord, Holiday, ShiftType } from '../shared/types'
+import {
+  getShiftOperationDailyFund,
+  type EmployeeSettings,
+  type TimeRecord,
+  type Holiday,
+  type ShiftType,
+} from '../shared/types'
 import { getConstantForMonth } from './legalConstants'
 
 export function timeToDecimal(time: string): number | null {
@@ -41,6 +47,10 @@ export function calcCalendarWorkDays(ym: string, holidays: Holiday[]): { days: n
     hours: workDaysExHolidays.length * (workDaysExHolidays.length > 0 ? 8 : 0),
     dailyFund: 8,
   }
+}
+
+export function getEmployeeDailyFund(emp: Pick<EmployeeSettings, 'shiftOperation' | 'workload' | 'weeklyHours' | 'workDaysPerWeek'>): number {
+  return getShiftOperationDailyFund(emp.shiftOperation, emp.workload)
 }
 
 export function formatDateCZ(dateStr: string): string {
@@ -138,7 +148,7 @@ export interface DayCalc {
 }
 
 export function calculateDay(rec: TimeRecord, emp: EmployeeSettings, holidays: Holiday[]): DayCalc {
-  const dailyFund = emp.workDaysPerWeek > 0 ? emp.weeklyHours / emp.workDaysPerWeek : 0
+  const dailyFund = getEmployeeDailyFund(emp)
   const brk = calcBreak(rec.shift, rec.arrival, rec.departure, emp.standardBreak)
   const worked = calcWorked(rec.arrival, rec.departure, brk)
   const hol = findHoliday(rec.date, holidays)
@@ -449,7 +459,7 @@ export function calcPaySlip(emp: EmployeeSettings, sum: MonthlySummary, manualRe
     throw new Error('Chybí podklady pro automatický výpočet PHV z předchozího čtvrtletí.')
   }
 
-  const dailyFund = emp.workDaysPerWeek > 0 ? emp.weeklyHours / emp.workDaysPerWeek : 0
+  const dailyFund = getEmployeeDailyFund(emp)
   const whwh = sum.workHoursWH
   const hr = calcHourlyRate(emp.baseSalary, whwh)
   const holidaySurchargeRate = Math.max(emp.holidaySurcharge, getMinimumHolidaySurcharge())

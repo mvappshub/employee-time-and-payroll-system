@@ -1,5 +1,6 @@
 import { getDaysInMonth, isWeekend } from './calc'
 import { mergeHolidayYears } from '../calendar/holidayCalendar'
+import { getShiftOperationDailyFund, type ShiftOperationType } from '../shared/types'
 
 export const AUTOMATIC_PHV_ERROR_MESSAGE = 'Chybí podklady pro automatický výpočet PHV z předchozího čtvrtletí.'
 
@@ -49,6 +50,8 @@ export interface AverageEarningsEmployeeContext {
   employmentStartDate: string
   baseSalary: number
   personalBonus: number
+  workload: number
+  shiftOperation: ShiftOperationType
   weeklyHours: number
   workDaysPerWeek: number
   weekendWorking: boolean
@@ -82,7 +85,7 @@ export function calculateProbableHourlyEarnings(employee: AverageEarningsEmploye
   const [year] = targetMonth.split('-').map(Number)
   const holidays = mergeHolidayYears([], [year])
   const holidayDates = new Set(holidays.map(holiday => holiday.date))
-  const dailyFund = employee.workDaysPerWeek > 0 ? employee.weeklyHours / employee.workDaysPerWeek : 0
+  const dailyFund = getShiftOperationDailyFund(employee.shiftOperation, employee.workload)
   const targetMonthFundHours = getDaysInMonth(targetMonth).reduce((sum, date) => {
     if (!employee.weekendWorking && isWeekend(date)) return sum
     if (holidayDates.has(date)) return sum

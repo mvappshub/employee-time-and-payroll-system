@@ -31,6 +31,7 @@ import {
 } from '../domain/monthWorkflow'
 import { printWithRetry } from '../adapters/browser/printWithRetry'
 import { buildTimeSummary } from './month/buildTimeSummary'
+import { calculateShiftOperationWeeklyHours, normalizeShiftOperationType } from '../domain/shared/types'
 
 function buildMonthList(currentMonth: string, loadedMonths: string[]): string[] {
   const year = currentMonth.split('-')[0]
@@ -286,7 +287,17 @@ export function useEmployeesScreen() {
     },
     onEmployeeChange: (field: keyof EmployeeSettings, value: string | number | boolean) => {
       if (!activeEmployee) return
-      setDraftEmployee({ ...activeEmployee, [field]: value } as EmployeeSettings)
+      const nextEmployee = { ...activeEmployee, [field]: value } as EmployeeSettings
+      if (field === 'shiftOperation' || field === 'workload' || field === 'workDaysPerWeek') {
+        const shiftOperation = field === 'shiftOperation' ? normalizeShiftOperationType(value) : nextEmployee.shiftOperation
+        nextEmployee.shiftOperation = shiftOperation
+        nextEmployee.weeklyHours = calculateShiftOperationWeeklyHours(
+          shiftOperation,
+          nextEmployee.workDaysPerWeek,
+          nextEmployee.workload,
+        )
+      }
+      setDraftEmployee(nextEmployee)
     },
     onToggleContractPreview: () => {
       setShowContractPreview(value => !value)

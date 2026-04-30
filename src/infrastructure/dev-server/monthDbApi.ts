@@ -8,7 +8,16 @@ import {
   sumAverageQuarterTotals,
   type AverageEarningsEmployeeContext,
 } from '../../domain/payroll/phv'
-import type { EmployeeSettings, EmployerProfile, IssuedPayslipDocument, PaySlipInputs, PayrollResult, TimeSummary } from '../../domain/shared/types'
+import {
+  calculateShiftOperationWeeklyHours,
+  normalizeShiftOperationType,
+  type EmployeeSettings,
+  type EmployerProfile,
+  type IssuedPayslipDocument,
+  type PaySlipInputs,
+  type PayrollResult,
+  type TimeSummary,
+} from '../../domain/shared/types'
 import type { SavedMonthRecord } from '../../domain/month/employeeMonth'
 
 const DATA_DIR = path.resolve(process.cwd(), 'month-data')
@@ -26,6 +35,8 @@ const DEFAULT_EMPLOYEE_CONTEXT: AverageEarningsEmployeeContext = {
   employmentStartDate: '2026-01-01',
   baseSalary: 30000,
   personalBonus: 0.25,
+  workload: 1,
+  shiftOperation: 'single',
   weeklyHours: 40,
   workDaysPerWeek: 5,
   weekendWorking: false,
@@ -42,6 +53,9 @@ function repairEmployerProfile(profile?: EmployerProfile): EmployerProfile {
 }
 
 function repairEmployeeSettings(employee?: Partial<EmployeeSettings>): EmployeeSettings {
+  const workload = typeof employee?.workload === 'number' ? employee.workload : 1
+  const shiftOperation = normalizeShiftOperationType(employee?.shiftOperation)
+  const workDaysPerWeek = typeof employee?.workDaysPerWeek === 'number' ? employee.workDaysPerWeek : 5
   return {
     id: employee?.id || '',
     name: employee?.name || '',
@@ -56,9 +70,10 @@ function repairEmployeeSettings(employee?: Partial<EmployeeSettings>): EmployeeS
     contractWorkSchedule: employee?.contractWorkSchedule || '',
     probationMonths: employee?.probationMonths || 0,
     fixedTermEndDate: employee?.fixedTermEndDate || '',
-    workload: employee?.workload || 1,
-    weeklyHours: employee?.weeklyHours || 40,
-    workDaysPerWeek: employee?.workDaysPerWeek || 5,
+    workload,
+    shiftOperation,
+    weeklyHours: calculateShiftOperationWeeklyHours(shiftOperation, workDaysPerWeek, workload),
+    workDaysPerWeek,
     weekendWorking: employee?.weekendWorking || false,
     shiftStart: employee?.shiftStart || '06:00',
     shiftEnd: employee?.shiftEnd || '14:30',
@@ -234,7 +249,12 @@ async function loadEmployees(): Promise<EmployeeSettings[]> {
   await ensureDataDir()
   try {
     const file = await fs.readFile(EMPLOYEES_FILE, 'utf8')
-    return JSON.parse(file) as EmployeeSettings[]
+    const raw = JSON.parse(file) as Partial<EmployeeSettings>[]
+    const repaired = raw.map(repairEmployeeSettings)
+    if (JSON.stringify(repaired) !== JSON.stringify(raw)) {
+      await saveEmployees(repaired)
+    }
+    return repaired
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return []
     throw error
@@ -318,6 +338,8 @@ function normalizeEmployeeContext(employee?: Partial<AverageEarningsEmployeeCont
       : DEFAULT_EMPLOYEE_CONTEXT.employmentStartDate,
     baseSalary: typeof employee.baseSalary === 'number' ? employee.baseSalary : DEFAULT_EMPLOYEE_CONTEXT.baseSalary,
     personalBonus: typeof employee.personalBonus === 'number' ? employee.personalBonus : DEFAULT_EMPLOYEE_CONTEXT.personalBonus,
+    workload: typeof employee.workload === 'number' ? employee.workload : DEFAULT_EMPLOYEE_CONTEXT.workload,
+    shiftOperation: normalizeShiftOperationType(employee.shiftOperation),
     weeklyHours: typeof employee.weeklyHours === 'number' ? employee.weeklyHours : DEFAULT_EMPLOYEE_CONTEXT.weeklyHours,
     workDaysPerWeek: typeof employee.workDaysPerWeek === 'number' ? employee.workDaysPerWeek : DEFAULT_EMPLOYEE_CONTEXT.workDaysPerWeek,
     weekendWorking: typeof employee.weekendWorking === 'boolean' ? employee.weekendWorking : DEFAULT_EMPLOYEE_CONTEXT.weekendWorking,
@@ -375,7 +397,7 @@ async function handleEmployees(req: IncomingMessage, res: ServerResponse): Promi
       sendJson(res, 409, { error: 'duplicate_employee_id' })
       return
     }
-    const employee = { ...body, id } as EmployeeSettings
+    const employee = repairEmployeeSettings({ ...body, id })
     employees.push(employee)
     await saveEmployees(employees)
     sendJson(res, 201, employee)
@@ -419,7 +441,7 @@ async function handleEmployeeUpdate(req: IncomingMessage, res: ServerResponse, e
     sendJson(res, 404, { error: 'employee_not_found' })
     return
   }
-  const updated = employees.map(employee => employee.id === employeeId ? { ...employee, ...body, id: employeeId } : employee)
+  const updated = employees.map(employee => employee.id === employeeId ? repairEmployeeSettings({ ...employee, ...body, id: employeeId }) : employee)
   await saveEmployees(updated)
   sendJson(res, 200, { ok: true })
 }

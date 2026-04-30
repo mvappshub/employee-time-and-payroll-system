@@ -10,6 +10,8 @@ import {
   type PaySlipInputs,
   type ShiftType,
   type TimeRecord,
+  calculateShiftOperationWeeklyHours,
+  normalizeShiftOperationType,
 } from '../../domain/shared/types'
 import { getDaysInMonth, isWeekend } from '../../domain/payroll/calc'
 import { mergeHolidayYears } from '../../domain/calendar/holidayCalendar'
@@ -31,6 +33,7 @@ const defaultEmployeeTemplate: EmployeeSettings = {
   probationMonths: 3,
   fixedTermEndDate: '',
   workload: 1,
+  shiftOperation: 'single',
   weeklyHours: 40,
   workDaysPerWeek: 5,
   weekendWorking: false,
@@ -96,12 +99,19 @@ function normalizeEmployerProfile(employer?: Partial<EmployerProfile>): Employer
 }
 
 export function normalizeEmployeeSettings(employee?: Partial<EmployeeSettings>): EmployeeSettings {
+  const shiftOperation = normalizeShiftOperationType(employee?.shiftOperation)
+  const workload = typeof employee?.workload === 'number' ? employee.workload : defaultEmployeeTemplate.workload
+  const workDaysPerWeek = typeof employee?.workDaysPerWeek === 'number' ? employee.workDaysPerWeek : defaultEmployeeTemplate.workDaysPerWeek
   return {
     ...defaultEmployeeTemplate,
     ...employee,
     id: employee?.id || defaultEmployeeTemplate.id || makeId(),
     employmentType: 'pracovni_pomer',
     status: employee?.status || 'active',
+    workload,
+    shiftOperation,
+    workDaysPerWeek,
+    weeklyHours: calculateShiftOperationWeeklyHours(shiftOperation, workDaysPerWeek, workload),
     employmentContractDocument: employee?.employmentContractDocument || null,
   }
 }

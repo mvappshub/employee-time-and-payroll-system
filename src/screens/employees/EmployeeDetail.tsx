@@ -5,7 +5,13 @@ import { Button } from '../../components/ui/Button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../../components/ui/Card'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { Input } from '../../components/ui/Input'
-import type { EmployeeSettings, EmploymentContractDocument } from '../../domain/shared/types'
+import { Select } from '../../components/ui/Select'
+import {
+  ShiftOperationTypeLabels,
+  type EmployeeSettings,
+  type EmploymentContractDocument,
+  type ShiftOperationType,
+} from '../../domain/shared/types'
 import { EmploymentContractDocumentView } from '../documents/EmploymentContractDocumentView'
 
 export interface EmployeeDetailProps {
@@ -74,7 +80,12 @@ export function EmployeeDetail({
               <Input label="Datum ukončení" type="date" value={employee.employmentEndDate || ''} onChange={e => onEmployeeChange('employmentEndDate', e.target.value)} />
               <Input label="Doba určitá do" type="date" value={employee.fixedTermEndDate || ''} onChange={e => onEmployeeChange('fixedTermEndDate', e.target.value)} />
               <Input label="Úvazek" type="number" step="0.1" value={employee.workload} onChange={e => onEmployeeChange('workload', parseFloat(e.target.value) || 0)} />
-              <Input label="Týdenní hodiny" type="number" value={employee.weeklyHours} onChange={e => onEmployeeChange('weeklyHours', parseFloat(e.target.value) || 0)} />
+              <Select label="Směnný provoz" value={employee.shiftOperation} onChange={e => onEmployeeChange('shiftOperation', e.target.value)}>
+                {(Object.entries(ShiftOperationTypeLabels) as Array<[ShiftOperationType, string]>).map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </Select>
+              <Input label="Týdenní hodiny" type="number" value={employee.weeklyHours} readOnly />
               <Input label="Zkušební doba (měsíce)" type="number" value={employee.probationMonths || 0} onChange={e => onEmployeeChange('probationMonths', parseFloat(e.target.value) || 0)} />
               <Input label="Osobní ohodnocení %" type="number" value={Math.round(employee.personalBonus * 100)} onChange={e => onEmployeeChange('personalBonus', (parseFloat(e.target.value) || 0) / 100)} />
             </div>

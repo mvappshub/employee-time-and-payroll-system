@@ -7,6 +7,7 @@ export interface EmployeeViewProps {
   employee: EmployeeSettings
   dailyFundLabel: string
   employmentTypeOptions: Option[]
+  shiftOperationOptions: Option[]
   holidayCompensationOptions: Option[]
   overtimeCompensationOptions: Option[]
   onEmployerChange: (field: keyof EmployerProfile, value: string) => void
@@ -20,6 +21,7 @@ export function EmployeeView({
   employee,
   dailyFundLabel,
   employmentTypeOptions,
+  shiftOperationOptions,
   holidayCompensationOptions,
   overtimeCompensationOptions,
   onEmployerChange,
@@ -116,6 +118,7 @@ export function EmployeeView({
             {sel('employmentType', 'Druh pracovněprávního vztahu', employmentTypeOptions)}
             {date('employmentStartDate', 'Datum nástupu')}
             {num('workload', 'Úvazek', 0.1)}
+            {sel('shiftOperation', 'Směnný provoz', shiftOperationOptions)}
             {num('weeklyHours', 'Týdenní fond hodin')}
             {num('workDaysPerWeek', 'Pracovní dny v týdnu', 1, 'w-12')}
             <tr>

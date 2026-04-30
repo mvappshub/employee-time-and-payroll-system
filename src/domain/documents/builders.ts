@@ -9,6 +9,9 @@ import type {
   PayrollResult,
   TimeSheetStatementDocument,
 } from '../shared/types'
+import {
+  getShiftOperationDailyFund,
+} from '../shared/types'
 
 function documentVersion(previousVersion?: number): number {
   return typeof previousVersion === 'number' ? previousVersion + 1 : 1
@@ -31,7 +34,9 @@ function buildEmploymentContractSnapshot(employee: EmployeeSettings, employer: E
       fixedTermEndDate: employee.fixedTermEndDate,
       baseSalary: employee.baseSalary,
       workload: employee.workload,
+      shiftOperation: employee.shiftOperation,
       weeklyHours: employee.weeklyHours,
+      dailyFund: getShiftOperationDailyFund(employee.shiftOperation, employee.workload),
     },
   }
 }

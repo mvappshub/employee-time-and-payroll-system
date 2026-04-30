@@ -3,6 +3,32 @@ export const EmploymentTypeLabels: Record<EmploymentType, string> = {
   pracovni_pomer: 'Pracovní poměr',
 }
 
+export type ShiftOperationType = 'single' | 'double' | 'triple'
+export const ShiftOperationTypeLabels: Record<ShiftOperationType, string> = {
+  single: 'Jednosměnný provoz',
+  double: 'Dvousměnný provoz',
+  triple: 'Třísměnný provoz',
+}
+export const ShiftOperationDailyFund: Record<ShiftOperationType, number> = {
+  single: 8,
+  double: 7.47,
+  triple: 7.5,
+}
+
+export function normalizeShiftOperationType(value: unknown): ShiftOperationType {
+  return value === 'double' || value === 'triple' ? value : 'single'
+}
+
+export function getShiftOperationDailyFund(value: unknown, workload = 1): number {
+  const safeWorkload = Number.isFinite(workload) && workload > 0 ? workload : 0
+  return ShiftOperationDailyFund[normalizeShiftOperationType(value)] * safeWorkload
+}
+
+export function calculateShiftOperationWeeklyHours(value: unknown, workDaysPerWeek: number, workload = 1): number {
+  const safeWorkDays = Number.isFinite(workDaysPerWeek) && workDaysPerWeek > 0 ? workDaysPerWeek : 0
+  return Math.round(getShiftOperationDailyFund(value, workload) * safeWorkDays * 100) / 100
+}
+
 export type EmployeeLifecycleStatus = 'active' | 'archived'
 export type HolidayCompensationMode = 'time-off' | 'premium'
 export type OvertimeCompensationMode = 'time-off' | 'premium'
@@ -58,7 +84,9 @@ export interface EmploymentContractSnapshot {
     fixedTermEndDate?: string
     baseSalary: number
     workload: number
+    shiftOperation: ShiftOperationType
     weeklyHours: number
+    dailyFund: number
   }
 }
 
@@ -157,6 +185,7 @@ export interface EmployeeSettings {
   probationMonths?: number
   fixedTermEndDate?: string
   workload: number
+  shiftOperation: ShiftOperationType
   weeklyHours: number
   workDaysPerWeek: number
   weekendWorking: boolean

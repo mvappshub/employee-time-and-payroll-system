@@ -11,6 +11,7 @@ import {
   saveEmployeeMonth as saveEmployeeMonthApi,
   type SavedMonthRecord,
 } from '../infrastructure/api/monthStorage'
+import { isDraftLike } from '../domain/monthWorkflow'
 
 type AutosaveMonthInput = {
   employer: EmployerProfile
@@ -35,7 +36,7 @@ export async function autosaveEmployeeMonthDraft({
   timeSummary,
   payrollState,
 }: AutosaveMonthInput) {
-  if (status !== 'draft' && status !== 'time_saved' && status !== 'time_closed') return
+  if (!isDraftLike(status) && status !== 'time_closed') return
 
   const saved = buildEmployeeMonthRecord({
     employeeId,

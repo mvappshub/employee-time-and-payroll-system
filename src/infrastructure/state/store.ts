@@ -13,7 +13,8 @@ import {
 } from '../../domain/shared/types'
 import { getDaysInMonth, isWeekend } from '../../domain/payroll/calc'
 import { mergeHolidayYears } from '../../domain/calendar/holidayCalendar'
-import { defaultPaySlipInputs } from '../../application/defaults'
+import { isTimeClosedOrLater } from '../../domain/monthWorkflow'
+import { defaultPaySlipInputs } from '../../domain/payroll/defaults'
 
 const defaultEmployeeTemplate: EmployeeSettings = {
   id: '',
@@ -493,7 +494,7 @@ export const useStore = create<Store>()(
         employeeRecords[idx] = { ...employeeRecords[idx], ...u }
         const previousStatus = withEmployeeMonthMap(state.monthStatusByEmployee, employeeId)[month] || 'draft'
         const nextStatus = previousStatus === 'draft' ? 'draft' : 'time_saved'
-        const nextPayrollState = previousStatus === 'time_closed' || previousStatus === 'payroll_calculated' || previousStatus === 'payroll_approved' || previousStatus === 'payslip_issued'
+        const nextPayrollState = isTimeClosedOrLater(previousStatus)
           ? invalidateDerivedMonthState(withEmployeeMonthMap(state.payrollByEmployee, employeeId)[month], 'Změna evidence po uzavření měsíce.')
           : withEmployeeMonthMap(state.payrollByEmployee, employeeId)[month]
 
@@ -519,7 +520,7 @@ export const useStore = create<Store>()(
       setPaySlipInput: (employeeId, month, u) => {
         const state = get()
         const previousStatus = withEmployeeMonthMap(state.monthStatusByEmployee, employeeId)[month] || 'draft'
-        const wasPayrollPhase = previousStatus === 'time_closed' || previousStatus === 'payroll_calculated' || previousStatus === 'payroll_approved' || previousStatus === 'payslip_issued'
+        const wasPayrollPhase = isTimeClosedOrLater(previousStatus)
         const nextStatus = wasPayrollPhase
           ? 'time_closed'
           : previousStatus === 'draft'

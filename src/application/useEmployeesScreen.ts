@@ -6,7 +6,6 @@ import {
   issueEmploymentContractDocument,
   isEmployerProfileReady,
 } from '../domain/documents/builders'
-import { printDocumentById } from '../screens/documents/print'
 import {
   buildEmployeeMonthRecord,
   createEmployee as createEmployeeApi,
@@ -18,11 +17,19 @@ import {
 } from '../infrastructure/api/monthStorage'
 import { useStore, normalizeEmployeeSettings, buildInitialEmployeeMonthRecords } from '../infrastructure/state/store'
 import { invalidateDocument } from '../domain/documents/builders'
-import type { EmployeeMonth, EmployeeSettings, MonthStatus, TimeSummary } from '../domain/shared/types'
+import type { EmployeeMonth, EmployeeSettings, MonthStatus } from '../domain/shared/types'
 import { calculateMonthDays, calcMonthlySummary } from '../domain/payroll/calc'
 import { formatMonthLabel } from './formatters'
 import { defaultPaySlipInputs } from './defaults'
 import { formatMonthStatus, isPayrollStatus, payslipStatusLabel } from './statusLabels'
+import {
+  canCloseAndCalculate,
+  isPayrollApprovedOrLater,
+  isTimeClosedOrLater,
+  routeForMonthStatus,
+} from '../domain/monthWorkflow'
+import { printWithRetry } from '../adapters/browser/printWithRetry'
+import { buildTimeSummary } from './month/buildTimeSummary'
 
 function actionLabelForStatus(status?: MonthStatus): string {
   if (!status) return 'Založit měsíc'
@@ -47,17 +54,6 @@ function buildMonthList(currentMonth: string, loadedMonths: string[]): string[] 
   const year = currentMonth.split('-')[0]
   const generated = Array.from({ length: 12 }, (_, index) => `${year}-${String(index + 1).padStart(2, '0')}`)
   return Array.from(new Set([...generated, ...loadedMonths])).sort()
-}
-
-function buildTimeSummary(summary: ReturnType<typeof calcMonthlySummary>): TimeSummary {
-  return {
-    monthlyFundHours: summary.monthlyFundHours,
-    workedHours: summary.workedHours,
-    workedDays: summary.workedDays,
-    vacationHours: summary.totalVacation,
-    sickHours: summary.totalSick,
-    totalSaldo: summary.totalSaldo,
-  }
 }
 
 export function useEmployeesScreen() {
@@ -129,26 +125,6 @@ export function useEmployeesScreen() {
   const monthExists = (employeeId: string, month: string) => {
     const statuses = monthStatusByEmployee[employeeId] || {}
     return typeof statuses[month] !== 'undefined'
-  }
-
-  const schedulePrintWithRetry = (
-    documentId: string,
-    setFailure: (message: string) => void,
-    attempt = 0,
-  ) => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        const printed = printDocumentById(documentId)
-        if (printed) return
-        if (attempt >= 2) {
-          setFailure('Tisk dokumentu se nepodařilo spustit. Zkuste akci zopakovat.')
-          return
-        }
-        window.setTimeout(() => {
-          schedulePrintWithRetry(documentId, setFailure, attempt + 1)
-        }, 50)
-      })
-    })
   }
 
   const invalidateIssuedMonthDocuments = async (employee: EmployeeSettings) => {
@@ -240,7 +216,7 @@ export function useEmployeesScreen() {
         payslipStatus: payslipStatusLabel(status),
         updatedAt: payrollState?.updatedAt || payrollState?.closedAt || payrollState?.approvedAt || '—',
         actionLabel: actionLabelForStatus(status),
-        actionRoute: (!status ? 'init' : (status === 'draft' || status === 'time_saved' ? 'timesheet' : 'payroll')) as 'init' | 'timesheet' | 'payroll',
+        actionRoute: (!status ? 'init' : (routeForMonthStatus(status) === 'time-tracking' ? 'timesheet' : 'payroll')) as 'init' | 'timesheet' | 'payroll',
         canPreviewTimeSheetDocument: Boolean(payrollState?.timeSheetDocument),
       }
     })
@@ -249,12 +225,12 @@ export function useEmployeesScreen() {
   const employeeRows = useMemo(() => employees.map(employee => {
     const statuses = monthStatusByEmployee[employee.id] || {}
     const lastClosedMonth = Object.entries(statuses)
-      .filter(([, status]) => status === 'time_closed' || status === 'payroll_calculated' || status === 'payroll_approved' || status === 'payslip_issued')
+      .filter(([, status]) => isTimeClosedOrLater(status))
       .map(([month]) => month)
       .sort()
       .at(-1) || '—'
     const lastApprovedMonth = Object.entries(statuses)
-      .filter(([, status]) => status === 'payroll_approved' || status === 'payslip_issued')
+      .filter(([, status]) => isPayrollApprovedOrLater(status))
       .map(([month]) => month)
       .sort()
       .at(-1) || '—'
@@ -356,7 +332,7 @@ export function useEmployeesScreen() {
       updateEmployee(activeEmployee.id, { employmentContractDocument: issuedDocument })
       setDraftEmployee(current => current ? { ...current, employmentContractDocument: issuedDocument } : current)
       setInfo('Pracovní smlouva byla vystavena.')
-      schedulePrintWithRetry('employment-contract-document', setError)
+      printWithRetry('employment-contract-document', setError)
     },
     onSaveEmployee: async () => {
       if (!activeEmployee) return
@@ -450,14 +426,9 @@ export function useEmployeesScreen() {
         await initMonthForActiveEmployee(month)
         return
       }
-      if (status === 'draft' || status === 'time_saved') {
+      if (canCloseAndCalculate(status)) {
         setCurrentMonth(month)
         setSection('time-tracking')
-        return
-      }
-      if (status === 'time_closed' || status === 'payroll_calculated') {
-        setCurrentMonth(month)
-        setSection('payroll')
         return
       }
       setCurrentMonth(month)
@@ -467,11 +438,7 @@ export function useEmployeesScreen() {
       if (!activeEmployee?.id) return
       setCurrentMonth(month)
       const status = monthStatusByEmployee[activeEmployee.id]?.[month]
-      if (status === 'draft' || status === 'time_saved' || !status) {
-        setSection('time-tracking')
-        return
-      }
-      setSection('payroll')
+      setSection(routeForMonthStatus(status))
     },
     onOpenTimeSheetDocument: (month: string) => {
       if (!activeEmployee?.id) return

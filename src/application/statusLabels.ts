@@ -1,4 +1,5 @@
 import type { MonthStatus } from '../domain/shared/types'
+import { isPayrollCalculatedOrLater } from '../domain/monthWorkflow'
 
 export const MONTH_STATUS_LABELS: Record<MonthStatus, string> = {
   empty: 'Bez měsíce',
@@ -15,7 +16,7 @@ export function formatMonthStatus(status?: MonthStatus): string {
 }
 
 export function isPayrollStatus(status?: MonthStatus): boolean {
-  return status === 'payroll_calculated' || status === 'payroll_approved' || status === 'payslip_issued'
+  return isPayrollCalculatedOrLater(status)
 }
 
 export function payslipStatusLabel(status?: MonthStatus): string {

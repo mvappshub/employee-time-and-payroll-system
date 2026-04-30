@@ -13,8 +13,10 @@ import type {
   TimeSummary,
   WorkflowAuditEntry,
 } from '../../domain/shared/types'
+import type { QuarterlyPhvResponse } from '../../domain/payroll/phv'
 
 export type { MonthStatus }
+export type { QuarterlyPhvResponse }
 
 export interface SavedMonthSnapshot {
   grossWage: number
@@ -33,23 +35,6 @@ export interface SavedMonthRecord extends EmployeeMonth, SavedMonthAverageSource
   employer?: EmployerProfile
   employee: EmployeeSettings
   snapshot?: SavedMonthSnapshot
-}
-
-export interface QuarterlyPhvResponse {
-  month: string
-  sourceType: 'actual' | 'probable' | 'unavailable'
-  averageHourlyEarnings: number | null
-  actualPhv: number | null
-  probableHourlyEarnings: number | null
-  employeeContextMonth: string | null
-  periodStart: string
-  periodEnd: string
-  sourceMonths: string[]
-  missingMonths: string[]
-  grossForAverage: number
-  workedHoursForAverage: number
-  workedDaysForAverage: number
-  reason: string | null
 }
 
 export interface BuildEmployeeMonthRecordInput {

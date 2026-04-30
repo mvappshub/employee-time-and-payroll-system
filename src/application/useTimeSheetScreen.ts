@@ -2,12 +2,13 @@ import { useEffect, useMemo, useState } from 'react'
 import { calculateMonthDays, calcMonthlySummary, formatDateCZ, isWeekend } from '../domain/payroll/calc'
 import { buildTimeSheetStatementDocument, getTimeSheetStatementBlockingReason } from '../domain/documents/builders'
 import { saveEmployeeMonth as saveEmployeeMonthApi } from '../infrastructure/api/monthStorage'
-import { printDocumentById } from '../screens/documents/print'
 import { autosaveEmployeeMonthDraft } from './autosaveMonth'
 import { defaultPaySlipInputs } from './defaults'
 import { formatCompactNumber, formatMonthLabel } from './formatters'
 import { useStore } from '../infrastructure/state/store'
 import type { EmployeeMonth, ShiftType, TimeRecord } from '../domain/shared/types'
+import { isTimeClosedOrLater, isTimeSavedOrLater } from '../domain/monthWorkflow'
+import { printWithRetry } from '../adapters/browser/printWithRetry'
 
 const SHIFTS: ShiftType[] = ['', 'ranní', 'odpolední', 'noční', 'přesčas', 'volno', 'dovolená', 'nemoc']
 
@@ -55,7 +56,7 @@ export function useTimeSheetScreen() {
   const timeSheetDocument = payrollState?.timeSheetDocument || null
   const documentBlockedReason = hasNoRows
     ? ''
-    : !employee || !selectedEmployeeId || !monthExists || !['time_saved', 'time_closed', 'payroll_calculated', 'payroll_approved', 'payslip_issued'].includes(monthStatus)
+    : !employee || !selectedEmployeeId || !monthExists || !isTimeSavedOrLater(monthStatus)
     ? 'Výpis evidence lze otevřít až z uloženého měsíce ve stavu Evidence uložena nebo vyšším.'
     : getTimeSheetStatementBlockingReason({
         employeeId: selectedEmployeeId,
@@ -67,22 +68,6 @@ export function useTimeSheetScreen() {
         createdAt: payrollState?.createdAt || new Date().toISOString(),
         updatedAt: payrollState?.updatedAt || new Date().toISOString(),
       }, employer)
-
-  const schedulePrint = (attempt = 0) => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        const printed = printDocumentById('time-sheet-document')
-        if (printed) return
-        if (attempt >= 2) {
-          setError('Tisk výpisu evidence se nepodařilo spustit. Zkuste akci zopakovat.')
-          return
-        }
-        window.setTimeout(() => {
-          schedulePrint(attempt + 1)
-        }, 50)
-      })
-    })
-  }
 
   useEffect(() => {
     if (!employee || !selectedEmployeeId || !monthExists || !hasNoRows) return
@@ -116,7 +101,7 @@ export function useTimeSheetScreen() {
 
   const onShiftChange = (index: number, shift: string) => {
     if (!employee || !selectedEmployeeId) return
-    if ((monthStatus === 'time_closed' || monthStatus === 'payroll_calculated' || monthStatus === 'payroll_approved' || monthStatus === 'payslip_issued') && !window.confirm('Změna evidence zneplatní spočítanou mzdu a vystavenou pásku. Pokračovat?')) {
+    if (isTimeClosedOrLater(monthStatus) && !window.confirm('Změna evidence zneplatní spočítanou mzdu a vystavenou pásku. Pokračovat?')) {
       return
     }
     const update: Partial<TimeRecord> = { shift: shift as ShiftType }
@@ -252,7 +237,9 @@ export function useTimeSheetScreen() {
         })
         setInfo('Výpis evidence byl vystaven.')
         setError('')
-        schedulePrint()
+        printWithRetry('time-sheet-document', () => {
+          setError('Tisk výpisu evidence se nepodařilo spustit. Zkuste akci zopakovat.')
+        })
       } catch (caughtError) {
         setError(caughtError instanceof Error ? caughtError.message : 'Výpis evidence se nepodařilo vystavit.')
       }
@@ -260,14 +247,14 @@ export function useTimeSheetScreen() {
     onShiftChange,
     onArrivalChange: (index: number, value: string) => {
       if (!selectedEmployeeId) return
-      if ((monthStatus === 'time_closed' || monthStatus === 'payroll_calculated' || monthStatus === 'payroll_approved' || monthStatus === 'payslip_issued') && !window.confirm('Změna evidence zneplatní spočítanou mzdu a vystavenou pásku. Pokračovat?')) {
+      if (isTimeClosedOrLater(monthStatus) && !window.confirm('Změna evidence zneplatní spočítanou mzdu a vystavenou pásku. Pokračovat?')) {
         return
       }
       updateRecord(selectedEmployeeId, month, index, { arrival: value })
     },
     onDepartureChange: (index: number, value: string) => {
       if (!selectedEmployeeId) return
-      if ((monthStatus === 'time_closed' || monthStatus === 'payroll_calculated' || monthStatus === 'payroll_approved' || monthStatus === 'payslip_issued') && !window.confirm('Změna evidence zneplatní spočítanou mzdu a vystavenou pásku. Pokračovat?')) {
+      if (isTimeClosedOrLater(monthStatus) && !window.confirm('Změna evidence zneplatní spočítanou mzdu a vystavenou pásku. Pokračovat?')) {
         return
       }
       updateRecord(selectedEmployeeId, month, index, { departure: value })

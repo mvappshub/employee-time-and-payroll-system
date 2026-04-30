@@ -1,8 +1,24 @@
 import { getDaysInMonth, isWeekend } from './calc'
 import { mergeHolidayYears } from '../calendar/holidayCalendar'
-import type { QuarterlyPhvResponse } from '../../infrastructure/api/monthStorage'
 
 export const AUTOMATIC_PHV_ERROR_MESSAGE = 'Chybí podklady pro automatický výpočet PHV z předchozího čtvrtletí.'
+
+export interface QuarterlyPhvResponse {
+  month: string
+  sourceType: 'actual' | 'probable' | 'unavailable'
+  averageHourlyEarnings: number | null
+  actualPhv: number | null
+  probableHourlyEarnings: number | null
+  employeeContextMonth: string | null
+  periodStart: string
+  periodEnd: string
+  sourceMonths: string[]
+  missingMonths: string[]
+  grossForAverage: number
+  workedHoursForAverage: number
+  workedDaysForAverage: number
+  reason: string | null
+}
 
 function monthId(year: number, month: number): string {
   return `${year}-${String(month).padStart(2, '0')}`

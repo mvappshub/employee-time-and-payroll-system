@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import { calculateMonthDays, calcMonthlySummary, calcPaySlip } from '../domain/payroll/calc'
-import { fetchQuarterlyPhv, type QuarterlyPhvResponse } from '../infrastructure/api/monthStorage'
+import { fetchQuarterlyPhv } from '../infrastructure/api/monthStorage'
 import { AUTOMATIC_PHV_ERROR_MESSAGE, assertAvailableAverageEarnings } from '../domain/payroll/phv'
+import type { QuarterlyPhvResponse } from '../domain/payroll/phv'
 import { useStore } from '../infrastructure/state/store'
 import { autosaveEmployeeMonthDraft } from './autosaveMonth'
 import { defaultPaySlipInputs } from './defaults'
 import { formatCzk, formatDays, formatHours, formatMonthLabel } from './formatters'
 import type { HolidayCompensationMode, IssuedPayslipDocument } from '../domain/shared/types'
 import { EmploymentTypeLabels } from '../domain/shared/types'
+import { isDraftLike, isPayrollPhase, isTimeClosedOrLater } from '../domain/monthWorkflow'
 
 type PayslipRowViewModel = {
   label: string
@@ -89,7 +91,7 @@ export function usePaySlipScreen() {
   const currentMonthStatus = selectedEmployeeId ? monthStatusByEmployee[selectedEmployeeId]?.[month] || 'empty' : 'empty'
   const payrollState = selectedEmployeeId ? payrollByEmployee[selectedEmployeeId]?.[month] : undefined
   const monthExists = selectedEmployeeId ? typeof monthStatusByEmployee[selectedEmployeeId]?.[month] !== 'undefined' : false
-  const isDataClosed = currentMonthStatus === 'time_closed' || currentMonthStatus === 'payroll_calculated' || currentMonthStatus === 'payroll_approved' || currentMonthStatus === 'payslip_issued'
+  const isDataClosed = isPayrollPhase(currentMonthStatus)
   const printDisabled = currentMonthStatus !== 'payslip_issued'
   const issuedPayslipDocument = payrollState?.payslipDocument || null
 
@@ -115,11 +117,7 @@ export function usePaySlipScreen() {
     sickHours: summary.totalSick,
     totalSaldo: summary.totalSaldo,
   }), [summary])
-  const requiresInvalidationConfirmation =
-    currentMonthStatus === 'time_closed' ||
-    currentMonthStatus === 'payroll_calculated' ||
-    currentMonthStatus === 'payroll_approved' ||
-    currentMonthStatus === 'payslip_issued'
+  const requiresInvalidationConfirmation = isTimeClosedOrLater(currentMonthStatus)
 
   const confirmPayrollInputChange = (apply: () => void) => {
     if (!selectedEmployeeId) return
@@ -167,7 +165,7 @@ export function usePaySlipScreen() {
 
   useEffect(() => {
     if (!employee || !selectedEmployeeId || !monthExists || monthRecords.length === 0) return
-    if (currentMonthStatus !== 'draft' && currentMonthStatus !== 'time_saved' && currentMonthStatus !== 'time_closed') return
+    if (!isDraftLike(currentMonthStatus) && currentMonthStatus !== 'time_closed') return
 
     const timeout = window.setTimeout(() => {
       autosaveEmployeeMonthDraft({

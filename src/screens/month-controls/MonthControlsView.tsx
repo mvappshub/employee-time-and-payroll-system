@@ -1,4 +1,5 @@
 import type { MonthStatus } from '../../domain/shared/types'
+import { canApproveAndIssue, canCloseAndCalculate, canPrintPayslip } from '../../domain/monthWorkflow'
 
 export interface MonthControlsViewProps {
   error: string
@@ -32,6 +33,7 @@ export function MonthControlsView({
   error,
   info,
   success,
+  currentStatus,
   currentStatusLabel,
   selectedEmployeeName,
   monthLabel,
@@ -47,9 +49,9 @@ export function MonthControlsView({
 }: MonthControlsViewProps) {
   const steps = [
     { label: 'Načíst', done: buttonState.canLoad, active: false },
-    { label: 'Evidence', done: buttonState.canCloseAndCalculate, active: currentStatusLabel === 'Rozpracováno' || currentStatusLabel === 'Evidence uložena' },
-    { label: 'Výpočet', done: buttonState.canApproveAndIssue || currentStatusLabel === 'Mzda spočítána', active: currentStatusLabel === 'Mzda spočítána' },
-    { label: 'Páska', done: buttonState.canPrint || currentStatusLabel === 'Výplatní páska vystavena', active: currentStatusLabel === 'Výplatní páska vystavena' },
+    { label: 'Evidence', done: buttonState.canCloseAndCalculate, active: canCloseAndCalculate(currentStatus) },
+    { label: 'Výpočet', done: buttonState.canApproveAndIssue || canApproveAndIssue(currentStatus), active: canApproveAndIssue(currentStatus) },
+    { label: 'Páska', done: buttonState.canPrint || canPrintPayslip(currentStatus), active: canPrintPayslip(currentStatus) },
   ]
 
   return (

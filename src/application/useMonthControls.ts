@@ -11,10 +11,19 @@ import {
   type SavedMonthRecord,
 } from '../infrastructure/api/monthStorage'
 import { buildInitialEmployeeMonthRecords, useStore } from '../infrastructure/state/store'
-import { printDocumentById } from '../screens/documents/print'
 import { defaultPaySlipInputs } from './defaults'
-import type { EmployeeMonth, EmployeeSettings, MonthStatus, TimeRecord, TimeSummary } from '../domain/shared/types'
+import type { EmployeeMonth, EmployeeSettings, MonthStatus, TimeRecord } from '../domain/shared/types'
 import { formatMonthLabel } from './formatters'
+import {
+  canApproveAndIssue,
+  canCalculatePayroll,
+  canCloseAndCalculate,
+  canIssuePayslip,
+  canPrintPayslip,
+  canReopenMonth,
+} from '../domain/monthWorkflow'
+import { printWithRetry } from '../adapters/browser/printWithRetry'
+import { buildTimeSummary } from './month/buildTimeSummary'
 
 function statusLabel(status: MonthStatus): string {
   switch (status) {
@@ -45,17 +54,6 @@ function nextStepLabel(status: MonthStatus): string {
       return 'Tisk / PDF'
     default:
       return 'Založit měsíc'
-  }
-}
-
-function buildTimeSummary(summary: ReturnType<typeof calcMonthlySummary>): TimeSummary {
-  return {
-    monthlyFundHours: summary.monthlyFundHours,
-    workedHours: summary.workedHours,
-    workedDays: summary.workedDays,
-    vacationHours: summary.totalVacation,
-    sickHours: summary.totalSick,
-    totalSaldo: summary.totalSaldo,
   }
 }
 
@@ -175,16 +173,16 @@ export function useMonthControls() {
   const buttonState = {
     canLoad: !!selectedEmployeeId && monthExists,
     canInitMonth: !!selectedEmployeeId && !monthExists,
-    canSave: !!selectedEmployeeId && monthExists && (currentStatus === 'draft' || currentStatus === 'time_saved'),
-    canPrefill: !!selectedEmployeeId && monthExists && (currentStatus === 'draft' || currentStatus === 'time_saved'),
-    canClose: !!selectedEmployeeId && monthExists && (currentStatus === 'draft' || currentStatus === 'time_saved'),
-    canCloseAndCalculate: !!selectedEmployeeId && monthExists && (currentStatus === 'draft' || currentStatus === 'time_saved'),
-    canCalculatePayroll: !!selectedEmployeeId && monthExists && (currentStatus === 'time_closed' || currentStatus === 'payroll_calculated'),
-    canApprove: !!selectedEmployeeId && monthExists && currentStatus === 'payroll_calculated',
-    canApproveAndIssue: !!selectedEmployeeId && monthExists && currentStatus === 'payroll_calculated',
-    canIssuePayslip: !!selectedEmployeeId && monthExists && currentStatus === 'payroll_approved',
-    canRequestArchive: !!selectedEmployeeId && monthExists && ['time_closed', 'payroll_calculated', 'payroll_approved', 'payslip_issued'].includes(currentStatus),
-    canPrint: !!selectedEmployeeId && monthExists && currentStatus === 'payslip_issued',
+    canSave: !!selectedEmployeeId && monthExists && canCloseAndCalculate(currentStatus),
+    canPrefill: !!selectedEmployeeId && monthExists && canCloseAndCalculate(currentStatus),
+    canClose: !!selectedEmployeeId && monthExists && canCloseAndCalculate(currentStatus),
+    canCloseAndCalculate: !!selectedEmployeeId && monthExists && canCloseAndCalculate(currentStatus),
+    canCalculatePayroll: !!selectedEmployeeId && monthExists && canCalculatePayroll(currentStatus),
+    canApprove: !!selectedEmployeeId && monthExists && canApproveAndIssue(currentStatus),
+    canApproveAndIssue: !!selectedEmployeeId && monthExists && canApproveAndIssue(currentStatus),
+    canIssuePayslip: !!selectedEmployeeId && monthExists && canIssuePayslip(currentStatus),
+    canRequestArchive: !!selectedEmployeeId && monthExists && canReopenMonth(currentStatus),
+    canPrint: !!selectedEmployeeId && monthExists && canPrintPayslip(currentStatus),
   }
 
   return {
@@ -261,24 +259,10 @@ export function useMonthControls() {
     },
     onPrintPayslip: () => {
       if (!buttonState.canPrint) return
-      const tryPrint = (attempt = 0) => {
-        setSection('payroll')
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            const printed = printDocumentById('issued-payslip-document')
-            if (printed) return
-            if (attempt >= 2) {
-              setError('Tisk výplatní pásky se nepodařilo spustit. Zkuste akci zopakovat.')
-              return
-            }
-            window.setTimeout(() => {
-              tryPrint(attempt + 1)
-            }, 50)
-          })
-        })
-      }
-
-      tryPrint()
+      setSection('payroll')
+      printWithRetry('issued-payslip-document', () => {
+        setError('Tisk výplatní pásky se nepodařilo spustit. Zkuste akci zopakovat.')
+      })
     },
     onInitMonth: async () => {
       if (!selectedEmployeeId || !employee) {
@@ -422,7 +406,7 @@ export function useMonthControls() {
         setInfo('Měsíc ještě není založen.')
         return
       }
-      if (!(currentStatus === 'draft' || currentStatus === 'time_saved')) {
+      if (!canCloseAndCalculate(currentStatus)) {
         setInfo('Evidenci lze uzavřít až po založení nebo uložení měsíce.')
         return
       }
@@ -463,7 +447,7 @@ export function useMonthControls() {
         setInfo('Měsíc ještě není založen.')
         return
       }
-      if (!(currentStatus === 'draft' || currentStatus === 'time_saved')) {
+      if (!canCloseAndCalculate(currentStatus)) {
         setInfo('Evidenci lze uzavřít až po založení nebo uložení měsíce.')
         return
       }
@@ -529,7 +513,7 @@ export function useMonthControls() {
       setError('')
       setInfo('')
       setSuccess('')
-      if (currentStatus !== 'time_closed' && currentStatus !== 'payroll_calculated') {
+      if (!canCalculatePayroll(currentStatus)) {
         setInfo('Mzdu lze spočítat až po uzavření evidence.')
         return
       }
@@ -568,7 +552,7 @@ export function useMonthControls() {
       setError('')
       setInfo('')
       setSuccess('')
-      if (currentStatus !== 'payroll_calculated') {
+      if (!canApproveAndIssue(currentStatus)) {
         setInfo('Mzdu lze schválit až po výpočtu mzdy.')
         return
       }
@@ -595,7 +579,7 @@ export function useMonthControls() {
       setError('')
       setInfo('')
       setSuccess('')
-      if (currentStatus !== 'payroll_calculated') {
+      if (!canApproveAndIssue(currentStatus)) {
         setInfo('Mzdu lze schválit až po výpočtu mzdy.')
         return
       }
@@ -654,7 +638,7 @@ export function useMonthControls() {
       setError('')
       setInfo('')
       setSuccess('')
-      if (currentStatus !== 'payroll_approved') {
+      if (!canIssuePayslip(currentStatus)) {
         setInfo('Výplatní pásku lze vystavit až po schválení mzdy.')
         return
       }

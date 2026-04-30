@@ -57,6 +57,7 @@ export function EmployeeMonthOverview({
               {mode === 'payroll' && <th className="px-3 py-2 text-left font-semibold">Páska</th>}
               <th className="px-3 py-2 text-left font-semibold">Poslední změna</th>
               <th className="px-3 py-2 text-right font-semibold">Akce</th>
+              {mode === 'payroll' && <th className="px-3 py-2 text-right font-semibold">Otevřít</th>}
             </tr>
           </thead>
           <tbody>
@@ -105,6 +106,13 @@ export function EmployeeMonthOverview({
                       )}
                     </div>
                   </td>
+                  {mode === 'payroll' && (
+                    <td className="px-3 py-1.5 text-right">
+                      <Button variant="ghost" size="xs" onClick={e => { e.stopPropagation(); onOpenMonth?.(row.month); }}>
+                        Otevřít
+                      </Button>
+                    </td>
+                  )}
                 </tr>
               )
             })}

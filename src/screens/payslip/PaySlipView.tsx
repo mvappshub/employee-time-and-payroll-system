@@ -1,4 +1,11 @@
 import type { ReactNode } from 'react'
+import { Loader2, Lock, Printer } from 'lucide-react'
+import { Alert } from '../../components/ui/Alert'
+import { Button } from '../../components/ui/Button'
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card'
+import { EmptyState } from '../../components/ui/EmptyState'
+import { Input } from '../../components/ui/Input'
+import { Select } from '../../components/ui/Select'
 import type { HolidayCompensationMode, IssuedPayslipDocument } from '../../domain/shared/types'
 import { IssuedPayslipDocumentView } from '../documents/IssuedPayslipDocumentView'
 
@@ -68,91 +75,96 @@ export function PaySlipView({
   extraActions,
   onPrintDocument,
 }: PaySlipViewProps) {
-  const inp = 'min-h-8 w-20 rounded-md border border-slate-300 bg-white px-2 py-1 text-right text-xs outline-none'
-
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.08)] text-xs">
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <span className="text-base font-semibold text-slate-900">Mzda / Výplatní páska</span>
-        <button
-          type="button"
-          disabled={printDisabled || !issuedPayslipDocument}
-          onClick={onPrintDocument}
-          className="border border-blue-600 bg-blue-600 px-3 py-2 text-[12px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Tisk / PDF
-        </button>
-        {extraActions}
+    <div className="space-y-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-sm font-semibold text-slate-900">Mzda / Výplatní páska</h2>
+          <div className="mt-0.5 truncate text-xs text-slate-500">{employeeHeader}</div>
+        </div>
+        <div className="flex shrink-0 items-center gap-1.5">
+          {extraActions}
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled={printDisabled || !issuedPayslipDocument}
+            onClick={onPrintDocument}
+            leftIcon={<Printer className="h-3.5 w-3.5" />}
+          >
+            Tisk / PDF
+          </Button>
+        </div>
       </div>
 
-      <div className="mb-3 rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-600">{employeeHeader}</div>
-
-      {blocked && <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 font-medium text-amber-800">{blockedMessage}</div>}
-      {loading && <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-slate-600">Načítání PHV...</div>}
-      {!loading && error && <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 font-medium text-red-700">{error}</div>}
-      {!loading && info && <div className="mt-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-slate-600">{info}</div>}
-      {!loading && dataClosedWarning && <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 font-medium text-amber-800">{dataClosedWarning}</div>}
+      {blocked && <EmptyState icon={<Lock />} title="Výpočet není dostupný" description={blockedMessage} className="min-h-[180px]" />}
+      {loading && <Alert tone="info" title="Načítání PHV" action={<Loader2 className="h-4 w-4 animate-spin text-blue-600" />} />}
+      {!loading && error && <Alert tone="danger">{error}</Alert>}
+      {!loading && info && <Alert tone="success">{info}</Alert>}
+      {!loading && dataClosedWarning && <Alert tone="warning">{dataClosedWarning}</Alert>}
 
       {!blocked && !loading && (
-        <div className="space-y-4">
-          <section className="app-controls rounded-lg border border-slate-200 bg-slate-50 p-4">
-            <div className="mb-3 text-sm font-semibold text-slate-900">Interní mzdové vstupy</div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <table className="w-full">
-                <tbody>
-                  <InputRow label="Ruční odměna">
-                    <input type="number" className={inp} value={internalInputs.manualReward} onChange={e => internalInputs.onManualRewardChange(parseFloat(e.target.value) || 0)} />
-                  </InputRow>
-                  {internalInputs.showHolidayCompensationMode && (
-                    <InputRow label="Práce ve svátek">
-                      <select
-                        className="min-h-8 rounded-md border border-slate-300 bg-white px-2 py-1 text-xs outline-none"
-                        value={internalInputs.holidayCompensationMode}
-                        onChange={event => internalInputs.onHolidayCompensationModeChange(event.target.value as HolidayCompensationMode)}
-                      >
-                        <option value="time-off">Náhradní volno</option>
-                        <option value="premium">Proplatit příplatkem</option>
-                      </select>
-                    </InputRow>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </section>
+        <div className="space-y-3">
+          <Card className="app-controls">
+            <CardHeader><CardTitle>Interní mzdové vstupy</CardTitle></CardHeader>
+            <CardContent>
+              <div className="grid gap-3 md:grid-cols-2">
+                <Input
+                  density="compact"
+                  label="Ruční odměna"
+                  type="number"
+                  value={internalInputs.manualReward}
+                  onChange={e => internalInputs.onManualRewardChange(parseFloat(e.target.value) || 0)}
+                />
+                {internalInputs.showHolidayCompensationMode && (
+                  <Select
+                    density="compact"
+                    label="Práce ve svátek"
+                    value={internalInputs.holidayCompensationMode}
+                    onChange={event => internalInputs.onHolidayCompensationModeChange(event.target.value as HolidayCompensationMode)}
+                  >
+                    <option value="time-off">Náhradní volno</option>
+                    <option value="premium">Proplatit příplatkem</option>
+                  </Select>
+                )}
+              </div>
+            </CardContent>
+          </Card>
 
           {currentCalculationRows && (
-            <section className="app-controls rounded-lg border border-slate-200 bg-white p-4">
-              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                <div className="text-sm font-semibold text-slate-900">Výpočet mzdy</div>
-                <div className="flex flex-wrap gap-2 text-[12px]">
-                  <span className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 font-semibold text-slate-900">Hrubá mzda: {currentCalculationRows.grossWage}</span>
-                  <span className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 font-semibold text-slate-900">Čistá mzda: {currentCalculationRows.netWage}</span>
+            <Card className="app-controls">
+              <CardHeader
+                actions={
+                  <div className="flex flex-wrap items-center gap-3 text-xs">
+                    <div><span className="text-[10px] uppercase tracking-wide text-slate-500">Hrubá mzda</span> <span className="ml-1.5 text-sm font-semibold tabular">{currentCalculationRows.grossWage}</span></div>
+                    <div><span className="text-[10px] uppercase tracking-wide text-slate-500">Čistá mzda</span> <span className="ml-1.5 text-sm font-semibold tabular text-emerald-600">{currentCalculationRows.netWage}</span></div>
+                  </div>
+                }
+              >
+                <CardTitle>Výpočet mzdy</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-2 lg:grid-cols-2 2xl:grid-cols-3">
+                  {currentCalculationRows.sections.map(section => (
+                    <section key={section.title} className="rounded-md border border-slate-200 bg-slate-50/50 p-2.5">
+                      <h3 className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600">{section.title}</h3>
+                      <table className="w-full">
+                        <tbody>
+                          {section.rows.map(row => <CalculationRowView key={`${section.title}-${row.label}`} label={row.label} value={row.value} formula={row.formula} />)}
+                        </tbody>
+                      </table>
+                    </section>
+                  ))}
                 </div>
-              </div>
-              <div className="grid gap-2 lg:grid-cols-2 2xl:grid-cols-3">
-                {currentCalculationRows.sections.map(section => (
-                  <section key={section.title} className="rounded-md border border-slate-200 bg-slate-50 p-2">
-                    <div className="mb-1 border-b border-slate-300 pb-1 text-[11px] font-bold uppercase tracking-normal text-slate-900">{section.title}</div>
-                    <table className="w-full">
-                      <tbody>
-                        {section.rows.map(row => <CalculationRowView key={`${section.title}-${row.label}`} label={row.label} value={row.value} formula={row.formula} />)}
-                      </tbody>
-                    </table>
-                  </section>
-                ))}
-              </div>
-            </section>
+              </CardContent>
+            </Card>
           )}
 
           {issuedPayslipDocument && issuedDocumentRows && (
-            <div className="space-y-4">
-              <section className="app-controls rounded-lg border border-slate-200 bg-slate-50 p-4 text-[12px] text-slate-600">
-                <div className="font-semibold text-slate-900">Výplatní páska pro zaměstnance</div>
-                Auditní dokument se renderuje z issued snapshotu uloženého při vystavení výplatní pásky.
-                <div className="mt-2">Typ pracovního poměru: {employmentTypeLabel}</div>
-                <div className="mt-1">Fond / odpracováno: {issuedDocumentTimeRows.map(row => `${row.label} ${row.hrs || ''} ${row.days || ''}`.trim()).join(' · ')}</div>
-                <div className="mt-1">Hrubá mzda a Čistá mzda jsou součástí vystaveného dokumentu níže.</div>
-              </section>
+            <div className="space-y-3">
+              <Alert tone="info" title="Výplatní páska pro zaměstnance">
+                Typ pracovního poměru: {employmentTypeLabel}. Fond / odpracováno: {issuedDocumentTimeRows.map(row => `${row.label} ${row.hrs || ''} ${row.days || ''}`.trim()).join(' · ')}. Hrubá mzda a Čistá mzda jsou součástí vystaveného dokumentu níže.
+              </Alert>
               <div className="document-print-only" aria-hidden="true">
                 <IssuedPayslipDocumentView
                   document={issuedPayslipDocument}
@@ -168,9 +180,9 @@ export function PaySlipView({
           )}
 
           {!issuedPayslipDocument && isDataClosed && (
-            <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 font-medium text-amber-800">
+            <Alert tone="warning">
               Vystavený dokument zatím neexistuje. Tisk je dostupný až po schválení a vystavení výplatní pásky.
-            </div>
+            </Alert>
           )}
         </div>
       )}
@@ -178,23 +190,14 @@ export function PaySlipView({
   )
 }
 
-function InputRow({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <tr>
-      <td className="text-slate-700">{label}</td>
-      <td className="text-right">{children}</td>
-    </tr>
-  )
-}
-
 function CalculationRowView({ label, value, formula }: CalculationRow) {
   return (
-    <tr className="border-t border-slate-200 first:border-t-0">
+    <tr className="border-b border-slate-200 last:border-0">
       <td className="py-1 pr-2 align-top">
-        <div className="text-[11px] font-medium leading-4 text-slate-800">{label}</div>
-        <div className="text-[10px] leading-3 text-slate-500">{formula}</div>
+        <div className="text-[11px] font-medium leading-tight text-slate-800">{label}</div>
+        <div className="mt-0.5 text-[10px] leading-tight text-slate-500">{formula}</div>
       </td>
-      <td className="whitespace-nowrap py-1 text-right align-top text-[11px] font-semibold leading-4 text-slate-900">{value}</td>
+      <td className="whitespace-nowrap py-1 text-right align-top text-[11px] font-semibold tabular text-slate-900">{value}</td>
     </tr>
   )
 }

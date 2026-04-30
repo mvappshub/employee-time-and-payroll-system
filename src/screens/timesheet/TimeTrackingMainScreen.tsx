@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react'
+import { CheckCircle2, Info, UserSearch, X, XCircle } from 'lucide-react'
 import { useEmployeesScreen } from '../../application/useEmployeesScreen'
 import { useMonthControls } from '../../application/useMonthControls'
 import { useTimeSheetScreen } from '../../application/useTimeSheetScreen'
+import { Button } from '../../components/ui/Button'
+import { EmptyState } from '../../components/ui/EmptyState'
 import { useStore } from '../../infrastructure/state/store'
+import { cn } from '../../utils/cn'
 import { EmployeeMonthOverview } from '../employees/EmployeeMonthOverview'
 import { TimeSheetView } from './TimeSheetView'
 
@@ -16,15 +20,21 @@ export function TimeTrackingTabs({
   onTabChange: (tab: TimeTrackingTab) => void
 }) {
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="inline-flex items-center gap-0.5 rounded-md border border-slate-200 bg-slate-100 p-0.5">
       <button
-        className={`rounded-md px-3 py-2 text-sm font-medium shadow-none ${activeTab === 'overview' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+        className={cn(
+          'rounded px-2.5 py-1 text-xs font-medium transition-colors',
+          activeTab === 'overview' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900',
+        )}
         onClick={() => onTabChange('overview')}
       >
-        Přehled za celý rok
+        Přehled roku
       </button>
       <button
-        className={`rounded-md px-3 py-2 text-sm font-medium shadow-none ${activeTab === 'detail' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+        className={cn(
+          'rounded px-2.5 py-1 text-xs font-medium transition-colors',
+          activeTab === 'detail' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900',
+        )}
         onClick={() => onTabChange('detail')}
       >
         Detail měsíce
@@ -44,6 +54,7 @@ export function TimeTrackingMainScreen({
   const monthControls = useMonthControls()
   const timeSheet = useTimeSheetScreen()
   const selectedEmployeeId = useStore(s => s.selectedEmployeeId)
+  const currentMonth = useStore(s => s.currentMonth)
   const setCurrentMonth = useStore(s => s.setCurrentMonth)
   const [toast, setToast] = useState<{ type: 'success' | 'info' | 'error'; message: string } | null>(null)
 
@@ -83,26 +94,40 @@ export function TimeTrackingMainScreen({
   }
 
   if (!selectedEmployeeId) {
-    return <div className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-600">Prosím, vyberte zaměstnance vpravo nahoře.</div>
+    return (
+      <EmptyState
+        icon={<UserSearch />}
+        title="Vyberte zaměstnance"
+        description="Použijte selektor v pravém horním rohu."
+      />
+    )
   }
 
   return (
     <div className="space-y-4">
       {toast && (
-        <div className={`fixed right-6 top-6 z-40 rounded-lg border px-4 py-3 text-sm shadow-lg ${
-          toast.type === 'error'
-            ? 'border-red-200 bg-red-50 text-red-700'
-            : toast.type === 'success'
-              ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-              : 'border-slate-200 bg-white text-slate-600'
-        }`}>
-          {toast.message}
+        <div
+          className={cn(
+            'fixed right-4 top-14 z-50 flex min-w-[260px] max-w-md items-start gap-2 rounded-md border px-3 py-2 text-xs shadow-md animate-fade-in',
+            toast.type === 'error' && 'border-red-200 bg-red-50 text-red-900',
+            toast.type === 'success' && 'border-emerald-200 bg-emerald-50 text-emerald-900',
+            toast.type === 'info' && 'border-slate-200 bg-white text-slate-700',
+          )}
+        >
+          {toast.type === 'error' ? <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
+            : toast.type === 'success' ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+            : <Info className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />}
+          <div className="flex-1">{toast.message}</div>
+          <button onClick={() => setToast(null)} className="shrink-0 text-slate-400 hover:text-slate-700">
+            <X className="h-3.5 w-3.5" />
+          </button>
         </div>
       )}
 
       <div className={activeTab === 'overview' ? 'block' : 'hidden'}>
         <EmployeeMonthOverview
           mode="time"
+          currentMonth={currentMonth}
           rows={overview.monthRows}
           onInitMonth={handleInitMonth}
           onOpenMonth={handleOpenMonth}
@@ -128,11 +153,9 @@ export function TimeTrackingMainScreen({
           onToggleDocumentPreview={timeSheet.onToggleDocumentPreview}
           onPrintDocument={timeSheet.onPrintDocument}
           extraActions={(
-            <>
-              <button className="border border-blue-600 bg-blue-600 px-3 py-2 text-[12px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50" onClick={monthControls.onCloseAndCalculate} disabled={!monthControls.buttonState.canCloseAndCalculate}>
-                Uzavřít evidenci a spočítat mzdu
-              </button>
-            </>
+            <Button variant="primary" size="xs" onClick={monthControls.onCloseAndCalculate} disabled={!monthControls.buttonState.canCloseAndCalculate}>
+              Uzavřít a spočítat
+            </Button>
           )}
           onShiftChange={timeSheet.onShiftChange}
           onArrivalChange={timeSheet.onArrivalChange}

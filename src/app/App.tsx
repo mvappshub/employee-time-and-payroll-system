@@ -1,6 +1,9 @@
 import { useState, type ReactNode } from 'react'
+import { Calendar, User } from 'lucide-react'
 import Holidays from '../Holidays'
 import { useAppShell } from '../application/useAppShell'
+import { Input } from '../components/ui/Input'
+import { Select } from '../components/ui/Select'
 import { useStore } from '../infrastructure/state/store'
 import { AppShellView } from '../screens/app/AppShellView'
 import { CompanyScreen } from '../screens/company/CompanyScreen'
@@ -19,9 +22,11 @@ function GlobalFilters() {
   const setCurrentMonth = useStore(s => s.setCurrentMonth)
 
   return (
-    <div className="flex flex-wrap items-center justify-end gap-2">
-      <select
-        className="min-h-8 rounded-md border border-slate-300 bg-white px-3 py-1 text-xs text-slate-700 outline-none"
+    <div className="flex items-center gap-2">
+      <div className="w-[200px]">
+        <Select
+        density="compact"
+        leftIcon={<User />}
         value={selectedEmployeeId || ''}
         onChange={event => selectEmployee(event.target.value || null)}
       >
@@ -29,13 +34,17 @@ function GlobalFilters() {
         {employees.map(employee => (
           <option key={employee.id} value={employee.id}>{employee.name || employee.employeeNumber || employee.id}</option>
         ))}
-      </select>
-      <input
+        </Select>
+      </div>
+      <div className="w-[150px]">
+        <Input
+        density="compact"
+        leftIcon={<Calendar />}
         type="month"
         value={currentMonth}
         onChange={event => setCurrentMonth(event.target.value)}
-        className="min-h-8 rounded-md border border-slate-300 bg-white px-3 py-1 text-xs text-slate-700 outline-none"
       />
+      </div>
     </div>
   )
 }

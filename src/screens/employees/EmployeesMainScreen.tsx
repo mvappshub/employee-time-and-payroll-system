@@ -1,7 +1,9 @@
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
+import { CheckCircle2, Info, X, XCircle } from 'lucide-react'
 import { useEmployeesScreen } from '../../application/useEmployeesScreen'
 import { useStore } from '../../infrastructure/state/store'
+import { cn } from '../../utils/cn'
 import { EmployeeDetail } from './EmployeeDetail'
 import { EmployeeList } from './EmployeeList'
 
@@ -17,15 +19,21 @@ export function EmployeesTabs({
   onTabChange: (tab: EmployeesTab) => void
 }) {
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="inline-flex items-center gap-0.5 rounded-md border border-slate-200 bg-slate-100 p-0.5">
       <button
-        className={`rounded-md px-3 py-2 text-sm font-medium shadow-none ${activeTab === 'list' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+        className={cn(
+          'rounded px-2.5 py-1 text-xs font-medium transition-colors',
+          activeTab === 'list' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900',
+        )}
         onClick={() => onTabChange('list')}
       >
         Seznam zaměstnanců
       </button>
       <button
-        className={`rounded-md px-3 py-2 text-sm font-medium shadow-none ${activeTab === 'detail' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'} disabled:bg-slate-100 disabled:text-slate-400`}
+        className={cn(
+          'rounded px-2.5 py-1 text-xs font-medium transition-colors disabled:text-slate-400',
+          activeTab === 'detail' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900',
+        )}
         disabled={!selectedEmployeeId}
         onClick={() => onTabChange('detail')}
       >
@@ -69,14 +77,21 @@ export function EmployeesMainScreen({
   }
 
   const toastNode: ReactNode = toast && (
-    <div className={`fixed right-6 top-6 z-40 rounded-lg border px-4 py-3 text-sm shadow-lg ${
-      toast.type === 'error'
-        ? 'border-red-200 bg-red-50 text-red-700'
-        : toast.type === 'success'
-          ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-          : 'border-slate-200 bg-white text-slate-600'
-    }`}>
-      {toast.message}
+    <div
+      className={cn(
+        'fixed right-4 top-14 z-50 flex min-w-[260px] max-w-md items-start gap-2 rounded-md border px-3 py-2 text-xs shadow-md animate-fade-in',
+        toast.type === 'error' && 'border-red-200 bg-red-50 text-red-900',
+        toast.type === 'success' && 'border-emerald-200 bg-emerald-50 text-emerald-900',
+        toast.type === 'info' && 'border-slate-200 bg-white text-slate-700',
+      )}
+    >
+      {toast.type === 'error' ? <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
+        : toast.type === 'success' ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+        : <Info className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />}
+      <div className="flex-1">{toast.message}</div>
+      <button onClick={() => setToast(null)} className="shrink-0 text-slate-400 hover:text-slate-700">
+        <X className="h-3.5 w-3.5" />
+      </button>
     </div>
   )
 

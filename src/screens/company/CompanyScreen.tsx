@@ -1,26 +1,12 @@
 import { useEffect, useState } from 'react'
-import { loadCompanyProfile, saveCompanyProfile } from '../../infrastructure/api/monthStorage'
+import { Alert } from '../../components/ui/Alert'
+import { Button } from '../../components/ui/Button'
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card'
+import { Input } from '../../components/ui/Input'
+import { PageHeader } from '../../components/ui/PageHeader'
 import { useStore } from '../../infrastructure/state/store'
+import { loadCompanyProfile, saveCompanyProfile } from '../../infrastructure/api/monthStorage'
 import type { EmployerProfile } from '../../domain/shared/types'
-
-const inp = 'min-h-7 w-full border border-[#1f2937] bg-white px-2 py-1 text-[12px] text-black outline-none'
-
-function CompanyField({
-  label,
-  value,
-  onChange,
-}: {
-  label: string
-  value: string
-  onChange: (value: string) => void
-}) {
-  return (
-    <label className="grid gap-1">
-      <span className="mb-[2px] text-[12px] font-bold text-black">{label}</span>
-      <input className={inp} value={value} onChange={e => onChange(e.target.value)} />
-    </label>
-  )
-}
 
 export function CompanyScreen() {
   const employer = useStore(s => s.employer)
@@ -63,39 +49,35 @@ export function CompanyScreen() {
   }
 
   return (
-    <section className="max-w-4xl border-2 border-black bg-white p-2">
-      <div className="mb-2 border-2 border-black bg-black px-2 py-1 text-sm font-extrabold text-white">Firma</div>
-      <div className="grid gap-2 lg:grid-cols-2">
-        <div className="space-y-2">
-          <div className="border border-black p-2">
-            <div className="mb-2 text-[12px] font-extrabold text-black">Povinné pro uložení</div>
-            <div className="grid gap-2">
-              <CompanyField label="Název" value={employer.name} onChange={value => updateField({ name: value })} />
-              <CompanyField label="IČO" value={employer.ico} onChange={value => updateField({ ico: value })} />
-              <CompanyField label="Sídlo" value={employer.seat} onChange={value => updateField({ seat: value })} />
-            </div>
+    <section className="max-w-3xl space-y-3">
+      <PageHeader title="Firemní profil" description="Údaje o zaměstnavateli pro pracovní smlouvy a dokumenty" />
+      <Card>
+        <CardHeader><CardTitle>Základní údaje</CardTitle></CardHeader>
+        <CardContent>
+          <div className="grid gap-3 md:grid-cols-2">
+            <Input label="Název" value={employer.name} onChange={e => updateField({ name: e.target.value })} />
+            <Input label="IČO" value={employer.ico} onChange={e => updateField({ ico: e.target.value })} />
+            <Input className="md:col-span-2" label="Sídlo" value={employer.seat} onChange={e => updateField({ seat: e.target.value })} />
           </div>
-        </div>
-        <div className="space-y-2">
-          <div className="border border-black p-2">
-            <div className="mb-2 text-[12px] font-extrabold text-black">Povinné pro tisk smlouvy</div>
-            <div className="grid gap-2">
-              <CompanyField label="Jednající osoba" value={employer.representativeName} onChange={value => updateField({ representativeName: value })} />
-              <CompanyField label="Funkce / jednání za zaměstnavatele" value={employer.representativeRole} onChange={value => updateField({ representativeRole: value })} />
-            </div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader><CardTitle>Zastupování</CardTitle></CardHeader>
+        <CardContent>
+          <div className="grid gap-3 md:grid-cols-2">
+            <Input label="Jednající osoba" value={employer.representativeName} onChange={e => updateField({ representativeName: e.target.value })} />
+            <Input label="Funkce / jednání za zaměstnavatele" value={employer.representativeRole} onChange={e => updateField({ representativeRole: e.target.value })} />
           </div>
-          <div className="border border-black bg-[#f3f4f6] p-2 text-[12px] text-[#4b5563]">
-            Pro tisk pracovní smlouvy musí být vyplněno všech pět polí: název, IČO, sídlo, jednající osoba a funkce jednající osoby. Runtime store slouží jen jako cache nad JSON API.
-          </div>
-        </div>
-      </div>
-      <div className="mt-2 flex items-center justify-end gap-2">
-        <button className="border border-black bg-[#2563eb] px-3 py-1 text-[12px] font-extrabold text-white disabled:border-slate-300 disabled:bg-slate-100 disabled:text-slate-500" onClick={onSave} disabled={saving}>
+        </CardContent>
+      </Card>
+      <Alert tone="info">Pro tisk pracovní smlouvy musí být vyplněno všech pět polí.</Alert>
+      {info && <Alert tone="success">{info}</Alert>}
+      {error && <Alert tone="danger">{error}</Alert>}
+      <div className="sticky bottom-2 z-10 flex items-center justify-end rounded-lg border border-slate-200 bg-white/95 px-3 py-2 shadow-md backdrop-blur">
+        <Button variant="primary" size="sm" onClick={onSave} disabled={saving}>
           Uložit firemní profil
-        </button>
+        </Button>
       </div>
-      {info && <div className="mt-2 border border-black bg-[#f3f4f6] px-2 py-1 text-[12px] text-[#4b5563]">{info}</div>}
-      {error && <div className="mt-2 border border-black bg-[#fecaca] px-2 py-1 text-[12px] font-bold text-black">{error}</div>}
     </section>
   )
 }

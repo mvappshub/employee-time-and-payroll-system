@@ -6,6 +6,21 @@ type Layer = 'domain' | 'application' | 'infrastructure' | 'screens' | 'app' | '
 
 const srcRoot = path.resolve(process.cwd(), 'src')
 const importPattern = /import\s+(?:type\s+)?(?:[\s\S]*?\s+from\s+)?['"]([^'"]+)['"]/g
+const allowedBoundaryViolations = [
+  'application/autosaveMonth.ts -> infrastructure/api/monthStorage.ts',
+  'application/useAppShell.ts -> infrastructure/api/monthStorage.ts',
+  'application/useAppShell.ts -> infrastructure/state/store.ts',
+  'application/useEmployeeScreen.ts -> infrastructure/state/store.ts',
+  'application/useEmployeesScreen.ts -> infrastructure/api/monthStorage.ts',
+  'application/useEmployeesScreen.ts -> infrastructure/state/store.ts',
+  'application/useHolidaysScreen.ts -> infrastructure/state/store.ts',
+  'application/useMonthControls.ts -> infrastructure/api/monthStorage.ts',
+  'application/useMonthControls.ts -> infrastructure/state/store.ts',
+  'application/usePaySlipScreen.ts -> infrastructure/api/monthStorage.ts',
+  'application/usePaySlipScreen.ts -> infrastructure/state/store.ts',
+  'application/useTimeSheetScreen.ts -> infrastructure/api/monthStorage.ts',
+  'application/useTimeSheetScreen.ts -> infrastructure/state/store.ts',
+]
 
 function layerOf(filePath: string): Layer {
   const relative = path.relative(srcRoot, filePath).replaceAll(path.sep, '/')
@@ -69,18 +84,14 @@ function findBoundaryViolations() {
     }
   }
 
-  return violations
+  return violations.sort()
 }
 
 describe('import boundaries', () => {
-  it('reports cross-layer imports without blocking incremental cleanup', () => {
+  it('does not add new cross-layer imports beyond the current allowlist', () => {
     const violations = findBoundaryViolations()
 
-    if (violations.length > 0) {
-      console.info(`Import boundary report:\n${violations.join('\n')}`)
-    }
-
-    expect(Array.isArray(violations)).toBe(true)
+    expect(violations).toEqual(allowedBoundaryViolations)
   })
 
   it('keeps the cleaned P0 boundary directions closed', () => {

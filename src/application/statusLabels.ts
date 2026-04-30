@@ -1,18 +1,8 @@
 import type { MonthStatus } from '../domain/shared/types'
-import { isPayrollCalculatedOrLater } from '../domain/monthWorkflow'
-
-export const MONTH_STATUS_LABELS: Record<MonthStatus, string> = {
-  empty: 'Bez měsíce',
-  draft: 'Rozpracováno',
-  time_saved: 'Evidence uložena',
-  time_closed: 'Evidence uzavřena',
-  payroll_calculated: 'Mzda spočítána',
-  payroll_approved: 'Mzda schválena',
-  payslip_issued: 'Páska vystavena',
-}
+import { describeMonthStatus, isPayrollCalculatedOrLater } from '../domain/monthWorkflow'
 
 export function formatMonthStatus(status?: MonthStatus): string {
-  return status ? MONTH_STATUS_LABELS[status] : 'Bez dat'
+  return describeMonthStatus(status).label
 }
 
 export function isPayrollStatus(status?: MonthStatus): boolean {

@@ -16,6 +16,7 @@ const employeeMonthOverview = readFileSync(new URL('./screens/employees/Employee
 const employeesHook = readFileSync(new URL('./application/useEmployeesScreen.ts', import.meta.url), 'utf8')
 const timeSheetHook = readFileSync(new URL('./application/useTimeSheetScreen.ts', import.meta.url), 'utf8')
 const autosaveMonth = readFileSync(new URL('./application/autosaveMonth.ts', import.meta.url), 'utf8')
+const monthWorkflow = readFileSync(new URL('./domain/monthWorkflow.ts', import.meta.url), 'utf8')
 
 describe('UI regressions', () => {
   it('employee view exposes employer profile, employee number, and vacation summary inputs', () => {
@@ -133,7 +134,8 @@ describe('UI regressions', () => {
 
   it('month overview action opens the consolidated payroll flow', () => {
     expect(employeeMonthOverview).toContain('onRunMonthAction')
-    expect(employeesHook).toContain('Schválit a vystavit výplatní pásku')
+    expect(employeesHook).toContain('getMonthPrimaryAction')
+    expect(monthWorkflow).toContain('Schválit a vystavit výplatní pásku')
     expect(employeesHook).not.toContain('issuePayslipForMonth')
     expect(employeesHook).toContain("setSection('payroll')")
   })

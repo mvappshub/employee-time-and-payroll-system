@@ -6,7 +6,7 @@ import {
   buildTimeSheetStatementDocument,
   invalidateDocument,
 } from './domain/documents/builders'
-import { buildEmployeeMonthRecord } from './infrastructure/api/monthStorage'
+import { buildEmployeeMonthRecord } from './domain/month/employeeMonth'
 import type { EmployeeMonth, EmployeeSettings, EmployerProfile } from './domain/shared/types'
 
 const employer: EmployerProfile = {

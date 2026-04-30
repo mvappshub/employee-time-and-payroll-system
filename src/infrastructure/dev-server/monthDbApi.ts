@@ -9,7 +9,7 @@ import {
   type AverageEarningsEmployeeContext,
 } from '../../domain/payroll/phv'
 import type { EmployeeSettings, EmployerProfile, IssuedPayslipDocument, PaySlipInputs, PayrollResult, TimeSummary } from '../../domain/shared/types'
-import type { SavedMonthRecord } from '../api/monthStorage'
+import type { SavedMonthRecord } from '../../domain/month/employeeMonth'
 
 const DATA_DIR = path.resolve(process.cwd(), 'month-data')
 const EMPLOYEES_DIR = path.join(DATA_DIR, 'employees')

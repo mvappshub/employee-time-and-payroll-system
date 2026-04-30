@@ -7,6 +7,8 @@ import {
   canIssuePayslip,
   canPrintPayslip,
   canReopenMonth,
+  describeMonthStatus,
+  getMonthPrimaryAction,
   isPayrollApprovedOrLater,
   isPayrollCalculatedOrLater,
   isTimeClosedOrLater,
@@ -50,5 +52,23 @@ describe('month workflow predicates', () => {
     expect(routeForMonthStatus('time_saved')).toBe('time-tracking')
     expect(routeForMonthStatus('time_closed')).toBe('payroll')
     expect(routeForMonthStatus('payslip_issued')).toBe('payroll')
+  })
+
+  it('describes status labels and primary actions in one place', () => {
+    expect(describeMonthStatus().label).toBe('Bez dat')
+    expect(describeMonthStatus('payslip_issued').label).toBe('Páska vystavena')
+    expect(describeMonthStatus('payslip_issued').controlsLabel).toBe('Výplatní páska vystavena')
+    expect(describeMonthStatus('payroll_calculated').nextStepLabel).toBe('Schválit a vystavit výplatní pásku')
+
+    expect(getMonthPrimaryAction().label).toBe('Založit měsíc')
+    expect(getMonthPrimaryAction().route).toBe('init')
+    expect(getMonthPrimaryAction('time_saved')).toEqual({
+      label: 'Uzavřít evidenci a spočítat mzdu',
+      route: 'timesheet',
+    })
+    expect(getMonthPrimaryAction('payslip_issued')).toEqual({
+      label: 'Tisk / PDF',
+      route: 'payroll',
+    })
   })
 })

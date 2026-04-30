@@ -1,3 +1,4 @@
+/** @deprecated Use screens/employees/EmployeesMainScreen through app composition. */
 import { useEmployeeScreen } from './application/useEmployeeScreen'
 import { EmployeeView } from './screens/employee/EmployeeView'
 

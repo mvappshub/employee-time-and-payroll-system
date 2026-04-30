@@ -4,12 +4,11 @@ import { buildIssuedPayslipDocument, buildTimeSheetStatementDocument } from '../
 import { AUTOMATIC_PHV_ERROR_MESSAGE, assertAvailableAverageEarnings } from '../domain/payroll/phv'
 import { getLegalConstantsSnapshot } from '../domain/payroll/legalConstants'
 import {
-  buildEmployeeMonthRecord,
   fetchQuarterlyPhv,
   loadEmployeeMonth,
   saveEmployeeMonth as saveEmployeeMonthApi,
-  type SavedMonthRecord,
 } from '../infrastructure/api/monthStorage'
+import { buildEmployeeMonthRecord, type SavedMonthRecord } from '../domain/month/employeeMonth'
 import { buildInitialEmployeeMonthRecords, useStore } from '../infrastructure/state/store'
 import { defaultPaySlipInputs } from './defaults'
 import type { EmployeeMonth, EmployeeSettings, MonthStatus, TimeRecord } from '../domain/shared/types'
@@ -21,41 +20,10 @@ import {
   canIssuePayslip,
   canPrintPayslip,
   canReopenMonth,
+  describeMonthStatus,
 } from '../domain/monthWorkflow'
 import { printWithRetry } from '../adapters/browser/printWithRetry'
 import { buildTimeSummary } from './month/buildTimeSummary'
-
-function statusLabel(status: MonthStatus): string {
-  switch (status) {
-    case 'draft': return 'Rozpracováno'
-    case 'time_saved': return 'Evidence uložena'
-    case 'time_closed': return 'Evidence uzavřena'
-    case 'payroll_calculated': return 'Mzda spočítána'
-    case 'payroll_approved': return 'Mzda schválena'
-    case 'payslip_issued': return 'Výplatní páska vystavena'
-    default: return 'Bez měsíce'
-  }
-}
-
-function nextStepLabel(status: MonthStatus): string {
-  switch (status) {
-    case 'empty':
-    case 'draft':
-      return 'Uzavřít evidenci a spočítat mzdu'
-    case 'time_saved':
-      return 'Uzavřít evidenci a spočítat mzdu'
-    case 'time_closed':
-      return 'Spočítat mzdu'
-    case 'payroll_calculated':
-      return 'Schválit a vystavit výplatní pásku'
-    case 'payroll_approved':
-      return 'Otevřít mzdy'
-    case 'payslip_issued':
-      return 'Tisk / PDF'
-    default:
-      return 'Založit měsíc'
-  }
-}
 
 function validateBeforeClose(
   monthRecords: TimeRecord[],
@@ -128,6 +96,7 @@ export function useMonthControls() {
   const payrollState = selectedEmployeeId ? payrollByEmployee[selectedEmployeeId]?.[currentMonth] : undefined
   const monthExists = selectedEmployeeId ? typeof monthStatusByEmployee[selectedEmployeeId]?.[currentMonth] !== 'undefined' : false
   const payrollEmployee = employee ? { ...employee, holidayCompensationMode: inputs.holidayCompensationMode } : null
+  const statusDescription = describeMonthStatus(currentStatus)
 
   const days = useMemo(
     () => employee ? calculateMonthDays(monthRecords, employee, holidays, inputs.sickCarryoverDays) : [],
@@ -190,10 +159,10 @@ export function useMonthControls() {
     info,
     success,
     currentStatus,
-    currentStatusLabel: statusLabel(currentStatus),
+    currentStatusLabel: statusDescription.controlsLabel,
     selectedEmployeeName: employee?.name || 'Nevybrán',
     monthLabel: formatMonthLabel(currentMonth),
-    nextStepLabel: nextStepLabel(currentStatus),
+    nextStepLabel: statusDescription.nextStepLabel,
     lastActionLabel: payrollState?.updatedAt || payrollState?.issuedAt || payrollState?.approvedAt || payrollState?.closedAt || '—',
     monthExists,
     showArchiveConfirm,

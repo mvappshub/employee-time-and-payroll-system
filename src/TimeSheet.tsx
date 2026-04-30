@@ -1,3 +1,4 @@
+/** @deprecated Use screens/timesheet/TimeTrackingMainScreen through app composition. */
 import { useTimeSheetScreen } from './application/useTimeSheetScreen'
 import { TimeSheetView } from './screens/timesheet/TimeSheetView'
 

@@ -34,4 +34,13 @@ describe('UI architecture boundaries', () => {
     expect(timeSheetContainer).toContain('useTimeSheetScreen')
     expect(timeSheetContainer).toContain('TimeSheetView')
   })
+
+  it('does not route through deprecated root containers', () => {
+    const app = readFileSync(new URL('./app/App.tsx', import.meta.url), 'utf8')
+
+    expect(app).not.toContain("from '../MonthControls'")
+    expect(app).not.toContain("from '../PaySlip'")
+    expect(app).not.toContain("from '../TimeSheet'")
+    expect(app).not.toContain("from '../Employee'")
+  })
 })

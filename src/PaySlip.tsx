@@ -1,3 +1,4 @@
+/** @deprecated Use screens/payroll/PayrollMainScreen through app composition. */
 import { usePaySlipScreen } from './application/usePaySlipScreen'
 import { PaySlipView } from './screens/payslip/PaySlipView'
 import { printDocumentById } from './screens/documents/print'

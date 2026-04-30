@@ -6,11 +6,8 @@ import type {
   TimeRecord,
   TimeSummary,
 } from '../domain/shared/types'
-import {
-  buildEmployeeMonthRecord,
-  saveEmployeeMonth as saveEmployeeMonthApi,
-  type SavedMonthRecord,
-} from '../infrastructure/api/monthStorage'
+import { buildEmployeeMonthRecord, type SavedMonthRecord } from '../domain/month/employeeMonth'
+import { saveEmployeeMonth as saveEmployeeMonthApi } from '../infrastructure/api/monthStorage'
 import { isDraftLike } from '../domain/monthWorkflow'
 
 type AutosaveMonthInput = {

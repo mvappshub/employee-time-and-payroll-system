@@ -7,7 +7,6 @@ import {
   isEmployerProfileReady,
 } from '../domain/documents/builders'
 import {
-  buildEmployeeMonthRecord,
   createEmployee as createEmployeeApi,
   listEmployeeMonths,
   listEmployees,
@@ -15,6 +14,7 @@ import {
   saveEmployeeDocument,
   updateEmployee as updateEmployeeApi,
 } from '../infrastructure/api/monthStorage'
+import { buildEmployeeMonthRecord } from '../domain/month/employeeMonth'
 import { useStore, normalizeEmployeeSettings, buildInitialEmployeeMonthRecords } from '../infrastructure/state/store'
 import { invalidateDocument } from '../domain/documents/builders'
 import type { EmployeeMonth, EmployeeSettings, MonthStatus } from '../domain/shared/types'
@@ -24,31 +24,13 @@ import { defaultPaySlipInputs } from './defaults'
 import { formatMonthStatus, isPayrollStatus, payslipStatusLabel } from './statusLabels'
 import {
   canCloseAndCalculate,
+  getMonthPrimaryAction,
   isPayrollApprovedOrLater,
   isTimeClosedOrLater,
   routeForMonthStatus,
 } from '../domain/monthWorkflow'
 import { printWithRetry } from '../adapters/browser/printWithRetry'
 import { buildTimeSummary } from './month/buildTimeSummary'
-
-function actionLabelForStatus(status?: MonthStatus): string {
-  if (!status) return 'Založit měsíc'
-  switch (status) {
-    case 'draft':
-    case 'time_saved':
-      return 'Uzavřít evidenci a spočítat mzdu'
-    case 'time_closed':
-      return 'Spočítat mzdu'
-    case 'payroll_calculated':
-      return 'Schválit a vystavit výplatní pásku'
-    case 'payroll_approved':
-      return 'Otevřít mzdy'
-    case 'payslip_issued':
-      return 'Tisk / PDF'
-    default:
-      return 'Založit měsíc'
-  }
-}
 
 function buildMonthList(currentMonth: string, loadedMonths: string[]): string[] {
   const year = currentMonth.split('-')[0]
@@ -203,6 +185,7 @@ export function useEmployeesScreen() {
         : null
       const status = statuses[month]
       const payrollState = payroll[month]
+      const primaryAction = getMonthPrimaryAction(status)
       return {
         month,
         monthLabel: formatMonthLabel(month),
@@ -215,8 +198,8 @@ export function useEmployeesScreen() {
         payrollStatus: isPayrollStatus(status) ? formatMonthStatus(status) : '—',
         payslipStatus: payslipStatusLabel(status),
         updatedAt: payrollState?.updatedAt || payrollState?.closedAt || payrollState?.approvedAt || '—',
-        actionLabel: actionLabelForStatus(status),
-        actionRoute: (!status ? 'init' : (routeForMonthStatus(status) === 'time-tracking' ? 'timesheet' : 'payroll')) as 'init' | 'timesheet' | 'payroll',
+        actionLabel: primaryAction.label,
+        actionRoute: primaryAction.route,
         canPreviewTimeSheetDocument: Boolean(payrollState?.timeSheetDocument),
       }
     })

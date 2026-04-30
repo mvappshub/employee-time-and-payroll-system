@@ -1,67 +1,15 @@
 import type {
-  CalculationSnapshot,
-  EmployeeMonth,
   EmployeeSettings,
   EmploymentContractDocument,
   EmployerProfile,
-  IssuedPayslipDocument,
   MonthStatus,
-  PaySlipInputs,
-  PayrollResult,
-  TimeRecord,
-  TimeSheetStatementDocument,
-  TimeSummary,
-  WorkflowAuditEntry,
 } from '../../domain/shared/types'
 import type { QuarterlyPhvResponse } from '../../domain/payroll/phv'
+import type { SavedMonthRecord } from '../../domain/month/employeeMonth'
 
 export type { MonthStatus }
 export type { QuarterlyPhvResponse }
-
-export interface SavedMonthSnapshot {
-  grossWage: number
-  workedHours: number
-  totalSaldo: number
-  savedAt: string
-}
-
-export interface SavedMonthAverageSource {
-  grossForAverage?: number
-  workedHoursForAverage?: number
-  workedDaysForAverage?: number
-}
-
-export interface SavedMonthRecord extends EmployeeMonth, SavedMonthAverageSource {
-  employer?: EmployerProfile
-  employee: EmployeeSettings
-  snapshot?: SavedMonthSnapshot
-}
-
-export interface BuildEmployeeMonthRecordInput {
-  employeeId: string
-  month: string
-  status: MonthStatus
-  employee: EmployeeSettings
-  employer?: EmployerProfile
-  records: TimeRecord[]
-  paySlipInputs: PaySlipInputs
-  existing?: Partial<SavedMonthRecord> | null
-  timeSummary?: TimeSummary
-  payrollResult?: PayrollResult
-  calculationSnapshot?: CalculationSnapshot
-  timeSheetDocument?: TimeSheetStatementDocument | null
-  payslipDocument?: IssuedPayslipDocument | null
-  auditTrail?: WorkflowAuditEntry[]
-  grossForAverage?: number
-  workedHoursForAverage?: number
-  workedDaysForAverage?: number
-  snapshot?: SavedMonthSnapshot
-  closedAt?: string
-  approvedAt?: string
-  issuedAt?: string
-  invalidatedAt?: string
-  invalidationReason?: string
-}
+export type { SavedMonthRecord } from '../../domain/month/employeeMonth'
 
 async function parseJsonResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
@@ -78,38 +26,6 @@ async function parseJsonResponse<T>(response: Response): Promise<T> {
     throw new Error(message || `HTTP ${response.status}`)
   }
   return response.json() as Promise<T>
-}
-
-export function buildEmployeeMonthRecord(input: BuildEmployeeMonthRecordInput): SavedMonthRecord {
-  const nowIso = new Date().toISOString()
-  const existing = input.existing || null
-
-  return {
-    employeeId: input.employeeId,
-    month: input.month,
-    status: input.status,
-    employer: input.employer ?? existing?.employer,
-    employee: input.employee,
-    records: input.records,
-    paySlipInputs: input.paySlipInputs,
-    timeSummary: input.timeSummary ?? existing?.timeSummary,
-    payrollResult: input.payrollResult ?? existing?.payrollResult,
-    calculationSnapshot: input.calculationSnapshot ?? existing?.calculationSnapshot,
-    timeSheetDocument: input.timeSheetDocument ?? existing?.timeSheetDocument ?? null,
-    payslipDocument: input.payslipDocument ?? existing?.payslipDocument ?? null,
-    auditTrail: input.auditTrail ?? existing?.auditTrail ?? [],
-    createdAt: existing?.createdAt || nowIso,
-    updatedAt: nowIso,
-    closedAt: input.closedAt ?? existing?.closedAt,
-    approvedAt: input.approvedAt ?? existing?.approvedAt,
-    issuedAt: input.issuedAt ?? existing?.issuedAt,
-    invalidatedAt: input.invalidatedAt ?? existing?.invalidatedAt,
-    invalidationReason: input.invalidationReason ?? existing?.invalidationReason,
-    grossForAverage: input.grossForAverage ?? existing?.grossForAverage,
-    workedHoursForAverage: input.workedHoursForAverage ?? existing?.workedHoursForAverage,
-    workedDaysForAverage: input.workedDaysForAverage ?? existing?.workedDaysForAverage,
-    snapshot: input.snapshot ?? existing?.snapshot,
-  }
 }
 
 export async function listEmployees(): Promise<EmployeeSettings[]> {
